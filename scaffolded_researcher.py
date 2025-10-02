@@ -349,34 +349,35 @@ class ScaffoldedResearcher:
         """Build the prompt for current iteration"""
         experimental_design = f"""You are part way through the process of autonomously writing a research paper.
 
-This is one iteration of a multi-iteration, stateless research loop. 
+This is prompt and your reply together form 1 iteration in a multi-iteration research loop. 
 The specific research problem you are working on is:
 
 {self.problem_statement}
 
 Each iteration, including this one:
-1. You receive the current state (LaTeX paper, code, execution output, your current plan)
-2. You output ONLY code blocks and/or LaTeX blocks and your plan
-3. You will recieve the output of the code, and whether the LaTeX compiles
-4. When saving figures, ALWAYS use either `savefig("name.png", dpi=300)`
+1. You will receive the current state (LaTeX paper, code, execution output, your previous plan)
+2. Based on the paper, code and previous plan, you will create a detailed plan for the remaining iterations
+3. You will output ONLY your updated plan, python code and LaTeX
+4. If you are have 0 remaining iterations, then the code and LaTeX created this iteration is final
+
+When saving figures, ALWAYS use either `savefig("name.png", dpi=300)`
    or `plt.savefig(os.path.join(output_dir, "name.png"), dpi=300)`.
    Do NOT hard-code session paths. Figures must end up in the same directory as `paper.tex`.
-5. End your response with: PLAN: [what you'll do over all remaining iterations]
 
 OUTPUT FORMAT:
+- PLAN: [detailed plan over the remaining iterations]
 - Python code: ```python ... ```
 - LaTeX: ```latex ... ``` (must be complete document with \\documentclass)
-- End with: PLAN: [plan description]
 
 TOKEN CONSTRAINTS:
 - Output limit: 6,000 tokens per iteration
 - Input limit: 30,000 tokens per iteration
 """
         state_description = f"""
-=== CURRENT STATE ===
+=== YOUR CURRENT STATE ===
 
-Iteration: {iteration} / {self.max_iterations}
-Iterations remaining: {self.max_iterations - iteration}
+Current iteration: {iteration} / {self.max_iterations}
+Iterations remaining after this one: {self.max_iterations - iteration}
 
 --- LaTeX Paper ---
 {state['latex']}
@@ -392,10 +393,6 @@ Iterations remaining: {self.max_iterations - iteration}
 
 --- Plan from Previous Iteration ---
 {state['plan']}
-
-=== Your Task Now ===
-Based on the LaTeX and Python code, and the previous plan develop an updated plan over the remaining iterations.
-Based on the plan, either make changes to the LaTeX or Python file or both
 """
         return experimental_design + state_description
 
