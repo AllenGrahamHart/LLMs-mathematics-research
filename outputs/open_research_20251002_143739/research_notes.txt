@@ -1,0 +1,90 @@
+
+LITERATURE REVIEW - Allen G Hart Papers
+========================================
+
+Paper 1: arXiv:2111.14226 (PhD Thesis, Nov 2021)
+- Likely covers: Foundations of reservoir computing, echo state networks
+- Expected themes: Memory capacity, computational power, learning dynamics
+- Key concepts: Reservoir design, edge of chaos, information processing
+
+Paper 2: arXiv:2211.09515 (Nov 2022)
+- Post-thesis work, likely extending core ideas
+- Possible focus: Novel architectures or theoretical advances
+- Timeline suggests refinement of thesis concepts
+
+Paper 3: arXiv:2508.21522 (Recent - Aug 2025)
+- Most recent work, cutting-edge directions
+- Likely builds on previous foundations
+
+CORE RESERVOIR COMPUTING CONCEPTS TO EXPLORE:
+==============================================
+
+1. MEMORY CAPACITY
+   - How reservoirs retain information over time
+   - Trade-offs between memory and nonlinearity
+   - Optimal reservoir parameters for memory tasks
+
+2. COMPUTATIONAL EXPRESSIVITY
+   - What functions can reservoirs compute?
+   - Universal approximation properties
+   - Kernel perspectives on reservoir computing
+
+3. NETWORK TOPOLOGY
+   - Random vs. structured connectivity
+   - Small-world, scale-free properties
+   - Impact on dynamical regimes
+
+4. TRAINING DYNAMICS
+   - Ridge regression for readout training
+   - Online vs. batch learning
+   - Generalization properties
+
+POTENTIAL RESEARCH DIRECTIONS:
+==============================
+
+Direction 1: HETEROGENEOUS RESERVOIRS
+- Mix different node types or timescales
+- Biological inspiration: diverse neural populations
+- Research question: Can heterogeneity improve performance/efficiency?
+
+Direction 2: GEOMETRY OF RESERVOIR REPRESENTATIONS
+- How do reservoirs embed input signals?
+- Manifold learning perspective
+- Connection to kernel methods and information geometry
+
+Direction 3: MINIMAL RESERVOIRS
+- How small can effective reservoirs be?
+- Single-node reservoirs with delays
+- Theory of minimal complexity for tasks
+
+Direction 4: RESERVOIR PRUNING & SPARSIFICATION
+- Start dense, remove connections
+- Information-theoretic criteria for importance
+- Compare to lottery ticket hypothesis
+
+Direction 5: TIME-VARYING RESERVOIRS
+- Adaptive connectivity during operation
+- Meta-learning the reservoir
+- Plasticity mechanisms
+
+INITIAL RESEARCH FOCUS (to be refined):
+========================================
+
+I'm leaning toward: "Information Geometry of Reservoir Computing"
+
+Why interesting:
+- Connects reservoir computing to differential geometry
+- Provides theoretical framework for understanding representations
+- Can lead to practical design principles
+- Relatively unexplored in literature
+
+Specific angles:
+1. Measure curvature of reservoir state space manifolds
+2. Relate geometric properties to task performance
+3. Design reservoirs with desired geometric properties
+4. Connection to tangent kernel theory
+
+Next steps:
+- Implement basic reservoir computing framework
+- Develop tools to analyze state space geometry
+- Design experiments on benchmark tasks

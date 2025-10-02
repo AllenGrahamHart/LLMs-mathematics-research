@@ -1,0 +1,23 @@
+{
+  "total_calls": 2,
+  "total_input_tokens": 7441,
+  "total_output_tokens": 12000,
+  "total_time": 162.49818468093872,
+  "total_cost": 0.20232299999999998,
+  "individual_calls": [
+    {
+      "timestamp": "2025-10-02T18:10:22.902056",
+      "input_tokens": 670,
+      "output_tokens": 6000,
+      "response_time": 81.81473422050476,
+      "cost": 0.09201
+    },
+    {
+      "timestamp": "2025-10-02T18:12:43.586153",
+      "input_tokens": 6771,
+      "output_tokens": 6000,
+      "response_time": 80.68345046043396,
+      "cost": 0.110313
+    }
+  ]
+}

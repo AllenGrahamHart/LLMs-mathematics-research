@@ -1,0 +1,44 @@
+=== STRATEGY ===
+# Strategy for 1 Iteration
+
+Given the severe constraint of **only 1 iteration**, I need to be highly efficient and strategic. Here's my plan:
+
+## Overall Approach
+I'll conduct a **focused computational study** on reservoir computing that:
+1. Can be completed in a single iteration
+2. Produces meaningful, novel insights
+3. Has clear theoretical motivation
+4. Generates compelling visualizations
+
+## Proposed Research Direction
+Based on the reservoir computing literature, I'll investigate **the relationship between reservoir hyperparameters and task-specific performance**, specifically:
+- How spectral radius, sparsity, and input scaling affect different computational tasks
+- The interplay between memory requirements and nonlinear processing
+- Optimal parameter regimes for different problem classes
+
+This is tractable because:
+- The experiments are well-defined and bounded
+- I can implement a clean RC framework quickly
+- Results will be interpretable and visual
+- It connects to fundamental questions in the field
+
+## Single Iteration Plan
+
+**Phase 1: Setup & Implementation (20%)**
+- Implement core reservoir computing framework
+- Set up 2-3 canonical tasks (memory, nonlinear transformation, temporal pattern)
+
+**Phase 2: Experiments (30%)**
+- Systematic parameter sweep over spectral radius, sparsity, input scaling
+- Test on multiple tasks
+- Generate all figures (performance heatmaps, trajectory visualizations, etc.)
+
+**Phase 3: Paper Writing (50%)**
+- Write complete paper with all sections
+- Introduction with proper context
+- Methods describing framework
+- Results with figures
+- Discussion connecting to broader literature
+- Proper citations
+
+Let me execute this now!

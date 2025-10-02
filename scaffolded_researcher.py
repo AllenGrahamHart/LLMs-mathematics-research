@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import subprocess
 import json
 import time
+import re
 
 load_dotenv()
 client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
@@ -21,17 +22,20 @@ class ResearchSession:
         os.makedirs(self.output_dir, exist_ok=True)
 
         self.latex_file = os.path.join(self.output_dir, "paper.tex")
+        self.python_file = os.path.join(self.output_dir, "code.py")
         self.log_file = os.path.join(self.output_dir, "session_log.txt")
         self.metrics_file = os.path.join(self.output_dir, "metrics.json")
 
-        self._initialize_latex()
+        self._initialize_files()
         self.log = []
-        self.conversation_history = []  # Add conversation history
-        self.api_metrics = []  # Track API call metrics
+        self.api_metrics = []
+        self._last_call_time = None
+        self.last_execution_output = ""
+        self.current_plan = "Begin research"
     
-    def _initialize_latex(self):
-        """Create initial LaTeX structure"""
-        initial_content = r"""\documentclass{article}
+    def _initialize_files(self):
+        """Create initial LaTeX and Python files"""
+        initial_latex = r"""\documentclass{article}
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage{graphicx}
@@ -49,7 +53,35 @@ class ResearchSession:
 \end{document}
 """
         with open(self.latex_file, 'w') as f:
-            f.write(initial_content)
+            f.write(initial_latex)
+        
+        initial_python = "# Research code will be added here\n"
+        with open(self.python_file, 'w') as f:
+            f.write(initial_python)
+    
+    def get_state(self):
+        """Get current state as dict"""
+        # Read files
+        with open(self.latex_file, 'r') as f:
+            latex_content = f.read()
+        
+        with open(self.python_file, 'r') as f:
+            python_content = f.read()
+        
+        # Get compilation status
+        compile_result = self.compile_latex()
+        if compile_result['success']:
+            compilation_status = "✓ Compiled successfully"
+        else:
+            compilation_status = f"✗ Compilation failed:\n{compile_result['error'][:500]}"
+        
+        return {
+            'latex': latex_content,
+            'compilation': compilation_status,
+            'python': python_content,
+            'execution_output': self.last_execution_output,
+            'plan': self.current_plan
+        }
     
     def extract_code_blocks(self, text: str):
         """Extract Python code blocks"""
@@ -61,8 +93,6 @@ class ResearchSession:
                 blocks.append(block[7:])
             elif block.startswith('python '):
                 blocks.append(block[7:])
-            else:
-                blocks.append(block.strip())
         return blocks
     
     def extract_latex_content(self, text: str):
@@ -77,16 +107,65 @@ class ResearchSession:
             return text
         return None
     
-    def execute_code(self, code: str, block_num: int):
-        """Execute code and save any plots"""
+    def extract_plan(self, text: str):
+        """Extract next iteration plan from response"""
+        # Look for common patterns
+        patterns = [
+            r'PLAN:\s*(.+?)(?:\n|$)',
+            r'Next iteration:\s*(.+?)(?:\n|$)',
+            r'Next:\s*(.+?)(?:\n|$)',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+        
+        # Default: extract last non-empty line
+        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        if lines:
+            return lines[-1][:200]  # Limit length
+        
+        return "Continue research"
+    
+    def execute_code(self, code: str):
+        """Execute code and capture output"""
         stdout_capture = StringIO()
         stderr_capture = StringIO()
 
+        # --- Safe savefig helper & monkey-patch ---
+        # Redirects any relative/incorrect paths into the current output_dir,
+        # creates missing dirs, and prints where the figure actually went.
+        import os as _os
+        _abs_out = _os.path.abspath(self.output_dir)
+        _orig_savefig = plt.savefig
+
+        def _safe_savefig(path, *args, **kwargs):
+            base = str(path)
+            if _os.path.isabs(base):
+                final = base
+            else:
+                # Any relative path -> drop directories and place into output_dir
+                # (prevents writing into stale or wrong session folders)
+                final = _os.path.join(_abs_out, _os.path.basename(base))
+            _os.makedirs(_os.path.dirname(final), exist_ok=True)
+            _orig_savefig(final, *args, **kwargs)
+            try:
+                rel = _os.path.relpath(final, _abs_out)
+            except Exception:
+                rel = final
+            print(f"✓ Saved figure -> {final} (relative: {rel})")
+
+        # Monkey-patch and expose helper in the user namespace
+        plt.savefig = _safe_savefig  # catch plain plt.savefig(...)
+        
         namespace = {
             'np': __import__('numpy'),
             'plt': plt,
             'matplotlib': matplotlib,
-            'output_dir': self.output_dir,  # Expose output_dir to code
+            'output_dir': self.output_dir,
+            'savefig': _safe_savefig,     # preferred helper
+            'plt_savefig': _safe_savefig, # alias, just in case
         }
 
         try:
@@ -94,27 +173,34 @@ class ResearchSession:
                  contextlib.redirect_stderr(stderr_capture):
                 exec(code, namespace)
 
-            # Close any remaining figures without saving
-            # (Claude should handle saving explicitly in the code)
             for fig_num in plt.get_fignums():
                 plt.close(fig_num)
 
+            # Post-exec diagnostic: list figures in output_dir
+            try:
+                imgs = sorted([p for p in os.listdir(self.output_dir)
+                               if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
+                diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
+            except Exception as _:
+                diag = ""
+
             return {
                 'success': True,
-                'stdout': stdout_capture.getvalue(),
-                'stderr': stderr_capture.getvalue(),
+                'output': stdout_capture.getvalue() + stderr_capture.getvalue() + diag,
             }
         except Exception as e:
+            # Post-exec diagnostic even on failure
+            try:
+                imgs = sorted([p for p in os.listdir(self.output_dir)
+                               if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
+                diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
+            except Exception as _:
+                diag = ""
             return {
                 'success': False,
-                'stdout': stdout_capture.getvalue(),
-                'stderr': stderr_capture.getvalue() + f"\n{type(e).__name__}: {str(e)}",
+                'output': stdout_capture.getvalue() + stderr_capture.getvalue() + 
+                         f"\n{type(e).__name__}: {str(e)}" + diag,
             }
-    
-    def update_latex(self, new_content: str):
-        """Replace LaTeX file with new content"""
-        with open(self.latex_file, 'w') as f:
-            f.write(new_content)
     
     def compile_latex(self):
         """Compile LaTeX to PDF"""
@@ -128,14 +214,6 @@ class ResearchSession:
             )
             
             if result.returncode == 0:
-                # Run second time for references
-                subprocess.run(
-                    ['pdflatex', '-interaction=nonstopmode', 'paper.tex'],
-                    cwd=self.output_dir,
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
                 return {'success': True}
             else:
                 return {'success': False, 'error': result.stdout}
@@ -148,45 +226,28 @@ class ResearchSession:
         with open(self.log_file, 'a') as f:
             f.write(entry + "\n")
     
-    def call_claude(self, prompt: str, use_thinking: bool = False):
-        """Call Claude API with conversation history and track metrics"""
-        # Add user message to history
-        self.conversation_history.append({
-            "role": "user",
-            "content": prompt
-        })
-
+    def call_claude(self, prompt: str):
+        """Call Claude API - stateless, no conversation history"""
         params = {
             "model": "claude-sonnet-4-5-20250929",
             "max_tokens": 16000,
-            "messages": self.conversation_history  # Use full conversation history
+            "messages": [{"role": "user", "content": prompt}]  # Single message, no history
         }
 
-        if use_thinking:
-            params["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": 10000
-            }
-
-        # Record start time
         start_time = time.time()
-
         response = client.messages.create(**params)
-
-        # Record end time
         end_time = time.time()
+        
+        self._last_call_time = end_time
         response_time = end_time - start_time
 
-        # Extract usage metrics
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
 
-        # Calculate cost ($3 per 1M input tokens, $15 per 1M output tokens)
         input_cost = (input_tokens / 1_000_000) * 3.0
         output_cost = (output_tokens / 1_000_000) * 15.0
         total_cost = input_cost + output_cost
 
-        # Store metrics
         metrics_entry = {
             'timestamp': datetime.now().isoformat(),
             'input_tokens': input_tokens,
@@ -201,53 +262,50 @@ class ResearchSession:
             if block.type == "text":
                 response_text += block.text
 
-        # Add assistant response to history
-        self.conversation_history.append({
-            "role": "assistant",
-            "content": response_text
-        })
+        print(f"  Input: {input_tokens:,} tokens | Output: {output_tokens:,} tokens | Cost: ${total_cost:.4f}")
 
         return response_text
     
     def process_response(self, response: str, iteration: int):
-        """Process Claude's response"""
+        """Process Claude's response and update state"""
         self.write_log(f"\n{'='*60}\nITERATION {iteration}\n{'='*60}")
-        self.write_log(f"Claude's response:\n{response}\n")
+        self.write_log(f"Response:\n{response}\n")
         
-        results = {
-            'code_executed': False,
-            'latex_updated': False,
-            'figures_generated': [],
-            'execution_results': []
-        }
-        
-        # Execute code blocks
+        # Extract and execute code
         code_blocks = self.extract_code_blocks(response)
         if code_blocks:
-            results['code_executed'] = True
-            self.write_log(f"\nFound {len(code_blocks)} code block(s)")
-
-            for i, code in enumerate(code_blocks):
-                self.write_log(f"\n--- Executing code block {i+1} ---")
-                exec_result = self.execute_code(code, iteration)
-                results['execution_results'].append(exec_result)
-
-                if exec_result['success']:
-                    self.write_log(f"✓ Execution successful")
-                    if exec_result['stdout']:
-                        self.write_log(f"Output:\n{exec_result['stdout']}")
-                else:
-                    self.write_log(f"✗ Execution failed")
-                    self.write_log(f"Error:\n{exec_result['stderr']}")
+            self.write_log(f"Found {len(code_blocks)} code block(s)")
+            
+            # Concatenate all code blocks
+            full_code = "\n\n".join(code_blocks)
+            
+            # Save to file
+            with open(self.python_file, 'w') as f:
+                f.write(full_code)
+            
+            # Execute
+            exec_result = self.execute_code(full_code)
+            if exec_result['success']:
+                self.write_log("✓ Code executed successfully")
+                self.last_execution_output = exec_result['output'][:2000]  # Limit length
+            else:
+                self.write_log("✗ Code execution failed")
+                self.last_execution_output = exec_result['output'][:2000]
+            
+            self.write_log(f"Output:\n{self.last_execution_output}")
+        else:
+            self.last_execution_output = "No code executed this iteration"
         
-        # Update LaTeX
+        # Extract and save LaTeX
         latex_content = self.extract_latex_content(response)
         if latex_content:
-            results['latex_updated'] = True
-            self.update_latex(latex_content)
-            self.write_log("\n✓ LaTeX file updated")
+            with open(self.latex_file, 'w') as f:
+                f.write(latex_content)
+            self.write_log("✓ LaTeX file updated")
         
-        return results
+        # Extract plan for next iteration
+        self.current_plan = self.extract_plan(response)
+        self.write_log(f"Next plan: {self.current_plan}")
 
     def get_metrics_summary(self):
         """Get summary of all API metrics"""
@@ -274,7 +332,6 @@ class ResearchSession:
             'individual_calls': self.api_metrics
         }
 
-        # Save metrics to file
         with open(self.metrics_file, 'w') as f:
             json.dump(summary, f, indent=2)
 
@@ -286,87 +343,74 @@ class ScaffoldedResearcher:
         self.session = ResearchSession(session_name)
         self.max_iterations = max_iterations
         self.current_iteration = 0
-        self.prompts = self._load_prompts()
+        self.problem_statement = ""
 
-    def _load_prompts(self):
-        """Load prompt templates from files"""
-        prompts = {}
-        prompt_files = {
-            'introduce': 'prompts/introduce_experiment.txt',
-            'iteration_step': 'prompts/iteration_step.txt',
-            'iteration_feedback': 'prompts/iteration_feedback.txt'
-        }
-        for key, filepath in prompt_files.items():
-            with open(filepath, 'r') as f:
-                prompts[key] = f.read()
-        return prompts
-    
-    def introduce_experiment(self, problem: str):
-        """Explain scaffolding structure to Claude"""
-        prompt = self.prompts['introduce'].format(
-            problem=problem,
-            max_iterations=self.max_iterations
-        )
+    def build_prompt(self, iteration: int, state: dict):
+        """Build the prompt for current iteration"""
+        experimental_design = f"""You are part way through the process of autonomously writing a research paper.
 
-        strategy = self.session.call_claude(prompt, use_thinking=True)
-        print("\n=== CLAUDE'S STRATEGY ===")
-        print(strategy)
-        self.session.write_log("=== STRATEGY ===\n" + strategy)
-        return strategy
+This is one iteration of a multi-iteration, stateless research loop. 
+The specific research problem you are working on is:
 
-    def iteration_step(self):
-        """Single iteration where Claude chooses and executes work"""
-        prompt = self.prompts['iteration_step'].format(
-            current_iteration=self.current_iteration,
-            max_iterations=self.max_iterations,
-            iterations_remaining=self.max_iterations - self.current_iteration
-        )
+{self.problem_statement}
 
-        response = self.session.call_claude(prompt, use_thinking=True)
-        results = self.session.process_response(response, self.current_iteration)
+Each iteration, including this one:
+1. You receive the current state (LaTeX paper, code, execution output, your current plan)
+2. You output ONLY code blocks and/or LaTeX blocks and your plan
+3. You will recieve the output of the code, and whether the LaTeX compiles
+4. When saving figures, ALWAYS use either `savefig("name.png", dpi=300)`
+   or `plt.savefig(os.path.join(output_dir, "name.png"), dpi=300)`.
+   Do NOT hard-code session paths. Figures must end up in the same directory as `paper.tex`.
+5. End your response with: PLAN: [what you'll do over all remaining iterations]
 
-        return {
-            'response': response,
-            'results': results
-        }
+OUTPUT FORMAT:
+- Python code: ```python ... ```
+- LaTeX: ```latex ... ``` (must be complete document with \\documentclass)
+- End with: PLAN: [plan description]
 
-    def iteration_feedback(self, work: dict):
-        """Provide execution feedback and ask Claude to self-assess"""
-        exec_summary = ""
-        if work['results']['execution_results']:
-            for i, result in enumerate(work['results']['execution_results']):
-                if result['success']:
-                    exec_summary += f"\n✓ Code block {i+1}: Success"
-                    if result['stdout']:
-                        exec_summary += f"\n  Output: {result['stdout'][:200]}"
-                else:
-                    exec_summary += f"\n✗ Code block {i+1}: Failed"
-                    exec_summary += f"\n  Error: {result['stderr'][:300]}"
+TOKEN CONSTRAINTS:
+- Output limit: 6,000 tokens per iteration
+- Input limit: 30,000 tokens per iteration
+"""
+        state_description = f"""
+=== CURRENT STATE ===
 
-        if work['results']['latex_updated']:
-            exec_summary += "\n✓ LaTeX paper updated"
+Iteration: {iteration} / {self.max_iterations}
+Iterations remaining: {self.max_iterations - iteration}
 
-        prompt = self.prompts['iteration_feedback'].format(
-            exec_summary=exec_summary if exec_summary else "No code executed or LaTeX updated this iteration.",
-            iterations_remaining=self.max_iterations - self.current_iteration
-        )
+--- LaTeX Paper ---
+{state['latex']}
 
-        assessment = self.session.call_claude(prompt)
-        self.session.write_log(f"\n=== SELF-ASSESSMENT ===\n{assessment}")
+--- LaTeX Compilation Status ---
+{state['compilation']}
 
-        return assessment
-    
+--- Python Code ---
+{state['python']}
+
+--- Last Execution Output ---
+{state['execution_output']}
+
+--- Plan from Previous Iteration ---
+{state['plan']}
+
+=== Your Task Now ===
+Based on the LaTeX and Python code, and the previous plan develop an updated plan over the remaining iterations.
+Based on the plan, either make changes to the LaTeX or Python file or both
+"""
+        return experimental_design + state_description
+
     def run(self, problem: str):
-        """Main scaffolding loop"""
+        """Main research loop (no separate initial prompt)"""
+        self.problem_statement = problem
+
         print("="*60)
-        print("SCAFFOLDED RESEARCH EXPERIMENT")
+        print("STATELESS SCAFFOLDED RESEARCH")
+        print("="*60)
+        print(f"Max iterations: {self.max_iterations}")
+        print(f"Output directory: {self.session.output_dir}")
         print("="*60)
 
-        # Introduce experiment
-        self.introduce_experiment(problem)
-        input("\nPress Enter to begin iterations...")
-
-        # Iteration loop
+        # Jump straight into the uniform iteration loop
         while self.current_iteration < self.max_iterations:
             self.current_iteration += 1
 
@@ -374,14 +418,19 @@ class ScaffoldedResearcher:
             print(f"ITERATION {self.current_iteration}/{self.max_iterations}")
             print("="*60)
 
-            # Claude chooses and does work
-            work = self.iteration_step()
+            # Get current state
+            state = self.session.get_state()
 
-            # Provide feedback and self-assessment (skip on final iteration)
-            if self.current_iteration < self.max_iterations:
-                self.iteration_feedback(work)
+            # Build the SAME style prompt every time
+            prompt = self.build_prompt(self.current_iteration, state)
 
-            print(f"\n[Iteration {self.current_iteration} complete]")
+            # Call Claude (stateless - no history)
+            response = self.session.call_claude(prompt)
+
+            # Process response and update state
+            self.session.process_response(response, self.current_iteration)
+
+            print(f"[Iteration {self.current_iteration} complete]")
 
         # Final compilation
         print("\n" + "="*60)
@@ -390,36 +439,25 @@ class ScaffoldedResearcher:
 
         compile_result = self.session.compile_latex()
         if compile_result['success']:
+            # Run twice for references
+            compile_result = self.session.compile_latex()
             print(f"✓ PDF generated: {os.path.join(self.session.output_dir, 'paper.pdf')}")
         else:
             print(f"✗ PDF compilation failed")
             print(f"Error: {compile_result.get('error', 'Unknown error')[:500]}")
 
-        # Print metrics summary
+        # Print metrics
         print("\n" + "="*60)
-        print("API METRICS SUMMARY")
+        print("METRICS SUMMARY")
         print("="*60)
         metrics = self.session.get_metrics_summary()
         print(f"Total API calls: {metrics['total_calls']}")
         print(f"Total input tokens: {metrics['total_input_tokens']:,}")
         print(f"Total output tokens: {metrics['total_output_tokens']:,}")
-        print(f"Total response time: {metrics['total_time']:.2f}s")
+        print(f"Total time: {metrics['total_time']:.2f}s")
         print(f"Total cost: ${metrics['total_cost']:.4f}")
-        print(f"Metrics saved to: {self.session.metrics_file}")
-
+        if metrics['total_calls'] > 0:
+            print(f"Average input per call: {metrics['total_input_tokens'] // metrics['total_calls']:,} tokens")
+            print(f"Average output per call: {metrics['total_output_tokens'] // metrics['total_calls']:,} tokens")
         print(f"\n=== EXPERIMENT COMPLETE ===")
-        print(f"Total iterations: {self.current_iteration}")
         print(f"Output directory: {self.session.output_dir}")
-
-
-# Run experiment
-if __name__ == "__main__":
-    with open('problems/power_method.txt', 'r') as f:
-        problem = f.read()
-
-    researcher = ScaffoldedResearcher(
-        session_name=f"power_method_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-        max_iterations=1
-    )
-
-    researcher.run(problem)
