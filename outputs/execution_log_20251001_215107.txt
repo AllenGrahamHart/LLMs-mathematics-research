@@ -1,0 +1,41 @@
+============================================================
+TEST: ASK CLAUDE TO WRITE CODE, THEN EXECUTE IT
+============================================================
+
+1. Asking Claude to write code...
+Prompt: Write Python code that:
+1. Prints 'Hello, World!'
+2. Prints the numbers 1 through 5
+
+CRITICAL INSTRUCTIONS:
+- Provide ONLY executable Python code
+- No explanations, no markdown, no comments outside the code
+- The code should run directly when executed
+- Start immediately with the code
+
+
+2. Claude's response:
+```python
+print('Hello, World!')
+for i in range(1, 6):
+    print(i)
+```
+
+3. Found 1 code block(s)
+
+4. Executing code block 1:
+--- CODE ---
+print('Hello, World!')
+for i in range(1, 6):
+    print(i)
+
+--- EXECUTION ---
+✓ Execution successful!
+Output:
+Hello, World!
+1
+2
+3
+4
+5
+

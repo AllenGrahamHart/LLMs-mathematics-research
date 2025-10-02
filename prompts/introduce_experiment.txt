@@ -1,0 +1,33 @@
+I'm running a scaffolded research experiment. Here's the structure:
+
+**Your research goal:**
+{problem}
+
+**How it works:**
+At each iteration, you choose what to work on next. You'll:
+1. Decide what needs to be done this iteration
+2. Do the work (write code, update the paper, etc.)
+3. Receive execution results
+4. Self-assess and decide next steps
+
+**Key constraints:**
+- Maximum {max_iterations} iterations total
+- You have complete flexibility in how to approach the problem
+- Adapt your strategy as you learn what works
+
+**Technical details:**
+- Code in ```python blocks executes automatically
+- The variable `output_dir` contains the path to your output directory
+- To save figures: Use `plt.savefig(os.path.join(output_dir, 'your_filename.png'))` in your code
+- Figures are NOT saved automatically - you MUST call plt.savefig() explicitly
+- Reference saved figures in LaTeX using just the filename (e.g., \includegraphics{{your_filename.png}})
+- LaTeX in ```latex blocks replaces paper.tex completely
+- You maintain ONE evolving LaTeX document throughout (each update replaces the entire file)
+
+**Success criteria:**
+- Complete, rigorous research paper
+- Working code with meaningful experiments
+- Clear, engaging writing
+- Proper citations (no fabrication)
+
+Given {max_iterations} iterations, what's your overall strategy? How will you allocate your time?

@@ -1,0 +1,15 @@
+[Iteration {current_iteration}/{max_iterations}]
+
+**Iterations remaining:** {iterations_remaining}
+
+**What do you want to work on this iteration?**
+
+First, briefly state:
+1. What you'll accomplish this iteration
+2. Why this is the right next step
+3. What you expect to produce (code/LaTeX/both)
+
+Then do the work. Remember:
+- Code will be executed automatically
+- Any figures you save will be available in the output directory (use `output_dir` variable)
+- You can update the LaTeX paper at any point

@@ -1,0 +1,146 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath,amsthm,amssymb}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{assumption}{Assumption}
+
+\begin{document}
+
+\section*{Convergence of the Power Method: Complete Proof}
+
+\subsection*{Setup and Assumptions}
+
+Let $A \in \mathbb{R}^{n \times n}$ be a square matrix. We make the following assumptions:
+
+\begin{assumption}[Diagonalizability]
+$A$ has $n$ linearly independent eigenvectors $\{v_1, v_2, \ldots, v_n\}$ forming a basis of $\mathbb{R}^n$.
+\end{assumption}
+
+\begin{assumption}[Distinct Dominant Eigenvalue]
+The eigenvalues of $A$ can be ordered such that
+\begin{equation}
+|\lambda_1| > |\lambda_2| \geq |\lambda_3| \geq \cdots \geq |\lambda_n|
+\end{equation}
+where $\lambda_1$ is called the \emph{dominant eigenvalue}.
+\end{assumption}
+
+\begin{assumption}[Non-zero Projection]
+The initial vector $v^{(0)}$ has a non-zero component in the direction of the dominant eigenvector $v_1$, i.e., when written as
+\begin{equation}
+v^{(0)} = \sum_{i=1}^{n} \alpha_i v_i
+\end{equation}
+we have $\alpha_1 \neq 0$.
+\end{assumption}
+
+\subsection*{Main Convergence Theorem}
+
+\begin{theorem}[Convergence of Power Method]
+Under Assumptions 1-3, the normalized iterates
+\begin{equation}
+x^{(k)} = \frac{A^k v^{(0)}}{\|A^k v^{(0)}\|}
+\end{equation}
+satisfy
+\begin{equation}
+x^{(k)} \to \pm \frac{v_1}{\|v_1\|}
+\end{equation}
+as $k \to \infty$, where the sign depends on the phase of $\lambda_1^k$. Moreover, the convergence is geometric with rate
+\begin{equation}
+\left\| x^{(k)} - \pm \frac{v_1}{\|v_1\|} \right\| = O\left(\left|\frac{\lambda_2}{\lambda_1}\right|^k\right)
+\end{equation}
+\end{theorem}
+
+\subsection*{Proof}
+
+\textbf{Step 1: Eigenvalue Decomposition}
+
+Since $\{v_1, \ldots, v_n\}$ form a basis (Assumption 1), we can write
+\begin{equation}
+v^{(0)} = \sum_{i=1}^{n} \alpha_i v_i
+\end{equation}
+where $\alpha_1 \neq 0$ by Assumption 3.
+
+\textbf{Step 2: Applying Powers of $A$}
+
+By linearity and the eigenvalue equation $Av_i = \lambda_i v_i$:
+\begin{align}
+A^k v^{(0)} &= A^k \left(\sum_{i=1}^{n} \alpha_i v_i\right) \\
+&= \sum_{i=1}^{n} \alpha_i A^k v_i \\
+&= \sum_{i=1}^{n} \alpha_i \lambda_i^k v_i
+\end{align}
+
+\textbf{Step 3: Factoring Out the Dominant Term}
+
+Factor out $\lambda_1^k$:
+\begin{align}
+A^k v^{(0)} &= \lambda_1^k \left(\alpha_1 v_1 + \sum_{i=2}^{n} \alpha_i \left(\frac{\lambda_i}{\lambda_1}\right)^k v_i\right)
+\end{align}
+
+\textbf{Step 4: Convergence of the Direction}
+
+By Assumption 2, $\left|\frac{\lambda_i}{\lambda_1}\right| < 1$ for all $i \geq 2$. Therefore:
+\begin{equation}
+\lim_{k \to \infty} \left(\frac{\lambda_i}{\lambda_1}\right)^k = 0 \quad \text{for } i \geq 2
+\end{equation}
+
+This gives:
+\begin{equation}
+\lim_{k \to \infty} \frac{A^k v^{(0)}}{\lambda_1^k} = \alpha_1 v_1
+\end{equation}
+
+\textbf{Step 5: Normalized Iterates}
+
+The normalized iterate is:
+\begin{align}
+x^{(k)} &= \frac{A^k v^{(0)}}{\|A^k v^{(0)}\|} \\
+&= \frac{\lambda_1^k \left(\alpha_1 v_1 + \sum_{i=2}^{n} \alpha_i \left(\frac{\lambda_i}{\lambda_1}\right)^k v_i\right)}{\left\|\lambda_1^k \left(\alpha_1 v_1 + \sum_{i=2}^{n} \alpha_i \left(\frac{\lambda_i}{\lambda_1}\right)^k v_i\right)\right\|} \\
+&= \frac{\lambda_1^k}{|\lambda_1|^k} \cdot \frac{\alpha_1 v_1 + \sum_{i=2}^{n} \alpha_i \left(\frac{\lambda_i}{\lambda_1}\right)^k v_i}{\left\|\alpha_1 v_1 + \sum_{i=2}^{n} \alpha_i \left(\frac{\lambda_i}{\lambda_1}\right)^k v_i\right\|}
+\end{align}
+
+Let $\theta_k = \arg(\lambda_1^k)$. Then $\frac{\lambda_1^k}{|\lambda_1|^k} = e^{i\theta_k}$ (or $\pm 1$ if $\lambda_1$ is real).
+
+As $k \to \infty$:
+\begin{equation}
+x^{(k)} \to e^{i\theta_k} \frac{\alpha_1 v_1}{\|\alpha_1 v_1\|} = e^{i\theta_k} \frac{v_1}{\|v_1\|} \cdot \frac{\alpha_1}{|\alpha_1|}
+\end{equation}
+
+For real matrices with real dominant eigenvalue: $x^{(k)} \to \pm \frac{v_1}{\|v_1\|}$.
+
+\textbf{Step 6: Convergence Rate Analysis}
+
+To quantify the convergence rate, consider the error:
+\begin{align}
+A^k v^{(0)} &= \lambda_1^k \alpha_1 v_1 \left(1 + \sum_{i=2}^{n} \frac{\alpha_i}{\alpha_1} \left(\frac{\lambda_i}{\lambda_1}\right)^k \frac{v_i}{v_1}\right)
+\end{align}
+
+The dominant error term comes from $\lambda_2$:
+\begin{equation}
+\left\|x^{(k)} - \frac{v_1}{\|v_1\|}\right\| \sim \left|\frac{\alpha_2}{\alpha_1}\right| \left|\frac{\lambda_2}{\lambda_1}\right|^k \left\|\frac{v_2}{\|v_1\|}\right\|
+\end{equation}
+
+Therefore, the convergence is geometric with ratio $\rho = \left|\frac{\lambda_2}{\lambda_1}\right|$.
+
+\subsection*{Key Observations}
+
+\begin{enumerate}
+\item \textbf{Convergence Rate:} The ratio $\rho = |\lambda_2/\lambda_1|$ determines convergence speed.
+\begin{itemize}
+\item If $|\lambda_2| \ll |\lambda_1|$: fast convergence
+\item If $|\lambda_2| \approx |\lambda_1|$: slow convergence
+\end{itemize}
+
+\item \textbf{Number of Iterations:} To reduce error by factor $\epsilon$:
+\begin{equation}
+k \approx \frac{\log \epsilon}{\log |\lambda_2/\lambda_1|}
+\end{equation}
+
+\item \textbf{Rayleigh Quotient:} The eigenvalue estimate
+\begin{equation}
+\lambda^{(k)} = \frac{(x^{(k)})^T A x^{(k)}}{(x^{(k)})^T x^{(k)}}
+\end{equation}
+converges to $\lambda_1$ at rate $O(|\lambda_2/\lambda_1|^{2k})$ (quadratic convergence for eigenvalue).
+\end{enumerate}
+
+\end{document}

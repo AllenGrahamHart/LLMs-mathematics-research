@@ -1,0 +1,10 @@
+**Execution results:**
+{exec_summary}
+
+**Self-assessment:**
+1. Did this iteration accomplish what you intended?
+2. What worked well? What didn't?
+3. What should you prioritize in the next iteration?
+4. Are you on track to complete the paper within {iterations_remaining} remaining iterations?
+
+Be honest and specific.
