@@ -9,6 +9,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import subprocess
 import json
+import time
 
 load_dotenv()
 client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
@@ -18,13 +19,15 @@ class ResearchSession:
         self.session_name = session_name
         self.output_dir = f"outputs/{session_name}"
         os.makedirs(self.output_dir, exist_ok=True)
-        
+
         self.latex_file = os.path.join(self.output_dir, "paper.tex")
         self.log_file = os.path.join(self.output_dir, "session_log.txt")
-        
+        self.metrics_file = os.path.join(self.output_dir, "metrics.json")
+
         self._initialize_latex()
         self.log = []
         self.conversation_history = []  # Add conversation history
+        self.api_metrics = []  # Track API call metrics
     
     def _initialize_latex(self):
         """Create initial LaTeX structure"""
@@ -146,38 +149,64 @@ class ResearchSession:
             f.write(entry + "\n")
     
     def call_claude(self, prompt: str, use_thinking: bool = False):
-        """Call Claude API with conversation history"""
+        """Call Claude API with conversation history and track metrics"""
         # Add user message to history
         self.conversation_history.append({
             "role": "user",
             "content": prompt
         })
-        
+
         params = {
             "model": "claude-sonnet-4-5-20250929",
             "max_tokens": 16000,
             "messages": self.conversation_history  # Use full conversation history
         }
-        
+
         if use_thinking:
             params["thinking"] = {
                 "type": "enabled",
                 "budget_tokens": 10000
             }
-        
+
+        # Record start time
+        start_time = time.time()
+
         response = client.messages.create(**params)
-        
+
+        # Record end time
+        end_time = time.time()
+        response_time = end_time - start_time
+
+        # Extract usage metrics
+        input_tokens = response.usage.input_tokens
+        output_tokens = response.usage.output_tokens
+
+        # Calculate cost ($3 per 1M input tokens, $15 per 1M output tokens)
+        input_cost = (input_tokens / 1_000_000) * 3.0
+        output_cost = (output_tokens / 1_000_000) * 15.0
+        total_cost = input_cost + output_cost
+
+        # Store metrics
+        metrics_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+            'response_time': response_time,
+            'cost': total_cost
+        }
+        self.api_metrics.append(metrics_entry)
+
         response_text = ""
         for block in response.content:
             if block.type == "text":
                 response_text += block.text
-        
+
         # Add assistant response to history
         self.conversation_history.append({
             "role": "assistant",
             "content": response_text
         })
-        
+
         return response_text
     
     def process_response(self, response: str, iteration: int):
@@ -219,6 +248,37 @@ class ResearchSession:
             self.write_log("\n✓ LaTeX file updated")
         
         return results
+
+    def get_metrics_summary(self):
+        """Get summary of all API metrics"""
+        if not self.api_metrics:
+            return {
+                'total_calls': 0,
+                'total_input_tokens': 0,
+                'total_output_tokens': 0,
+                'total_time': 0.0,
+                'total_cost': 0.0
+            }
+
+        total_input_tokens = sum(m['input_tokens'] for m in self.api_metrics)
+        total_output_tokens = sum(m['output_tokens'] for m in self.api_metrics)
+        total_time = sum(m['response_time'] for m in self.api_metrics)
+        total_cost = sum(m['cost'] for m in self.api_metrics)
+
+        summary = {
+            'total_calls': len(self.api_metrics),
+            'total_input_tokens': total_input_tokens,
+            'total_output_tokens': total_output_tokens,
+            'total_time': total_time,
+            'total_cost': total_cost,
+            'individual_calls': self.api_metrics
+        }
+
+        # Save metrics to file
+        with open(self.metrics_file, 'w') as f:
+            json.dump(summary, f, indent=2)
+
+        return summary
 
 
 class ScaffoldedResearcher:
@@ -317,8 +377,9 @@ class ScaffoldedResearcher:
             # Claude chooses and does work
             work = self.iteration_step()
 
-            # Provide feedback and self-assessment
-            self.iteration_feedback(work)
+            # Provide feedback and self-assessment (skip on final iteration)
+            if self.current_iteration < self.max_iterations:
+                self.iteration_feedback(work)
 
             print(f"\n[Iteration {self.current_iteration} complete]")
 
@@ -334,6 +395,18 @@ class ScaffoldedResearcher:
             print(f"✗ PDF compilation failed")
             print(f"Error: {compile_result.get('error', 'Unknown error')[:500]}")
 
+        # Print metrics summary
+        print("\n" + "="*60)
+        print("API METRICS SUMMARY")
+        print("="*60)
+        metrics = self.session.get_metrics_summary()
+        print(f"Total API calls: {metrics['total_calls']}")
+        print(f"Total input tokens: {metrics['total_input_tokens']:,}")
+        print(f"Total output tokens: {metrics['total_output_tokens']:,}")
+        print(f"Total response time: {metrics['total_time']:.2f}s")
+        print(f"Total cost: ${metrics['total_cost']:.4f}")
+        print(f"Metrics saved to: {self.session.metrics_file}")
+
         print(f"\n=== EXPERIMENT COMPLETE ===")
         print(f"Total iterations: {self.current_iteration}")
         print(f"Output directory: {self.session.output_dir}")
@@ -346,7 +419,7 @@ if __name__ == "__main__":
 
     researcher = ScaffoldedResearcher(
         session_name=f"power_method_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-        max_iterations=2
+        max_iterations=1
     )
 
     researcher.run(problem)

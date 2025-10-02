@@ -1,0 +1,22 @@
+You are conducting open-ended research. Here are papers to guide your investigation:
+
+Papers:
+1. [Paper 1 title and arXiv link]
+2. [Paper 2 title and arXiv link]
+3. [Paper 3 title and arXiv link]
+
+Your task:
+1. Read and synthesize the key ideas from these papers
+2. Identify an interesting research question (could be a gap, extension, or new connection)
+3. Formulate a specific, tractable research problem
+4. Conduct the research (theory, proofs, and/or numerical experiments as appropriate)
+5. Write a complete research paper presenting your findings
+
+Requirements:
+- Choose your own research direction
+- The question should be non-trivial but achievable within your iteration budget
+- Include both theoretical analysis and computational experiments where relevant
+- Write an engaging paper that connects your contributionm to the wider literature
+- Provide proper citations
+
+You have complete freedom in choosing what to investigate.
