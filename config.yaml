@@ -1,0 +1,25 @@
+# Configuration for LLM Mathematics Research
+
+execution:
+  timeout: 600  # seconds (10 minutes)
+  output_limit: 2000  # characters to keep from execution output
+
+compilation:
+  timeout: 30  # seconds for LaTeX compilation
+  error_limit: 500  # characters to show from compilation errors
+
+api:
+  model: claude-sonnet-4-5-20250929
+  max_tokens: 16000
+  thinking_budget: 8000
+  rate_limit_wait: 10  # seconds to wait when rate limited
+  costs:
+    input_per_million: 3.0  # USD per million input tokens
+    output_per_million: 15.0  # USD per million output tokens
+
+output:
+  plan_limit: 200  # characters for extracted plan
+  figure_dpi: 300  # DPI for saved figures
+
+research:
+  max_iterations: 20  # default maximum iterations for research sessions

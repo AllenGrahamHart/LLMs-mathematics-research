@@ -1,4 +1,5 @@
 import os
+import anthropic
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from io import StringIO
@@ -11,9 +12,14 @@ import subprocess
 import json
 import time
 import re
+import yaml
 
 load_dotenv()
 client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
+# Load configuration
+with open('config.yaml', 'r') as f:
+    CONFIG = yaml.safe_load(f)
 
 class ResearchSession:
     def __init__(self, session_name: str):
@@ -32,6 +38,7 @@ class ResearchSession:
         self._last_call_time = None
         self.last_execution_output = ""
         self.current_plan = "Begin research"
+        self.client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
     
     def _initialize_files(self):
         """Create initial LaTeX and Python files"""
@@ -73,7 +80,8 @@ class ResearchSession:
         if compile_result['success']:
             compilation_status = "✓ Compiled successfully"
         else:
-            compilation_status = f"✗ Compilation failed:\n{compile_result['error'][:500]}"
+            error_limit = CONFIG['compilation']['error_limit']
+            compilation_status = f"✗ Compilation failed:\n{compile_result['error'][:error_limit]}"
         
         return {
             'latex': latex_content,
@@ -102,8 +110,10 @@ class ResearchSession:
                 parts = text.split('```')
                 for i in range(1, len(parts), 2):
                     block = parts[i]
-                    if block.startswith('latex\n') or block.startswith('tex\n'):
-                        return block.split('\n', 1)[1] if '\n' in block else block
+                    if block.startswith('latex\n'):
+                        return block[6:]  # Remove 'latex\n'
+                    elif block.startswith('tex\n'):
+                        return block[4:]  # Remove 'tex\n'
             return text
         return None
     
@@ -124,12 +134,14 @@ class ResearchSession:
         # Default: extract last non-empty line
         lines = [l.strip() for l in text.split('\n') if l.strip()]
         if lines:
-            return lines[-1][:200]  # Limit length
-        
+            return lines[-1][:CONFIG['output']['plan_limit']]
+
         return "Continue research"
     
     def execute_code(self, code: str):
-        """Execute code and capture output"""
+        """Execute code and capture output with configurable timeout"""
+        import threading
+
         stdout_capture = StringIO()
         stderr_capture = StringIO()
 
@@ -158,7 +170,7 @@ class ResearchSession:
 
         # Monkey-patch and expose helper in the user namespace
         plt.savefig = _safe_savefig  # catch plain plt.savefig(...)
-        
+
         namespace = {
             'np': __import__('numpy'),
             'plt': plt,
@@ -168,39 +180,53 @@ class ResearchSession:
             'plt_savefig': _safe_savefig, # alias, just in case
         }
 
-        try:
-            with contextlib.redirect_stdout(stdout_capture), \
-                 contextlib.redirect_stderr(stderr_capture):
-                exec(code, namespace)
+        result = {'success': False, 'output': '', 'timeout': False}
 
-            for fig_num in plt.get_fignums():
-                plt.close(fig_num)
-
-            # Post-exec diagnostic: list figures in output_dir
+        def run_code():
             try:
-                imgs = sorted([p for p in os.listdir(self.output_dir)
-                               if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
-                diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
-            except Exception as _:
-                diag = ""
+                with contextlib.redirect_stdout(stdout_capture), \
+                     contextlib.redirect_stderr(stderr_capture):
+                    exec(code, namespace)
 
-            return {
-                'success': True,
-                'output': stdout_capture.getvalue() + stderr_capture.getvalue() + diag,
-            }
-        except Exception as e:
-            # Post-exec diagnostic even on failure
-            try:
-                imgs = sorted([p for p in os.listdir(self.output_dir)
-                               if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
-                diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
-            except Exception as _:
-                diag = ""
+                for fig_num in plt.get_fignums():
+                    plt.close(fig_num)
+
+                # Post-exec diagnostic: list figures in output_dir
+                try:
+                    imgs = sorted([p for p in os.listdir(self.output_dir)
+                                   if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
+                    diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
+                except Exception as _:
+                    diag = ""
+
+                result['success'] = True
+                result['output'] = stdout_capture.getvalue() + stderr_capture.getvalue() + diag
+            except Exception as e:
+                # Post-exec diagnostic even on failure
+                try:
+                    imgs = sorted([p for p in os.listdir(self.output_dir)
+                                   if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
+                    diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
+                except Exception as _:
+                    diag = ""
+                result['success'] = False
+                result['output'] = stdout_capture.getvalue() + stderr_capture.getvalue() + \
+                                 f"\n{type(e).__name__}: {str(e)}" + diag
+
+        thread = threading.Thread(target=run_code, daemon=True)
+        thread.start()
+        timeout_seconds = CONFIG['execution']['timeout']
+        thread.join(timeout=timeout_seconds)
+
+        if thread.is_alive():
+            # Timeout occurred
             return {
                 'success': False,
-                'output': stdout_capture.getvalue() + stderr_capture.getvalue() + 
-                         f"\n{type(e).__name__}: {str(e)}" + diag,
+                'output': stdout_capture.getvalue() + stderr_capture.getvalue() +
+                         f'\nCode did not finish running in {timeout_seconds} seconds',
             }
+
+        return result
     
     def compile_latex(self):
         """Compile LaTeX to PDF"""
@@ -210,7 +236,7 @@ class ResearchSession:
                 cwd=self.output_dir,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=CONFIG['compilation']['timeout']
             )
             
             if result.returncode == 0:
@@ -226,16 +252,39 @@ class ResearchSession:
         with open(self.log_file, 'a') as f:
             f.write(entry + "\n")
     
+    def can_make_api_call(self) -> bool:
+        """Test if we can make an API call with absolute minimal cost."""
+        try:
+            self.client.messages.create(
+                model=CONFIG['api']['model'],
+                max_tokens=1,  # Output limited to 1 token
+                messages=[{"role": "user", "content": "x"}]  # Input: 1 token
+            )
+            return True
+        except anthropic.RateLimitError:
+            return False
+
     def call_claude(self, prompt: str):
-        """Call Claude API - stateless, no conversation history"""
+        """Call Claude API"""
+
+        # Test if we can make a call
+        wait_time = CONFIG['api']['rate_limit_wait']
+        while not self.can_make_api_call():
+            print(f"  Rate limited, waiting {wait_time}s...")
+            time.sleep(wait_time)
+
         params = {
-            "model": "claude-sonnet-4-5-20250929",
-            "max_tokens": 16000,
+            "model": CONFIG['api']['model'],
+            "max_tokens": CONFIG['api']['max_tokens'],
+            "thinking": {
+                "type": "enabled",
+                "budget_tokens": CONFIG['api']['thinking_budget']
+            },
             "messages": [{"role": "user", "content": prompt}]  # Single message, no history
         }
 
         start_time = time.time()
-        response = client.messages.create(**params)
+        response = self.client.messages.create(**params)
         end_time = time.time()
         
         self._last_call_time = end_time
@@ -244,8 +293,8 @@ class ResearchSession:
         input_tokens = response.usage.input_tokens
         output_tokens = response.usage.output_tokens
 
-        input_cost = (input_tokens / 1_000_000) * 3.0
-        output_cost = (output_tokens / 1_000_000) * 15.0
+        input_cost = (input_tokens / 1_000_000) * CONFIG['api']['costs']['input_per_million']
+        output_cost = (output_tokens / 1_000_000) * CONFIG['api']['costs']['output_per_million']
         total_cost = input_cost + output_cost
 
         metrics_entry = {
@@ -285,13 +334,14 @@ class ResearchSession:
             
             # Execute
             exec_result = self.execute_code(full_code)
+            output_limit = CONFIG['execution']['output_limit']
             if exec_result['success']:
                 self.write_log("✓ Code executed successfully")
-                self.last_execution_output = exec_result['output'][:2000]  # Limit length
+                self.last_execution_output = exec_result['output'][:output_limit]
             else:
                 self.write_log("✗ Code execution failed")
-                self.last_execution_output = exec_result['output'][:2000]
-            
+                self.last_execution_output = exec_result['output'][:output_limit]
+
             self.write_log(f"Output:\n{self.last_execution_output}")
         else:
             self.last_execution_output = "No code executed this iteration"
@@ -359,19 +409,16 @@ Each iteration, including this one:
 2. Based on the paper, code and previous plan, you will create a detailed plan for the remaining iterations
 3. You will output ONLY your updated plan, python code and LaTeX
 4. If you are have 0 remaining iterations, then the code and LaTeX created this iteration is final
+5. If your code does not finish running after 10 minutes it will terminate.
 
-When saving figures, ALWAYS use either `savefig("name.png", dpi=300)`
-   or `plt.savefig(os.path.join(output_dir, "name.png"), dpi=300)`.
+When saving figures, ALWAYS use either `savefig("name.png", dpi={CONFIG['output']['figure_dpi']})`
+   or `plt.savefig(os.path.join(output_dir, "name.png"), dpi={CONFIG['output']['figure_dpi']})`.
    Do NOT hard-code session paths. Figures must end up in the same directory as `paper.tex`.
 
 OUTPUT FORMAT:
 - PLAN: [detailed plan over the remaining iterations]
 - Python code: ```python ... ```
 - LaTeX: ```latex ... ``` (must be complete document with \\documentclass)
-
-TOKEN CONSTRAINTS:
-- Output limit: 6,000 tokens per iteration
-- Input limit: 30,000 tokens per iteration
 """
         state_description = f"""
 === YOUR CURRENT STATE ===
@@ -441,7 +488,8 @@ Iterations remaining after this one: {self.max_iterations - iteration}
             print(f"✓ PDF generated: {os.path.join(self.session.output_dir, 'paper.pdf')}")
         else:
             print(f"✗ PDF compilation failed")
-            print(f"Error: {compile_result.get('error', 'Unknown error')[:500]}")
+            error_limit = CONFIG['compilation']['error_limit']
+            print(f"Error: {compile_result.get('error', 'Unknown error')[:error_limit]}")
 
         # Print metrics
         print("\n" + "="*60)
