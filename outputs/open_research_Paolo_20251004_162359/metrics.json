@@ -1,0 +1,65 @@
+{
+  "total_calls": 8,
+  "total_input_tokens": 258574,
+  "total_output_tokens": 102424,
+  "total_time": 2448.395903110504,
+  "total_cost": 2.3120819999999997,
+  "individual_calls": [
+    {
+      "timestamp": "2025-10-04T16:26:37.926992",
+      "input_tokens": 21854,
+      "output_tokens": 9194,
+      "response_time": 155.7416217327118,
+      "cost": 0.203472
+    },
+    {
+      "timestamp": "2025-10-04T16:29:44.988629",
+      "input_tokens": 30163,
+      "output_tokens": 10803,
+      "response_time": 175.6004877090454,
+      "cost": 0.252534
+    },
+    {
+      "timestamp": "2025-10-04T16:33:38.510951",
+      "input_tokens": 32138,
+      "output_tokens": 11807,
+      "response_time": 201.7928340435028,
+      "cost": 0.27351899999999996
+    },
+    {
+      "timestamp": "2025-10-04T16:36:50.523158",
+      "input_tokens": 33064,
+      "output_tokens": 9932,
+      "response_time": 156.5314154624939,
+      "cost": 0.248172
+    },
+    {
+      "timestamp": "2025-10-04T16:50:52.685423",
+      "input_tokens": 31411,
+      "output_tokens": 13332,
+      "response_time": 802.6568977832794,
+      "cost": 0.294213
+    },
+    {
+      "timestamp": "2025-10-04T16:56:07.254281",
+      "input_tokens": 34937,
+      "output_tokens": 16000,
+      "response_time": 261.12702083587646,
+      "cost": 0.344811
+    },
+    {
+      "timestamp": "2025-10-04T17:05:53.456468",
+      "input_tokens": 37448,
+      "output_tokens": 15679,
+      "response_time": 441.36577129364014,
+      "cost": 0.347529
+    },
+    {
+      "timestamp": "2025-10-04T17:12:22.199420",
+      "input_tokens": 37559,
+      "output_tokens": 15677,
+      "response_time": 253.57985424995422,
+      "cost": 0.34783200000000003
+    }
+  ]
+}

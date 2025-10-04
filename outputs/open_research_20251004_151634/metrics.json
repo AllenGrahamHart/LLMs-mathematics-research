@@ -1,0 +1,30 @@
+{
+  "total_calls": 3,
+  "total_input_tokens": 77609,
+  "total_output_tokens": 24594,
+  "total_time": 370.21238565444946,
+  "total_cost": 0.601737,
+  "individual_calls": [
+    {
+      "timestamp": "2025-10-04T15:18:36.846651",
+      "input_tokens": 20693,
+      "output_tokens": 7605,
+      "response_time": 119.31372952461243,
+      "cost": 0.17615399999999998
+    },
+    {
+      "timestamp": "2025-10-04T15:21:13.254078",
+      "input_tokens": 27942,
+      "output_tokens": 8639,
+      "response_time": 127.42857050895691,
+      "cost": 0.21341100000000002
+    },
+    {
+      "timestamp": "2025-10-04T15:24:55.203771",
+      "input_tokens": 28974,
+      "output_tokens": 8350,
+      "response_time": 123.47008562088013,
+      "cost": 0.212172
+    }
+  ]
+}

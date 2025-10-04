@@ -134,7 +134,7 @@ class ResearchSession:
         # Default: extract last non-empty line
         lines = [l.strip() for l in text.split('\n') if l.strip()]
         if lines:
-            return lines[-1][:CONFIG['output']['plan_limit']]
+            return lines[-1]
 
         return "Continue research"
     
