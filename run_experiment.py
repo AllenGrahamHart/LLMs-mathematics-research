@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     researcher = ScaffoldedResearcher(
         session_name=f"open_research_Paolo_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-        max_iterations=8
+        max_iterations=4
     )
 
     researcher.run(problem)
