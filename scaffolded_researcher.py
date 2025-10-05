@@ -495,7 +495,7 @@ FATAL (must be fixed or removed):
 - Proofs that are fundamentally wrong (key ideas are unworkable)
 - Numerical experiments that are clearly nonesensical or irrelavent
 
-SERIOUS (should fix, but core idea may be salvageable):
+SERIOUS (should fix):
 - Theorems that are incorrect but could be saved with small changes
 - Proofs with fillable gaps or plausible sketch proofs
 - Unclear but plausible connection between theory and experiment
@@ -541,7 +541,7 @@ MINOR CONCERNS:
 
 RECOMMENDATION:
 [Recommend revisions to the researcher's plan consistent with the remaining iteration budget.
-If there are 0 iterations remaining, the paper is already complete and your critique is final.]
+If there are 0 iterations remaining after this one, the paper is already complete and your critique is a final evaluation of the completed work.]
 """
         return critic_prompt
 
