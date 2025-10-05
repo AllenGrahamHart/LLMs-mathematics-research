@@ -429,6 +429,14 @@ Each iteration, including this one:
 4. If you have 0 remaining iterations, then the code and LaTeX created this iteration is final
 5. If your code does not finish running after {CONFIG['execution']['timeout']} seconds it will terminate.
 
+When writing code, note the Pip-installed packages are:
+- numpy
+- scipy  
+- pandas
+- matplotlib
+- networkx
+- scikit-learn
+
 When saving figures, ALWAYS use either `savefig("name.png", dpi={CONFIG['output']['figure_dpi']})`
    or `plt.savefig(os.path.join(output_dir, "name.png"), dpi={CONFIG['output']['figure_dpi']})`.
    Do NOT hard-code session paths. Figures must end up in the same directory as `paper.tex`.
@@ -479,7 +487,6 @@ Your job is to:
 1. Identify errors and issues in the current work
 2. Grade their severity (FATAL, SERIOUS, MINOR)
 3. Provide actionable feedback appropriate to the remaining iteration budget
-4. Decide whether work can proceed or must be revised
 
 ERROR SEVERITY LEVELS - with examples:
 
