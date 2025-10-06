@@ -206,7 +206,7 @@ If you use this work, please cite:
 ```bibtex
 @software{llm_maths_research,
   title = {LLM Mathematics Research},
-  author = {Your Name},
+  author = {Allen G Hart},
   year = {2025},
   url = {https://github.com/yourusername/llm-maths-research}
 }
