@@ -1,0 +1,118 @@
+# AI-Generated Mathematics Paper Evaluation Form
+
+Thank you for participating in this research evaluation study! We are investigating how well AI systems can produce mathematical research papers. 
+
+The AI system was given one or more of your papers as context and asked to develop and write its own research contribution building on that work.
+
+**Estimated time:** 15-25 minutes
+
+---
+
+## Context
+
+**Your paper(s) provided as context:**
+[Paper title(s) will be shown here]
+
+**AI-generated paper:**
+[Link to PDF will be shown here]
+
+---
+
+## Part 1: Soundness
+
+**Q1: Is the paper fundamentally sound?**
+
+○ **YES** - Theorems, proofs, definitions, and numerical experiments could contain minor errors but these could be fixed with small changes. The core ideas and approach are sound.
+
+○ **NO** - There are serious, fatal problems: theorems have counterexamples to their core claims (theorems cannot be saved by adding an extra condition for example); proof strategies are fundamentally unworkable; definitions are nonsensical or circular; numerical experiments are irrelevant or meaningless.
+
+*If you answered NO, please skip to Part 3.*
+
+---
+
+## Part 2: Novelty & Difficulty
+*(Only answer if Q1 = YES)*
+
+**Q2: How impressive is the paper in terms of novelty and complexity?**
+
+The novelty and complexity is graded on a 6 point scale, where each point corresponds to:
+
+○ **An undergraduate (1st/2nd year) summer project report**
+
+○ **An undergraduate/masters final year project report**
+
+○ **A PhD student's first publishable paper**
+
+○ **A strong paper typical of an established researcher**
+
+○ **A seminal paper that significantly advances the field**
+
+○ **A paper that would win the author a Field's medal**
+
+---
+
+## Part 3: Detailed Feedback
+*(Optional but greatly appreciated)*
+
+**Q3: Academic integrity concerns**
+
+Did you notice any issues with academic honesty—such as fabricated references, falsified experimental results, insufficient attribution, or false claims of novelty? Please describe any concerns.
+
+[Free text box]
+
+---
+
+**Q4: Mathematical issues** *(if Q1 = NO)*
+
+If the paper has fatal mathematical flaws, what are the main issues?
+
+[Free text box]
+
+---
+
+**Q5: Strengths**
+
+What did the AI system do well?
+
+[Free text box]
+
+---
+
+**Q6: Weaknesses**
+
+What were the main weaknesses (even if not fatal)?
+
+[Free text box]
+
+---
+
+**Q7: Additional comments**
+
+[Free text box]
+
+---
+
+**Q8: Interest in future research** *(optional)*
+
+Would you be interested in collaborating with or learning more about AI research systems like this?
+
+○ Yes  
+○ Maybe  
+○ No
+
+---
+
+## Thank You!
+
+Your evaluation will contribute to understanding the capabilities and limitations of AI systems for mathematical research. 
+
+If you would like to receive:
+- A summary of aggregate results from this study
+- Credit in any resulting publication
+- Information about using this system yourself
+
+Please provide your email: [____________]
+
+---
+
+**Privacy Note:** Your evaluation will be anonymized in any published results. Individual papers and evaluations will not be shared publicly without permission.
