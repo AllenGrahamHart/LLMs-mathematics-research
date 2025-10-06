@@ -1,5 +1,5 @@
-from scaffolded_researcher import ScaffoldedResearcher
 from datetime import datetime
+from src.llm_maths_research import ScaffoldedResearcher
 
 if __name__ == "__main__":
     with open('problems/open_research_Paolo.txt', 'r') as f:
