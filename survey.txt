@@ -22,7 +22,7 @@ The AI system was given one or more of your papers as context and asked to devel
 
 **Q1: Is the paper fundamentally sound?**
 
-○ **YES** - Theorems, proofs, definitions, and numerical experiments could contain minor errors but these could be fixed with small changes. The core ideas and approach are sound.
+○ **YES** - Theorems, proofs, definitions, and numerical experiments may contain minor errors but these could be fixed with small changes. The core ideas and approach are sound.
 
 ○ **NO** - There are serious, fatal problems: theorems have counterexamples to their core claims (theorems cannot be saved by adding an extra condition for example); proof strategies are fundamentally unworkable; definitions are nonsensical or circular; numerical experiments are irrelevant or meaningless.
 
@@ -37,17 +37,17 @@ The AI system was given one or more of your papers as context and asked to devel
 
 The novelty and complexity is graded on a 6 point scale, where each point corresponds to:
 
-○ **An undergraduate (1st/2nd year) summer project report**
+[1] **An undergraduate (1st/2nd year) summer project report**
 
-○ **An undergraduate/masters final year project report**
+[2] **An undergraduate/masters final year project report**
 
-○ **A PhD student's first publishable paper**
+[3] **A PhD student's first publishable paper**
 
-○ **A strong paper typical of an established researcher**
+[4] **A strong paper typical of an established researcher**
 
-○ **A seminal paper that significantly advances the field**
+[5] **A seminal paper that significantly advances the field**
 
-○ **A paper that would win the author a Field's medal**
+[6] **A paper that would win the author a Field's medal**
 
 ---
 
