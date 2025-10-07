@@ -1,9 +1,0 @@
-Investigate the convergence of the power method for finding eigenvalues.
-
-Tasks:
-1. State the power method algorithm clearly
-2. Prove rigorously that it converges to the dominant eigenvector (with all steps)
-3. Implement it in Python
-4. Test on a 3x3 matrix and plot the error vs iteration
-5. Make the paper engaging to read and connect the results to practical applications and the wider literature
-6. Write a complete paper with theory, code results, and figures.

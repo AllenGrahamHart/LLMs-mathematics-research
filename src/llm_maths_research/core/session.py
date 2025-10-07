@@ -117,6 +117,7 @@ class ResearchSession:
         """
         # Look for common patterns (multiline)
         patterns = [
+            r'##?\s*PLAN\s*(.+?)(?=\n#|\n```|\Z)',  # Markdown header # PLAN or ## PLAN
             r'PLAN:\s*(.+?)(?:\n\n|\Z)',
             r'Next iteration:\s*(.+?)(?:\n\n|\Z)',
             r'Next:\s*(.+?)(?:\n\n|\Z)',

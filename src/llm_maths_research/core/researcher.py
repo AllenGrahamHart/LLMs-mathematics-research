@@ -9,18 +9,33 @@ from ..config import CONFIG
 class ScaffoldedResearcher:
     """Manages the research loop with generator and critic phases."""
 
-    def __init__(self, session_name: str, max_iterations: int = 20):
+    def __init__(self, session_name: str, max_iterations: int = 20, paper_ids: list = None):
         """
         Initialize scaffolded researcher.
 
         Args:
             session_name: Unique name for this research session
             max_iterations: Maximum number of iterations to run
+            paper_ids: List of ArXiv paper IDs to use in research
         """
         self.session = ResearchSession(session_name)
         self.max_iterations = max_iterations
         self.current_iteration = 0
         self.problem_statement = ""
+        self.paper_ids = paper_ids or []
+
+        # Load papers content from problems/papers/
+        self.papers_content = {}
+        for paper_id in self.paper_ids:
+            # Find git root or project root
+            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            paper_path = os.path.join(current_dir, "problems", "papers", f"{paper_id}.txt")
+
+            if os.path.exists(paper_path):
+                with open(paper_path, 'r') as f:
+                    self.papers_content[paper_id] = f.read()
+            else:
+                print(f"Warning: Paper file not found: {paper_path}")
 
     def build_generator_prompt(self, iteration: int, state: Dict[str, str]) -> str:
         """
@@ -33,15 +48,22 @@ class ScaffoldedResearcher:
         Returns:
             Generator prompt string
         """
+        # Build papers section
+        papers_section = ""
+        if self.papers_content:
+            papers_section = "\n\n=== REFERENCE PAPERS ===\n\n"
+            for paper_id, content in self.papers_content.items():
+                papers_section += f"--- Paper {paper_id} ---\n{content}\n\n"
+
         experimental_design = f"""You are part way through the process of autonomously writing a research paper.
 
-This prompt, your reply, and comments from a critic AI, together form 1 iteration in a multi-iteration research loop.
+This prompt, your reply, and comments from an AI critic, together form 1 iteration in a multi-iteration research loop.
 The specific research problem you are working on is:
 
 {self.problem_statement}
-
+{papers_section}
 Each iteration, including this one:
-1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, a critique)
+1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, an AI generated critique)
 2. Based on the paper, code, your previous plan, and external critique, you will create a detailed plan for the remaining iterations
 3. You will output ONLY your updated plan, python code and LaTeX
 4. If you have 0 remaining iterations, then the code and LaTeX created this iteration is final
@@ -60,9 +82,18 @@ When saving figures, ALWAYS use either `savefig("name.png", dpi={CONFIG['output'
    Do NOT hard-code session paths. Figures must end up in the same directory as `paper.tex`.
 
 OUTPUT FORMAT:
-- PLAN: [detailed plan over the remaining iterations]
-- Python code: ```python ... ```
-- LaTeX: ```latex ... ``` (must be complete document with \\documentclass)
+## PLAN
+[detailed plan over the remaining iterations]
+
+## PYTHON CODE
+```python
+...
+```
+
+## LATEX
+```latex
+... (must be complete document with \\documentclass)
+```
 """
         state_description = f"""
 === YOUR CURRENT STATE ===
@@ -102,12 +133,27 @@ Iterations remaining after this one: {self.max_iterations - iteration}
         Returns:
             Critic prompt string
         """
+        # Load survey content if this is the final iteration
+        survey_content = ""
+        if iteration >= self.max_iterations:
+            survey_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "survey.txt")
+            if os.path.exists(survey_path):
+                with open(survey_path, 'r') as f:
+                    survey_content = f.read()
+
+        # Build papers section
+        papers_section = ""
+        if self.papers_content:
+            papers_section = "\n\n=== REFERENCE PAPERS ===\n\n"
+            for paper_id, content in self.papers_content.items():
+                papers_section += f"--- Paper {paper_id} ---\n{content}\n\n"
+
         critic_prompt = f"""You are a research critic evaluating work in progress by an AI. Your role is to provide constructive, severity-graded feedback that helps improve the research.
 
 The AI researcher is working on:
 {self.problem_statement}
-
-Your critique is part of an AI researcher-critic scaffolding loop with a fixed iteration budget.
+{papers_section}
+Your critique is part of an AI researcher-critic agentic loop with a fixed iteration budget.
 Current iteration: {iteration} / {self.max_iterations}
 Iterations remaining: {self.max_iterations - iteration}
 
@@ -168,9 +214,20 @@ MINOR CONCERNS:
 [List minor concerns. If none, write "None identified."]
 
 RECOMMENDATION:
-[Recommend revisions to the researcher's plan consistent with the remaining iteration budget.
-If there are 0 iterations remaining after this one, the paper is already complete and your critique is a final evaluation of the completed work.]
+[Recommend revisions to the researcher's plan consistent with the remaining iteration budget.]
 """
+
+        # Add survey for final iteration
+        if self.max_iterations == iteration:
+            critic_prompt += f"""
+There are 0 iterations remaining so the paper is already complete and your critique is a final evaluation of the completed work.
+In addition to your critique - please complete this survey:
+
+{survey_content}
+"""
+        else:
+            critic_prompt += "\n"
+
         return critic_prompt
 
     def run(self, problem: str):

@@ -4,8 +4,6 @@ Thank you for participating in this research evaluation study! We are investigat
 
 The AI system was given one or more of your papers as context and asked to develop and write its own research contribution building on that work.
 
-**Estimated time:** 15-25 minutes
-
 ---
 
 ## Context
@@ -26,7 +24,7 @@ The AI system was given one or more of your papers as context and asked to devel
 
 ○ **NO** - There are serious, fatal problems: theorems have counterexamples to their core claims (theorems cannot be saved by adding an extra condition for example); proof strategies are fundamentally unworkable; definitions are nonsensical or circular; numerical experiments are irrelevant or meaningless.
 
-*If you answered NO, please skip to Part 3.*
+*If you answered NO, please skip Part 2.*
 
 ---
 
