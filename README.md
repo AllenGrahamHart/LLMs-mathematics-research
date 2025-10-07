@@ -14,6 +14,7 @@ The system manages the full research workflow including code execution, LaTeX co
 ## Features
 
 - **Scaffolded Research Loop**: Generator-critic architecture with configurable iteration budgets
+- **Reference Papers**: Load ArXiv papers as context from `problems/papers/` directory
 - **LaTeX Integration**: Automatic paper generation and PDF compilation
 - **Code Execution**: Safe Python code execution with timeout protection
 - **Comprehensive Logging**: Tracks all iterations, critiques, plans, and metrics
@@ -59,6 +60,8 @@ ANTHROPIC_API_KEY=your-api-key-here
 
 ### Command Line Interface
 
+The `llm-research` command runs research on any problem file:
+
 ```bash
 # Run research on a problem file
 llm-research problems/your_problem.txt
@@ -70,6 +73,8 @@ llm-research problems/your_problem.txt --max-iterations 10
 llm-research problems/your_problem.txt --session-name my_experiment
 ```
 
+**Note**: The CLI does not accept paper IDs. For paper-based research, use `run_experiment.py` instead.
+
 ### Python API
 
 ```python
@@ -79,10 +84,19 @@ from llm_maths_research import ScaffoldedResearcher
 with open('problems/problem.txt', 'r') as f:
     problem = f.read()
 
-# Create and run researcher
+# Create and run researcher (basic)
 researcher = ScaffoldedResearcher(
     session_name="my_session",
     max_iterations=20
+)
+
+researcher.run(problem)
+
+# Or with reference papers (from problems/papers/ directory)
+researcher = ScaffoldedResearcher(
+    session_name="my_session",
+    max_iterations=20,
+    paper_ids=["2501.00123", "2501.00456"]  # Loads from problems/papers/*.txt
 )
 
 researcher.run(problem)
@@ -90,9 +104,20 @@ researcher.run(problem)
 
 ### Direct Script Execution
 
+The `run_experiment.py` script provides a simpler interface that reads from `problems/open_research.txt`:
+
 ```bash
-python run_experiment.py
+# Basic usage - provide ArXiv paper IDs
+python run_experiment.py --papers 2501.00123 2501.00456
+
+# Specify maximum iterations
+python run_experiment.py --papers 2501.00123 --max-iterations 10
+
+# Custom session name
+python run_experiment.py --papers 2501.00123 2501.00456 --session-name my_experiment
 ```
+
+**Note**: This script automatically uses the problem defined in `problems/open_research.txt`.
 
 ## Project Structure
 
@@ -108,9 +133,12 @@ llm-maths-research/
 │   ├── config.py              # Configuration management
 │   └── cli.py                 # Command-line interface
 ├── problems/                  # Research problem files
+│   ├── papers/                # ArXiv papers as .txt files (e.g., 2501.00123.txt)
+│   └── open_research.txt      # Default problem for run_experiment.py
 ├── outputs/                   # Generated outputs (papers, code, logs)
 ├── tests/                     # Test suite
 ├── config.yaml                # Configuration file
+├── run_experiment.py          # Direct script for paper-based research
 ├── pyproject.toml             # Package metadata
 └── README.md                  # This file
 ```
