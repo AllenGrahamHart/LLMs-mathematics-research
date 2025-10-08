@@ -10,8 +10,8 @@ compilation:
 
 api:
   model: claude-sonnet-4-5-20250929
-  max_tokens: 128000
-  thinking_budget: 16000
+  max_tokens: 64000
+  thinking_budget: 32000
   rate_limit_wait: 10  # seconds to wait when rate limited
   costs:
     input_per_million: 3.0  # USD per million input tokens
