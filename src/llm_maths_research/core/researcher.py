@@ -67,7 +67,7 @@ Each iteration, including this one:
 2. Based on the paper, code, your previous plan, and external critique, you will create a detailed plan for the remaining iterations
 3. You will output ONLY your updated plan, python code and LaTeX
 4. If you have 0 remaining iterations, then the code and LaTeX created this iteration is final
-5. If your code does not finish running after {CONFIG['execution']['timeout']} seconds it will terminate.
+5. At each iteration if your code does not finish running after {CONFIG['execution']['timeout']} seconds it will terminate.
 
 When writing code, note the Pip-installed packages are:
 - numpy

@@ -1,0 +1,37 @@
+I'm a postdoc at Warwick University (UK) conducting a study to assess how well an AI agent can autonomously write entire mathematics research papers with freedom to choose it's own research questions. 
+
+If this sounds interesting to you please read on!
+
+The goal is to get a large sample of mathematicians (100+) to each review a unique AI written paper in their field of expertise.
+
+For each academic in the sample I selected at least one of their papers to provide to the AI agent as context.
+
+As you were selected to be in the sample (if you wish to participate) I selected the following paper(s) of yours
+
+[papers]
+
+Building on the ideas contained in your papers, the agent has written its own paper - which is in the attached .pdf.
+
+I am interested in how highly or poorly you rate the quality of the AI generated paper.
+
+To collect this data in a structured way, I created a survey.
+
+If you want to participate in the survey please review the attached paper and answer the first 3 questions in the survey - which is in the body of this email.
+
+Questions 4-7 are optional open ended questions where you can leave an extended review.
+
+All answers to the survey and participants will be anonymous by default unless you wish to waive anonymity.
+
+Feel free to review the paper with colleagues, a supervisor or a PhD student.
+
+If any of your colleagues are interested in participating as well, they can email me and I will try my best to include them.
+
+The full experimental code, including prompts etc can be found here:
+
+https://github.com/AllenGrahamHart/LLMs-mathematics-research
+
+If you are interested in becoming involved with the project (e.g. developing the agent further, evaluating it across other areas) I am always interested in collaboration!
+
+If you have any further questions or comments, please ask.
+
+=== SURVEY ===
