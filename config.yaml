@@ -1,7 +1,7 @@
 # Configuration for LLM Mathematics Research
 
 execution:
-  timeout: 600  # seconds (10 minutes)
+  timeout: 1200  # seconds (20 minutes)
   output_limit: 2000  # characters to keep from execution output
 
 compilation:
@@ -12,7 +12,7 @@ api:
   model: claude-sonnet-4-5-20250929
   max_tokens: 64000
   thinking_budget: 32000
-  rate_limit_wait: 10  # seconds to wait when rate limited
+  rate_limit_wait: 20  # seconds to wait when rate limited
   costs:
     input_per_million: 3.0  # USD per million input tokens
     output_per_million: 15.0  # USD per million output tokens
