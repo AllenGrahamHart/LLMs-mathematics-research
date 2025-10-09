@@ -2,27 +2,54 @@
 
 import os
 from typing import Dict
-from .session import ResearchSession
+from .session import ResearchSession, SEPARATOR_WIDTH
 from ..config import CONFIG
 
 
 class ScaffoldedResearcher:
-    """Manages the research loop with generator and critic phases."""
+    """
+    Manages a scaffolded research loop with generator and critic phases.
 
-    def __init__(self, session_name: str, max_iterations: int = 20, paper_ids: list = None):
+    "Scaffolded" refers to the iterative support structure where:
+    - A generator AI produces research outputs (LaTeX papers + Python code)
+    - A critic AI provides feedback to guide improvements
+    - The process repeats for multiple iterations with an explicit plan
+    - Each iteration builds upon previous work with structured feedback
+
+    This architecture provides AI researchers with guidance and error correction,
+    similar to how scaffolding supports construction work.
+    """
+
+    def __init__(self, session_name: str, max_iterations: int = 20, paper_ids: list = None, start_iteration: int = 1, resume_at_critic: int = None):
         """
         Initialize scaffolded researcher.
 
         Args:
             session_name: Unique name for this research session
             max_iterations: Maximum number of iterations to run
-            paper_ids: List of ArXiv paper IDs to use in research
+            paper_ids: List of paper file names (without .txt) from problems/papers/ directory
+            start_iteration: Starting iteration number (for resuming sessions, default: 1)
+            resume_at_critic: If set, resume at critic phase of this iteration (generator already completed)
         """
         self.session = ResearchSession(session_name)
         self.max_iterations = max_iterations
-        self.current_iteration = 0
         self.problem_statement = ""
         self.paper_ids = paper_ids or []
+        self.resume_at_critic = resume_at_critic
+
+        # Validate that only one resume mode is set
+        if start_iteration > 1 and resume_at_critic:
+            raise ValueError("Cannot use both --start-iteration and --resume-at-critic. Choose one.")
+
+        # Set iteration counter and load state based on resume mode
+        if resume_at_critic:
+            self.current_iteration = resume_at_critic - 1  # Will be incremented at start of loop
+            self.session.load_last_state()
+        elif start_iteration > 1:
+            self.current_iteration = start_iteration - 1  # Will be incremented at start of loop
+            self.session.load_last_state()
+        else:
+            self.current_iteration = 0  # Will be incremented to 1 at start of loop
 
         # Load papers content from problems/papers/
         self.papers_content = {}
@@ -63,11 +90,11 @@ The specific research problem you are working on is:
 {self.problem_statement}
 {papers_section}
 Each iteration, including this one:
-1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, an AI generated critique)
+1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, an AI-generated critique)
 2. Based on the paper, code, your previous plan, and external critique, you will create a detailed plan for the remaining iterations
 3. You will output ONLY your updated plan, python code and LaTeX
 4. If you have 0 remaining iterations, then the code and LaTeX created this iteration is final
-5. At each iteration if your code does not finish running after {CONFIG['execution']['timeout']} seconds it will terminate.
+5. Your code will terminate if it does not finish running within {CONFIG['execution']['timeout']} seconds.
 
 When writing code, note the Pip-installed packages are:
 - numpy
@@ -79,6 +106,7 @@ When writing code, note the Pip-installed packages are:
 
 When saving figures, ALWAYS use either `savefig("name.png", dpi={CONFIG['output']['figure_dpi']})`
    or `plt.savefig(os.path.join(output_dir, "name.png"), dpi={CONFIG['output']['figure_dpi']})`.
+   The variable `output_dir` is available and points to the current working directory.
    Do NOT hard-code session paths. Figures must end up in the same directory as `paper.tex`.
 
 OUTPUT FORMAT:
@@ -167,7 +195,7 @@ ERROR SEVERITY LEVELS - with examples:
 FATAL (must be fixed or removed):
 - Theorems with counterexamples to the core claim (not just edge cases)
 - Proofs that are fundamentally wrong (key ideas are unworkable)
-- Numerical experiments that are clearly nonesensical or irrelavent
+- Numerical experiments that are clearly nonesensical or irrelevant
 
 SERIOUS (should fix):
 - Theorems that are incorrect but could be saved with small changes
@@ -176,7 +204,7 @@ SERIOUS (should fix):
 - Experiments not explained clearly enough for replication
 
 MINOR (could fix):
-- Unclear or unecessary sentences
+- Unclear or unnecessary sentences
 - Undefined terms, or unstated conditions that are arguably obvious from context
 - Suboptimal presentation or style
 
@@ -230,7 +258,7 @@ In addition to your critique - please complete this survey:
 
         return critic_prompt
 
-    def run(self, problem: str):
+    def run(self, problem: str) -> None:
         """
         Main research loop with generator-critic interaction.
 
@@ -239,30 +267,54 @@ In addition to your critique - please complete this survey:
         """
         self.problem_statement = problem
 
-        print("="*60)
+        print("="*SEPARATOR_WIDTH)
         print("SCAFFOLDED RESEARCH WITH CRITIC")
-        print("="*60)
+        print("="*SEPARATOR_WIDTH)
         print(f"Max iterations: {self.max_iterations}")
         print(f"Output directory: {self.session.output_dir}")
-        print("="*60)
+        print("="*SEPARATOR_WIDTH)
 
         while self.current_iteration < self.max_iterations:
             self.current_iteration += 1
 
-            print(f"\n{'='*60}")
+            print(f"\n{'='*SEPARATOR_WIDTH}")
             print(f"ITERATION {self.current_iteration}/{self.max_iterations}")
-            print("="*60)
+            print("="*SEPARATOR_WIDTH)
 
             # Get current state
             state = self.session.get_state()
 
-            # GENERATOR PHASE
-            print("\n[GENERATOR]")
-            generator_prompt = self.build_generator_prompt(self.current_iteration, state)
-            generator_response = self.session.call_claude(generator_prompt)
+            # Check if resuming at critic for this iteration
+            if self.resume_at_critic and self.current_iteration == self.resume_at_critic:
+                print("\n[RESUMING AT CRITIC - skipping generator API call, using saved response]")
+                # Load the saved generator response
+                generator_response = self.session.load_last_generator_response()
+                if not generator_response:
+                    print("ERROR: Could not load generator response. Falling back to normal execution.")
+                    # Fall through to normal generator execution
+                    print("\n[GENERATOR]")
+                    generator_prompt = self.build_generator_prompt(self.current_iteration, state)
+                    generator_response = self.session.call_claude(generator_prompt)
+                    self.session.process_response(generator_response, self.current_iteration)
+                    self.session.write_generator_response(self.current_iteration, generator_response)
+                else:
+                    print(f"✓ Loaded generator response from file ({len(generator_response)} chars)")
+                    # Update in-memory state without overwriting files (they're already correct)
+                    self.session.update_state_from_response(generator_response)
 
-            # Process generator response
-            self.session.process_response(generator_response, self.current_iteration)
+                # Clear flag so we don't skip generator in subsequent iterations
+                self.resume_at_critic = None
+            else:
+                # GENERATOR PHASE
+                print("\n[GENERATOR]")
+                generator_prompt = self.build_generator_prompt(self.current_iteration, state)
+                generator_response = self.session.call_claude(generator_prompt)
+
+                # Process generator response
+                self.session.process_response(generator_response, self.current_iteration)
+
+                # Save generator response for potential resume at critic
+                self.session.write_generator_response(self.current_iteration, generator_response)
 
             # CRITIC PHASE
             print("\n[CRITIC]")
@@ -297,9 +349,9 @@ In addition to your critique - please complete this survey:
             print(f"\n[Iteration {self.current_iteration} complete]")
 
         # Final compilation
-        print("\n" + "="*60)
+        print("\n" + "="*SEPARATOR_WIDTH)
         print("COMPILING FINAL PAPER")
-        print("="*60)
+        print("="*SEPARATOR_WIDTH)
 
         from ..utils.latex import compile_latex
         compile_result = compile_latex(self.session.output_dir)
@@ -312,9 +364,9 @@ In addition to your critique - please complete this survey:
             print(f"Error: {compile_result.get('error', 'Unknown error')[:error_limit]}")
 
         # Print metrics
-        print("\n" + "="*60)
+        print("\n" + "="*SEPARATOR_WIDTH)
         print("METRICS SUMMARY")
-        print("="*60)
+        print("="*SEPARATOR_WIDTH)
         metrics = self.session.get_metrics_summary()
         print(f"Total API calls: {metrics['total_calls']}")
         print(f"Total input tokens: {metrics['total_input_tokens']:,}")

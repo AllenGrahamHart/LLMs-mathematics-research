@@ -1,0 +1,266 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{authblk}
+\usepackage[margin=1in]{geometry}
+
+\title{The evolution of parasite virulence in the presence of resistance-conferring defensive symbionts}
+
+\author[1,2]{Cameron A. Smith}
+\author[3]{Scott Renegado}
+\author[2,3,4]{Ben Ashby}
+
+\affil[1]{Department of Biology, University of Oxford, Oxford, United Kingdom}
+\affil[2]{Department of Mathematical Sciences, University of Bath, Bath, United Kingdom}
+\affil[3]{Department of Mathematics, Simon Fraser University, Burnaby, BC, Canada}
+\affil[4]{Pacific Institute on Pathogens, Pandemics and Society, Burnaby, BC, Canada}
+
+\date{Received June 14, 2024; revised March 13, 2025; accepted April 25, 2025}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Defensive symbionts---organisms that confer protection to their hosts against natural enemies such as parasites, predators, or herbivores---are found throughout the natural world. Theoretical and empirical studies have shown that defensive symbionts can both interfere with ecological interactions between hosts and exploiters, as well as drive exploiter evolution. Defensive symbionts are also potential candidates for biocontrol agents to help manage infectious diseases or agricultural pests. The impact of defensive symbionts on parasite ecology and evolution has therefore recently received empirical and theoretical attention. In this theoretical study, we investigate the impact that a defensive symbiont which protects hosts from infection (conferred resistance) has on the evolution of parasite virulence. We also explore how the extent of protection conferred by the defensive symbiont coevolves with parasite virulence, and how symbiont and parasite evolution affect the ecology of the host population in both the short- and long-term. We show that, while costly resistance-conferring defensive symbionts always select for increased parasite virulence, the overall long-term ecological effect on the host population may still be positive due to reductions in disease prevalence. This contrasts with tolerance-conferring symbionts (which protect against virulence), where the long-term ecological effects on the host population are always negative. We also show when the defensive symbiont can successfully eliminate the parasite. Resistance-conferring defensive symbionts therefore offer more promise as evolutionarily robust biocontrols than those that only confer tolerance.
+\end{abstract}
+
+\noindent\textbf{Keywords:} defensive symbiont, resistance, virulence evolution, host--parasite, host protection, microbiome
+
+\section{Introduction}
+
+Defensive symbiosis---where an organism provides protection to another in a mutually beneficial relationship---has been observed across many taxa \cite{ford2016}, including in insects \cite{horak2020,oliver2003}, birds \cite{martin-platero2006,martin-vivaldi2010}, plants \cite{arnold2003,kiss2003} and crustaceans \cite{gil-turnes1992,gil-turnes1989}. For example, the bacterium \textit{Hamiltonella defensa} can provide protection to pea aphids (\textit{Acyrthosiphon pisum}) against the parasitoid \textit{Aphidius ervi} \cite{oliver2003}. Similarly, nematodes (\textit{Caenorhabditis elegans}) can be protected from pathogenic bacteria (\textit{Staphylococcus aureus}) by protective bacteria (\textit{Enterococcus faecalis}) \cite{king2016,rafaluk-mohr2018}; moreover, selection can increase the level of protection conferred by the defensive symbiont \cite{ashby2017}. Protection conferred by defensive symbionts broadly falls into one of two categories: tolerance and resistance. Tolerance reduces harmful effects of the parasite, for example, through immune priming \cite{hoang2024} or the production of antitoxins \cite{selva2009}. In contrast, resistance either reduces the parasite's growth rate or prevents infection, for example, through interference competition \cite{gil-turnes1989,martin-vivaldi2010,oliver2003}, immune-mediated competition \cite{rances2012}, or within-host predation \cite{iebba2014}. These two defence mechanisms have distinct effects on parasite fitness---resistance reduces parasite transmission whereas tolerance typically does not---and so we would therefore expect their effects on parasite evolution to differ. We have previously shown how tolerance-conferring defensive symbionts impact on parasite evolution, driving the evolution of higher virulence \cite{smith2023}. However, the effects of resistance-conferring defensive symbionts on parasite evolution are currently unknown.
+
+The effect of defensive symbionts on parasite ecology and evolution has traditionally received much less attention than pairwise interactions between hosts and parasites, but interest in defensive symbiosis has grown substantially in recent years, both theoretically \cite{ashby2017,nelson2017,nelson2020,rafaluk-mohr2018,smith2023} and empirically \cite{ford2016,hoang2022,king2016,rafaluk-mohr2018}. Here, we summarize recent theoretical developments (for a review of empirical observations of defensive symbiosis, see \cite{ford2016}). \cite{ashby2017} used a theoretical model to determine the evolution of host protection in the presence of an evolutionarily static parasite. This study demonstrated that both conferred tolerance and conferred resistance were able to evolve under a wide range of conditions, but resistance was generally more beneficial to the host. \cite{rafaluk-mohr2018} extended this work to consider coevolution between the host and a resistance-conferring defensive symbiont, and found that if the defensive symbiont confers a moderate level of protection, the host will evolve to become more mutualistic towards it. In contrast, \cite{smith2023} considered coevolution between a parasite and a tolerance-conferring defensive symbiont. The authors found that the parasite would always evolve to be more virulent in the presence of the defensive symbiont, and that tolerance could induce diversification of the parasite into low and high virulence strains. They further found that host outcomes are almost always negative in the long term upon the introduction of a defensive symbiont. \cite{rafaluk-mohr2018b} modelled coevolution between hosts, parasites, and defensive symbionts to investigate the interplay between host immune response and conferred defence. They concluded that the costs and benefits for harbouring the symbiont are the key evolutionary drivers, and in particular, the balance between the host relying on its own immune response or defence from the symbiont. Microbes that can evolve along the entire mutualism-parasitism continuum have also been theoretically investigated. For example, \cite{nelson2017} allow symbionts to protect the host but also increase or decrease their virulence, with a shared cost of virulence among all symbionts. They show that the community of symbionts maintains mutualisms and evolves lower virulence when the shared costs are sufficiently low, but higher virulence may evolve when shared costs are high. In a follow-up paper, \cite{nelson2020} show that the virulence of both symbionts can be reduced if one evolves to become more protective, which can in turn lead to the microbes evolving towards mutualism.
+
+More generally, there has been significant theoretical work investigating the effects of multiple infections on pathogen evolution (see \cite{alizon2013} for a review). As an example, \cite{kamiya2018} developed a model incorporating coinfections with two different strains of the same pathogen, differing in their virulence. Hosts may be infected with either of the two strains, or be coinfected by both, and the host experiences selection on its level of immunosuppression at the cost of either recovery (a decreasing function of immunosuppression) or susceptibility to coinfections (an increasing function of immunosuppression). The authors find that greater immunosuppression selects for higher virulence, but immunosuppression is minimized at intermediate virulence. A key conclusion from this body of work on coinfecting pathogens is that the nature of any interactions between coinfecting microbes is crucial for determining evolutionary outcomes \cite{alizon2013,choisy2010,kamiya2018,vanbaalen1995}. Here, we use a mathematical model that is similar in structure to a previous paper \cite{smith2023}, to investigate: (1) the effects that resistance-conferring defensive symbionts have on the evolution of parasite virulence; (2) how the defensive symbiont coevolves with the parasite; and (3) the overall short- and long-term effects on the host population. We show how the introduction of a costly defensive symbiont into an established host--parasite system always selects for higher parasite virulence, but may also lead to parasite extinction. We also show that the defensive symbiont can experience disruptive selection, leading to the evolution of protective and nonprotective phenotypes. Finally, we show that symbiont-parasite coevolution can have either positive or negative net effects on the host population in the short- and long-term depending on the fitness costs to the symbiont.
+
+\section{Materials and methods}
+
+\subsection{Model}
+
+We model a well-mixed, homogeneous host population with two co-circulating microbes---a defensive symbiont and a parasite, using a similar framework to \cite{smith2023}. The parasite increases host mortality, whereas the defensive symbiont reduces a host's susceptibility to infection by the parasite. Hosts can be in one of four states: healthy (no microbes, denoted with $H$), harbouring the defensive symbiont only ($D$), infected with the parasite only ($P$) or harbouring both microbes ($B$). We assume a density-dependent birth rate $\nu(N, \rho) = (H + P + (1-\rho)(D + B))(b - qN)$, where a proportion $\rho$ of hosts with the symbiont undergo vertical transmission, and $N = H + D + P + B$ is the total population density. Neither the symbiont, nor the parasite have impacts on reproduction, and the parasite can only be transmitted horizontally. We define $b$ to be the maximum per capita birth rate and $q$ denote the strength of density dependence on births. Hosts have a background (non-microbe related) death rate $d$, and suffer an additional mortality rate of $\alpha_P$ from the parasite (virulence) and $\alpha_D$ from the defensive symbiont, with $\alpha_D \ll \alpha_P$ (meaning that the symbiont, while protective in the presence of the parasite, is costly to harbour and is essentially a mild parasite that may confer benefits to the host depending on the ecological context). Hosts with both microbes experience an additional mortality rate of $\alpha_B = \alpha_D + \alpha_P$. In general, parasites and symbionts may affect other host life history traits such as reproduction or growth rates, but for the sake of simplicity and for consistency with previous work in \cite{smith2023} we restrict the effects of virulence to host mortality. Each microbe can be cleared independently by the host, with parasites cleared at rate $\gamma_P$ and defensive symbionts at rate $\gamma_D$. Hosts that harbour the defensive symbiont experience a reduction in susceptibility to the parasite, defined by the parameter $y \in [0,1]$, where $y=0$ denotes no reduction in susceptibility and $y=1$ is complete resistance.
+
+We model the (co)evolution of parasite virulence ($\alpha_P$) and the strength of conferred protection ($y$). In the absence of a trade-off, the parasite will evolve to be completely avirulent ($\alpha_P = 0$). Likewise, if the defensive symbiont does not experience any trade-offs, then host protection will evolve to be maximized at $y=1$. We therefore consider how trade-offs with microbial transmission rates affect the evolution of virulence and host protection. We assume that the parasite has transmission rate $\beta_P(\alpha_P) = \hat{\beta}_P\sqrt{\alpha_P}$, so that there are diminishing returns to higher virulence (accelerating costs). This ensures that the parasite evolves to an optimal level of virulence in the absence of the defensive symbiont (see the Supplementary Section S1). For the defensive symbiont we assume a general trade-off of the form $\beta_D(y) = \hat{\beta}_D(1-c(y))$, where $c(y)$ is the cost of host protection such that:
+\begin{equation}
+c(y) = \begin{cases}
+c_1\frac{1-e^{c_2y}}{1-e^{c_2}}, & c_2 \neq 0, \\
+c_1y, & c_2 = 0.
+\end{cases}
+\end{equation}
+
+Here, $c_1 \in [0,1]$ denotes the strength of the cost at maximal protection (when $y=1$), and $c_2 \in \mathbb{R}$ is the shape of the cost: $c_2 > 0$ represents an accelerating cost (diminishing returns) and $c_2 < 0$ a decelerating cost (increasing returns). Host protection reduces susceptibility to the parasite such that the transmission rate to hosts with the defensive symbiont is $\beta_{PD}(y, \alpha_P) = \beta_P(\alpha_P)(1-y)$. This yields the following ordinary differential equations (full schematic in Figure 1):
+
+\begin{align}
+\frac{dH}{dt} &= \nu(N, \rho) - [d + \beta_D(y)(D + B) \nonumber \\
+&\quad + \beta_P(\alpha_P)(P + B)]H + \gamma_D D + \gamma_P P, \label{eq:H} \\
+\frac{dD}{dt} &= \rho(D + B)(b - qN) + \beta_D(y)H(D + B) \nonumber \\
+&\quad - [d + \alpha_D + \gamma_D + \beta_{PD}(y, \alpha_P)(P + B)]D + \gamma_P B, \label{eq:D} \\
+\frac{dP}{dt} &= \beta_P(\alpha_P)H(P + B) - [d + \alpha_P + \gamma_P + \beta_D(y)(D + B)]P + \gamma_D B, \label{eq:P} \\
+\frac{dB}{dt} &= \beta_D(y)P(D + B) + \beta_{PD}(y, \alpha_P)D(P + B) \nonumber \\
+&\quad - [d + \alpha_B + \gamma_D + \gamma_P]B. \label{eq:B}
+\end{align}
+
+These ordinary differential equations \eqref{eq:H}--\eqref{eq:B} are similar in structure to our previous study investigating the effects of symbiont-conferred tolerance, but there are two key differences \cite{smith2023}. First, here we focus on symbiont-conferred resistance, which reduces the likelihood of pathogen infection ($\beta_{PD}(y, \alpha_P)$), whereas tolerance in \cite{smith2023} reduced disease-associated mortality ($\alpha_B$). Second, the model now includes vertical transmission of the symbiont with probability $\rho$. In the main text we will focus on the case where $\rho = 0$ (i.e., no vertical transmission of the symbiont), although we relax this assumption in the Supplementary Information. Since vertical transmission simply increases the prevalence of the defensive symbiont, this has the same qualitative effect as increasing its horizontal transmission rate.
+
+\subsection{Analysis}
+
+We combine both numerical and analytical techniques to investigate the effects of resistance-conferring defensive symbionts on the evolution of parasite virulence, and to determine the consequences for the host population. Firstly, we derive fitness functions for rare mutant defensive symbionts and parasites using invasion evolutionary analysis \cite{dieckmann1996,geritz1998,metz1992}. We define $w_D(y_m|\theta_r)$ to be the invasion fitness of a rare mutant defensive symbiont (a small concentration of individuals with a different protection level to the resident population), where $y_m$ is the value of the rare mutant's protection level to its host, and $\theta_r = (y_r, \alpha_{P,r})$ is the current environment (the resident symbiont's level of protection, $y_r$, and parasite virulence, $\alpha_{P,r}$). Similarly, we define $w_P(\alpha_{P,m}|\theta_r)$ to be the fitness for a rare mutant parasite with virulence $\alpha_{P,m}$:
+
+\begin{align}
+w_D(y_m|\theta_r) &= \frac{\beta_D(y_m)\{H^*_r[d + \alpha_{B,r} + \gamma_D + \gamma_P + \beta_{PD}(y_m, \alpha_{P,r})(P^*_r + B^*_r)] \nonumber \\
+&\quad + P^*_r[d + \alpha_D + \gamma_D + \gamma_P + \beta_{PD}(y_m, \alpha_{P,r})(P^*_r + B^*_r)]\}}{[d + \alpha_D + \gamma_D + \beta_{PD}(y_m, \alpha_{P,r})(P^*_r + B^*_r)][d + \alpha_{B,r} + \gamma_D + \gamma_P]} \nonumber \\
+&\quad - \gamma_P\beta_P(\alpha_{P,r})(1-y_m)(P^*_r + B^*_r) \label{eq:wD}
+\end{align}
+
+\begin{align}
+w_P(\alpha_{P,m}|\theta_r) &= \frac{\beta_P(\alpha_{P,m})\{H^*_r[d + \alpha_{B,m} + \gamma_D + \gamma_P + \beta_D(y_r)(D^*_r + B^*_r)] \nonumber \\
+&\quad + D^*_r(1-y_r)[d + \alpha_{P,m} + \gamma_D + \gamma_P + \beta_D(y_r)(D^*_r + B^*_r)]\}}{[d + \alpha_{P,m} + \gamma_P + \beta_D(y_r)(D^*_r + B^*_r)][d + \alpha_{B,m} + \gamma_D + \gamma_P]} \nonumber \\
+&\quad - \gamma_D\beta_D(y_r)(D^*_r + B^*_r). \label{eq:wP}
+\end{align}
+
+Here, we denote by, for example, $H^*_r$, the steady state of the host density under the resident traits, and $\alpha_{B,i} = \alpha_D + \alpha_{P,i}$ for $i \in \{r, m\}$. The steady states cannot be calculated analytically, and hence we determine steady states and their stability numerically. We do this by solving the system \eqref{eq:H}--\eqref{eq:B} for a prolonged length of time until the solution approaches an equilibrium. We then substitute these into the respective selection gradients $\mathcal{F}_D(y, \alpha_P) = \left.\frac{\partial w_D}{\partial y_m}(y_m|\theta)\right|_{y_m=y}$ for the defensive symbiont and $\mathcal{F}_P(y, \alpha_P) = \left.\frac{\partial w_P}{\partial \alpha_{P,m}}(\alpha_{P,m}|\theta)\right|_{\alpha_{P,m}=\alpha_P}$ where $\theta = (y, \alpha_P)$. A singular strategy for one species is then found by finding the roots of the corresponding selection gradient. We find co-singular strategies $(y^*, \alpha^*_P)$ by solving $\mathcal{F}_D(y^*, \alpha^*_P) = \mathcal{F}_P(y^*, \alpha^*_P) = 0$ simultaneously. As the steady states are analytically intractable, we determine evolutionary stability numerically. When only virulence is evolving, we determine the singular strategy and if it is evolutionary stable numerically.
+
+In all simulations, we assume that the defensive symbiont is introduced into an established host--parasite population, such that the parasite has already evolved to its evolutionarily stable level of virulence $\alpha^\bullet_P$ (see Appendix A), given by
+\begin{equation}
+\alpha^\bullet_P = d + \gamma_P. \label{eq:ancestral}
+\end{equation}
+
+We focus our analysis on three impacts of defensive symbiosis: on the evolution of virulence; on the evolution of conferred host protection; and the net ecological effect on the host population size in both the short- and long-term. We focus on the host population size rather than host fitness as the use of symbionts as biocontrols in agriculture, industry and conservation are more likely to be used to achieve increases in population sizes (e.g., crop yield, endangered species) rather than to affect host evolution by mediating host fitness. To evaluate the net ecological effect on the host population, we will employ a relative measure of population size. We define by $N^\bullet$ the ancestral population size in the absence of the defensive symbiont (see Supplementary Section S1), and we define $N^*(y, \alpha_P)$ to be the equilibrium population size for a given trait pair calculated from \eqref{eq:H} to \eqref{eq:B}. We then obtain the relative population increase:
+\begin{equation}
+Q(y, \alpha_P) = \frac{N^*(y, \alpha_P)}{N^\bullet}. \label{eq:Q}
+\end{equation}
+
+\subsection{Simulations}
+
+The Analysis section above assumes that we have (i) a separation of timescales between the ecological dynamics \eqref{eq:H}--\eqref{eq:B} and the evolutionary dynamics (mutations are rare); and (ii) that selection is weak, meaning that mutations occur ``nearby'' in trait space to the resident trait. Mutations are therefore treated as having small phenotypic effects. For our simulations we relax these assumptions by firstly introducing mutations before the ecological dynamics reach equilibrium, and secondly by discretising our trait space. Firstly, we solve the ecological dynamics until a time $T_{eco} = 100$ (chosen arbitrarily). We then introduce a rare mutation by first choosing either the defensive symbiont or parasite population (with equal probability) and then introducing a new mutant trait at a distance $\Delta_D$ or $\Delta_P$ away from one of the resident traits (chosen with probability proportional to their frequency) at an arbitrarily low frequency. We also remove any traits which drop below an arbitrary extinction threshold $\epsilon = 10^{-5}$. We continue these steps for a total of $T_{evo}$ evolutionary time-steps to determine the long-term evolutionary behaviour of the system.
+
+When only virulence is evolving, we determine the singular strategy and if it is evolutionary stable numerically. Specifically, we calculate the value of $\alpha_P$ which makes $\mathcal{F}_P(\alpha_P, y) = 0$ using a root finding algorithm (\texttt{fsolve} from the \texttt{scipy.optimize} package), and then confirm it is evolutionary stable by determining the sign of the second derivative of the fitness function \eqref{eq:wP} (with respect to mutant virulence) at the singular strategy. When parasite virulence and symbiont protection strength coevolve, we use the simulation algorithm described above with different initial levels of protection to determine the coevolutionary outcome: branching (if the final distribution of phenotypes is bimodal); possible extinction (if a populations is driven extinct in at least one simulation); or stable coexistence (if both symbiont and parasite remain monomorphic for the duration of the simulation).
+
+\section{Results}
+
+\subsection{Defensive symbiont evolution}
+
+We first consider how introducing a non-evolving defensive symbiont affects the evolution of parasite virulence and the net ecological effect this has on host population size (Figure 2). Regardless of the costs of conferring host protection, the defensive symbiont always drives selection for higher parasite virulence (Figure 2A), provided there is a cost to the host for harbouring the symbiont ($\alpha_D > 0$). This cost decreases the life expectancy of hosts with both microbes. As a result, the parasite experiences selection for a higher transmission rate which in turn leads to higher virulence. If the costs of host protection are not too high (dashed and dotted curves in Figure 2), then the defensive symbiont can drive the parasite extinct. However, if the costs of protection are sufficiently high, then the defensive symbiont instead decreases in abundance for high levels of protection and eventually becomes unviable, causing virulence to tend towards its ancestral state (solid curve in Figure 2A). While conferred resistance always leads to a reduction in parasite prevalence (Figure 2C), the net ecological effect on host population size is more complex (Figure 2B). When host protection is weak, the defensive symbiont has a net negative ecological impact on the host population size, as resistance is largely ineffective and the parasite experiences selection for higher virulence. However, sufficiently protective defensive symbionts have a net positive ecological effect on the host population size even though evolved virulence is higher because they suppress disease prevalence and hence reduce the risk of infection (Figure 2C).
+
+\subsection{Parasite-symbiont coevolution}
+
+We now investigate the effects of parasite-symbiont coevolution on both species as the costs of host protection vary (Figure 3). Notably, there is a relatively narrow region of symbiont trade-offs where symbiont-parasite coexistence is guaranteed (Figure 3A). The coexistence thresholds mostly depend on the strength of the cost of host protection---if the cost is sufficiently low, the defensive symbiont can drive the parasite extinct, but if the cost is too high then the defensive symbiont is potentially unviable. Whether extinction occurs depends on the initial level of host protection, with low levels of host protection more likely to lead to coexistence and high levels to extinction of one species (due to costs of protection or the impact of conferred resistance, for symbionts and parasites respectively). As observed in \cite{ashby2017}, when the symbiont experiences a decelerating cost ($c_2 < 0$) of host protection that is also relatively weak ($c_1 \approx 0.1$), it can diversify into two subpopulations (one with relatively high host protection and the other with no host protection; Figure 3B). However, the parasite always remains monomorphic (Figure 3C). It is well established that decelerating trade-offs tend to cause disruptive selection, either in the form of repellers (causing bistable outcomes dependent on initial conditions) or evolutionary branching points (leading to diversification and stable polymorphism) \cite{bowers2005}. This is due to positive feedbacks where decreases in relatively low levels of resistance can lead to large reductions in costs (i.e., selection reinforces lower levels of resistance), whereas increases in relatively high levels of resistance carry little extra cost (i.e., selection reinforces higher levels of resistance).
+
+We illustrate the coevolutionary dynamics of the parasite and defensive symbiont in Figure 4 for three starting resistance values ($y \in \{0.2, 0.5, 0.8\}$) to represent the varied impacts of biocontrol on each population. Shading indicates whether there is a net positive (blue) or negative (red) ecological impact on the host population size, with contours indicating the percentage change in host population size at equilibrium (equation \ref{eq:Q}). The qualitative ecological outcome for the host population (i.e., positive or negative changes in population size) may depend on not only the cost and shape of the trade-off for the defensive symbiont, but also on the initial level of protection. For example, when the symbiont experiences an accelerating trade-off, the net ecological impact on the host population size may transition from positive to negative or vice versa depending on the initial level of protection and the extent to which conferring resistance is costly (Figure 4A and B). Under low costs, the symbiont is more prevalent and has a higher impact on the parasite, leading to a reduction in disease prevalence (see also Figure 2C, black dashed line) and hence an overall increase in the host population size. As costs increase the symbiont becomes rarer and so the impact on the parasite decreases, increasing parasite prevalence and causing a reduction in the host population size. If, however, the costs of host protection decelerate, an evolutionary repeller may exist (Figure 4C and D), which can lead to the loss of protection and a negative ecological outcome for the host population if initial protection is too low (i.e., below the repeller point). This reduction in host population size is caused by the effective presence of two parasites (the obligate parasite and the symbiont that confers no protection). If the initial protection is sufficiently high but protection is moderately costly to the symbiont, then selection favours an increase in protection resulting in a net positive ecological effect on the host population size. Since the initial protection is above the repelling point, the symbiont evolves to confer maximum protection, preventing new infections.
+
+\begin{table}[h]
+\centering
+\caption{Default parameters for the model in Equations \ref{eq:H}--\ref{eq:B}.}
+\begin{tabular}{lcc}
+\hline
+Name & Notation & Value \\
+\hline
+Maximum per capita birth rate & $b$ & 1.0 \\
+Density-dependent effects & $q$ & 1.0 \\
+Natural mortality rate & $d$ & 0.1 \\
+Maximum defensive symbiont transmission rate & $\hat{\beta}_D$ & 5.0 \\
+Parasite transmission scaling parameter & $\hat{\beta}_P$ & 5.0 \\
+Defensive symbiont virulence & $\alpha_D$ & 0.2 \\
+Shape parameter for defensive symbiont trade-off & $c_2$ & $-2.0$ \\
+Recovery rate from defensive symbiont & $\gamma_D$ & 0.3 \\
+Recovery rate from parasite & $\gamma_P$ & 0.3 \\
+\hline
+\end{tabular}
+\label{tab:params}
+\end{table}
+
+\section{Discussion}
+
+Previous theoretical work has explored the ecological and evolutionary effects of tolerance-conferring symbionts on parasite evolution and host ecology \cite{smith2023}, but the effects of resistance-conferring symbionts were unknown. In this paper, we have investigated the effects that resistance-conferring defensive symbionts have on parasite evolution, how conferred resistance coevolves with parasite virulence (here defined as an increase in mortality rather than effects on reproduction), and the ecological consequences for the host population by determining the net effect on the population size in the short- and long-term. We have shown: (1) that introducing a resistance-conferring defensive symbiont always increases selection for virulence; (2) how the nature of fitness costs for the defensive symbiont determine the coevolutionary outcome; and (3) that the host benefits from this symbiotic interaction provided that the level of conferred resistance is sufficiently high and the symbiont remains viable. However, if conferred resistance evolves to a relatively low level, then the combination of increased virulence from the parasite, coupled with the cost of harbouring the defensive symbiont, can lead to a net negative effect on the host population. The symbiont can also drive the parasite extinct when the costs of conferred protection are not too high.
+
+Our results demonstrate that there are key differences in the ecological and evolutionary effects of defensive symbionts when host protection is conferred through resistance as opposed to tolerance \cite{smith2023}. First, while both mechanisms of host protection always select for higher parasite virulence, tolerance typically selects for much higher levels of virulence \cite{smith2023}. This is because tolerance directly offsets virulence in hosts with both microbes, potentially leading to an arms race between the symbiont and parasite where higher virulence is mitigated by higher tolerance. When symbionts confer resistance, however, higher virulence evolves due to competition for hosts. As such, if harbouring the defensive symbiont is not costly ($\alpha_D = 0$), then there is no effect on the long-term evolution of parasite virulence.
+
+Second, when symbionts confer tolerance there is always a net negative impact on the host population size in the long term, even if the symbiont initially leads to an increase in the host population size \cite{smith2023}. This occurs because when the parasite evolves higher virulence, only hosts with the defensive symbiont receive protection, whereas hosts that do not harbour the defensive symbiont experience the full virulence of the parasite. Tolerance-conferring symbionts therefore have a net negative effect on the host population in the long-term and so this mechanism of host protection is not evolutionarily robust. In contrast, resistance prevents new infections and so reduces parasite prevalence, which can lead to a long-term increase in the host population size even though the parasite evolves higher virulence. Note also that higher parasite virulence reduces the average infectious period of the parasite, and so this too contributes to lower parasite prevalence.
+
+Third, unlike tolerance-conferring symbionts, which only mitigate against disease (and therefore do not reduce parasite fitness), resistance-conferring symbionts prevent new infections and so may drive the parasite extinct. Finally, while tolerance-conferring symbionts can lead to parasite diversification \cite{smith2023}, resistance-conferring symbionts do not. However, resistance-conferring symbionts may experience disruptive selection and evolve into two contrasting phenotypes---as shown previously in \cite{ashby2017}---one of which evolves to lose host protection.
+
+Together with previous findings \cite{smith2023}, these results suggest that defensive symbionts may be a key driver of higher virulence in host--parasite relationships. Our results also have implications for the use of resistance-conferring symbionts as biocontrol agents to supress or eliminate infectious diseases. Unlike with tolerance, where the introduction of a defensive symbiont will always lead to more virulent parasites and detrimental outcomes for the host in the long-term \cite{smith2023}, there are regions of parameter and trait space where a resistance-conferring defensive symbiont has a long-term positive impact on the host population. Beneficial host outcomes occur when either: both the defensive symbiont and parasite coexist but with disease prevalence suppressed by host protection, or when the defensive symbiont drives the parasite to extinction. Parasite extinction typically occurs when costs to the defensive symbiont are moderate to low, and the defensive symbiont confers a relatively high level of protection.
+
+Defensive symbionts are found across the biological world, with conferred resistance likely a key protection mechanism. For example, resistance-conferring defensive symbionts in pea aphids have been shown to cause a reduction of up to 41.5\% in the parasitized host population depending on the strain of symbiont \cite{oliver2003}. Our results suggest that for a symbiont such as this to provide adequate protection, the cost of protection must be moderate to low, whilst the symbiont must also invest a moderate to large amount of its resources towards conferred resistance. Moreover, if costs of host protection accelerate, then this is more likely to lead to stable coexistence of protective symbionts with the parasite. However, symbionts may also reduce disease severity in addition to preventing infection. In honeybees, for example, the protective bacterium \textit{Snodgrasella alvi} has been shown to cause both a reduction in CFU for the pathogen \textit{Serratia marcescens} and an increase in survivability for infected hosts \cite{horak2020}. This suggests that the within-host dynamics may be crucial for determining the net effects of parasite-symbiont interactions. A key simplification of our model, and others in this area \cite{ashby2017,nelson2017,nelson2020,rafaluk-mohr2018,smith2023}, is that the dynamics focus on the population level. Future work should therefore also consider how microbes interact with each other and the immune response at the within-host level to better understand effects on selection. Example mechanisms at the within-host scale may be interference or resource competition \cite{gil-turnes1989,martin-vivaldi2010,oliver2003}, immune priming \cite{hoang2022} and predation \cite{iebba2014}. Hybrid models that capture dynamics across scales are more challenging to work with, but recent advances in multiscale modelling techniques promise novel insights into the key drivers of evolution at within- and between-host levels \cite{smith2025}.
+
+Overall, our results suggest that while there are some similarities in outcomes between resistance- and tolerance-conferring symbionts (e.g., selection for higher virulence except for when symbionts are cost-free), there are also crucial differences that can impact on parasite and symbiont evolution, and on host ecology. Moreover, resistance-conferring symbionts are likely to be better prospects for biocontrol agents as they can be evolutionarily robust; however, whether they have a net positive or negative impact on the host population in the long term depends crucially on the nature of fitness costs experienced by the defensive symbiont.
+
+\section*{Supplementary material}
+
+Supplementary material is available at \textit{Journal of Evolutionary Biology} online.
+
+\section*{Data availability}
+
+All code for the generation of figures can be found at \url{doi.org/10.5281/zenodo.15267698}.
+
+\section*{Author contributions}
+
+Cameron Smith (Formal analysis [supporting], Methodology [supporting], Supervision [Equal], Visualization [lead], Writing---original draft [lead], Writing---review \& editing [Equal]), Scott Renegado (Formal analysis [lead], Methodology [lead]), and Ben Ashby (Conceptualization [lead], Formal analysis [supporting], Methodology [supporting], Supervision [equal], Writing---review \& editing [equal])
+
+\section*{Funding}
+
+PIPPS receives funding from the BC Ministry of Health. C.A.S. acknowledges funding from ERC grant COEVOPRO 802242.
+
+\section*{Acknowledgments}
+
+We acknowledge the support of the Natural Sciences and Engineering Research Council of Canada (NSERC). Nous remercions le Conseil de recherches en sciences naturelles et en genie du Canada (CRSNG) de son soutien.
+
+\section*{Conflicts of interest}
+
+None declared.
+
+\begin{thebibliography}{99}
+
+\bibitem{alizon2013}
+Alizon, S. (2013). Co-infection and super-infection models in evolutionary epidemiology. \textit{Interface Focus}, \textbf{3}(6), 20130031. \url{https://doi.org/10.1098/rsfs.2013.0031}
+
+\bibitem{arnold2003}
+Arnold, A. E., Mejía, L. C., Kyllo, D., \ldots\ Herre, E. A. (2003). Fungal endophytes limit pathogen damage in a tropical tree. \textit{Proceedings of the National Academy of Sciences of the United States of America}, \textbf{100}(26), 15649--15654. \url{https://doi.org/10.1073/pnas.2533483100}
+
+\bibitem{ashby2017}
+Ashby, B., \& King, K. C. (2017). Friendly foes: The evolution of host protection by a parasite. \textit{Evolution Letters}, \textbf{1}(4), 211--221. \url{https://doi.org/10.1002/evl3.19}
+
+\bibitem{bowers2005}
+Bowers, R. G., Hoyle, A., White, A., \& Boots, M. (2005). The geometric theory of adaptive evolution: Trade-off and invasion plots. \textit{Journal of Theoretical Biology}, \textbf{233}(3), 363--377. \url{https://doi.org/10.1016/j.jtbi.2004.10.017}
+
+\bibitem{choisy2010}
+Choisy, M., \& de Roode, J. C. (2010). Mixed infections and the evolution of virulence: Effects of resource competition, parasite plasticity, and impaired host immunity. \textit{The American Naturalist}, \textbf{175}(5), E105--E118. \url{https://doi.org/10.1086/651587}
+
+\bibitem{dieckmann1996}
+Dieckmann, U., \& Law, R. (1996). The dynamical theory of coevolution: A derivation from stochastic ecological processes. \textit{Journal of Mathematical Biology}, \textbf{34}(5-6), 579--612. \url{https://doi.org/10.1007/BF02409751}
+
+\bibitem{ford2016}
+Ford, S. A., \& King, K. C. (2016). Harnessing the power of defensive microbes: Evolutionary implications in nature and disease control. \textit{PLoS Pathogens}, \textbf{12}(4), e1005465. \url{https://doi.org/10.1371/journal.ppat.1005465}
+
+\bibitem{geritz1998}
+Geritz, S. A. H., Kisdi, É., Meszéna, G., \& Metz, J. A. J. (1998). Evolutionarily singular strategies and the adaptive growth and branching of the evolutionary tree. \textit{Evolutionary Ecology}, \textbf{12}, 35--57. \url{https://doi.org/10.1023/A:1006554906681}
+
+\bibitem{gil-turnes1992}
+Gil-Turnes, M. S., \& Fenical, W. (1992). Embryos of \textit{Homarus americanus} are protected by epibiotic bacteria. \textit{The Biological Bulletin}, \textbf{182}(1), 105--108. \url{https://doi.org/10.2307/1542184}
+
+\bibitem{gil-turnes1989}
+Gil-Turnes, M. S., Hay, M. E., \& Fenical, W. (1989). Symbiotic marine bacteria chemically defend crustacean embryos from a pathogenic fungus. \textit{Science}, \textbf{246}(4926), 116--118. \url{https://doi.org/10.1126/science.2781297}
+
+\bibitem{hoang2022}
+Hoang, K. L., \& King, K. C. (2022). Symbiont-mediated immune priming in animals through an evolutionary lens. \textit{Microbiology}, \textbf{168}(4). \url{https://doi.org/10.1099/mic.0.001181}
+
+\bibitem{hoang2024}
+Hoang, K. L., Read, T. D., \& King, K. C. (2024). Incomplete immunity in a natural animal-microbiota interaction selects for higher pathogen virulence. \textit{Current Biology}, \textbf{34}(6), 1357--1362. \url{https://doi.org/10.1016/j.cub.2024.02.015}
+
+\bibitem{horak2020}
+Horak, R. D., Leonard, S. P., \& Moran, N. A. (2020). Symbionts shape host innate immunity in honeybees. \textit{Proceedings of the Royal Society B: Biological Sciences}, \textbf{287}(1933), 20201184. \url{https://doi.org/10.1098/rspb.2020.1184}
+
+\bibitem{iebba2014}
+Iebba, V., Totino, V., Santangelo, F., \ldots\ Schippa, S. (2014). \textit{Bdellovibrio bacteriovorus} directly attacks \textit{Pseudomonas aeruginosa} and \textit{Staphylococcus aureus} Cystic fibrosis isolates. \textit{Frontiers in Microbiology}, \textbf{5}, 280. \url{https://doi.org/10.3389/fmicb.2014.00280}
+
+\bibitem{kamiya2018}
+Kamiya, T., Mideo, N., \& Alizon, S. (2018). Coevolution of virulence and immunosuppression in multiple infections. \textit{Journal of Evolutionary Biology}, \textbf{31}(7), 995--1005. \url{https://doi.org/10.1111/jeb.13280}
+
+\bibitem{king2016}
+King, K. C., Brockhurst, M. A., Vasieva, O., \ldots\ Hurst, G. D. (2016). Rapid evolution of microbe-mediated protection against pathogens in a worm host. \textit{The ISME Journal}, \textbf{10}(8), 1915--1924. \url{https://doi.org/10.1038/ismej.2015.259}
+
+\bibitem{kiss2003}
+Kiss, L. (2003). A review of fungal antagonists of powdery mildews and their potential as biocontrol agents. \textit{Pest Management Science}, \textbf{59}(4), 475--483. \url{https://doi.org/10.1002/ps.689}
+
+\bibitem{martin-platero2006}
+Martín-Platero, A. M., Valdivia, E. M., Ruíz-Rodríguez, M., \ldots\ Martínez-Bueno, M. (2006). Characterization of antimicrobial substances produced by \textit{Enterococcus faecalis} MRR 10-3, isolated from the uropygial gland of the hoopoe (\textit{Upupa epops}). \textit{Applied and Environmental Microbiology}, \textbf{72}(6), 4245--4249. \url{https://doi.org/10.1128/AEM.02940-05}
+
+\bibitem{martin-vivaldi2010}
+Martín-Vivaldi, M. A., Peña, A., Peralta-Sánchez, J. M., \ldots\ Soler, J. J. (2010). Antimicrobial chemicals in hoopoe preen secretions are produced by symbiotic bacteria. \textit{Proceedings of the Royal Society B: Biological Sciences}, \textbf{277}(1678), 123--130. \url{https://doi.org/10.1098/rspb.2009.1377}
+
+\bibitem{metz1992}
+Metz, J. A. J., Nisbet, R. M., \& Geritz, S. A. H. (1992). How should we define 'fitness' for general ecological scenarios? \textit{Trends in Ecology \& Evolution}, \textbf{7}(6), 198--202. \url{https://doi.org/10.1016/0169-5347(92)90073-K}
+
+\bibitem{nelson2020}
+Nelson, P., \& May, G. (2020). Defensive symbiosis and the evolution of virulence. \textit{The American Naturalist}, \textbf{196}(3), 333--343. \url{https://doi.org/10.1086/709962}
+
+\bibitem{nelson2017}
+Nelson, P. G., \& May, G. (2017). Coevolution between mutualists and parasites in symbiotic communities may lead to the evolution of lower virulence. \textit{The American Naturalist}, \textbf{190}(6), 803--817. \url{https://doi.org/10.1086/694334}
+
+\bibitem{oliver2003}
+Oliver, K. M., Russell, J. A., Moran, N. A., \& Hunter, M. S. (2003). Facultative bacterial symbionts in aphids confer resistance to parasitic wasps. \textit{Proceedings of the National Academy of Sciences of the United States of America}, \textbf{100}(4), 1803--1807. \url{https://doi.org/10.1073/pnas.0335320100}
+
+\bibitem{rafaluk-mohr2018}
+Rafaluk-Mohr, C., Ashby, B., Dahan, D. A., \& King, K. C. (2018). Mutual fitness benefits arise during coevolution in a nematode-defensive microbe model. \textit{Evolution Letters}, \textbf{2}(3), 246--256. \url{https://doi.org/10.1002/evl3.58}
+
+\bibitem{rances2012}
+Rancès, E., Ye, Y. H., Woolfit, M., \ldots\ O'Neill, S. L. (2012). The relative importance of innate immune priming in \textit{Wolbachia}-mediated dengue interference. \textit{PLoS Pathogens}, \textbf{8}(2), e1002548. \url{https://doi.org/10.1371/journal.ppat.1002548}
+
+\bibitem{selva2009}
+Selva, L., Viana, D., Regev-Yochay, G., \ldots\ Penadés, J. R. (2009). Killing niche competitors by remote-control bacteriophage induction. \textit{Proceedings of the National Academy of Sciences of the United States of America}, \textbf{106}(4), 1234--1238. \url{https://doi.org/10.1073/pnas.0809600106}
+
+\bibitem{smith2023}
+Smith, C. A., \& Ashby, B. (2023). Tolerance-conferring defensive symbionts and the evolution of parasite virulence. \textit{Evolution Letters}, \textbf{7}(4), qrad015. \url{https://doi.org/10.1093/evlett/qrad015}
+
+\bibitem{smith2025}
+Smith, C. A., \& Ashby, B. (2025). Efficient coupling of within- and between-host infectious disease dynamics. \textit{Journal of Theoretical Biology}, \textbf{602-603}, 112061. \url{https://doi.org/10.1016/j.jtbi.2025.112061}
+
+\bibitem{vanbaalen1995}
+van Baalen, M., \& Sabelis, M. W. (1995). The dynamics of multiple infection and the evolution of virulence. \textit{The American Naturalist}, \textbf{146}(6), 881--910. \url{https://doi.org/10.1086/285830}
+
+\end{thebibliography}
+
+\end{document}

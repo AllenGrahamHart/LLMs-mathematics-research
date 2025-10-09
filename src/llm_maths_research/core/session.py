@@ -16,6 +16,9 @@ from ..utils.code_execution import execute_code, extract_code_blocks
 
 load_dotenv()
 
+# Width of section separators in log files
+SEPARATOR_WIDTH = 60
+
 
 class ResearchSession:
     """Manages a single research session including files, state, and API calls."""
@@ -37,18 +40,81 @@ class ResearchSession:
         self.metrics_file = os.path.join(self.output_dir, "metrics.json")
         self.critique_file = os.path.join(self.output_dir, "critiques.txt")
         self.plans_file = os.path.join(self.output_dir, "plans.txt")
+        self.generator_responses_file = os.path.join(self.output_dir, "generator_responses.txt")
 
         self._initialize_files()
         self.log = []
         self.api_metrics = []
         self._last_call_time = None
         self.last_execution_output = ""
-        self.current_plan = "Begin research"
-        self.current_critique = "Good luck!"
+        self.current_plan = "No prior plan - beginning research"
+        self.current_critique = "No prior critique - good luck!"
         self.client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
-    def _initialize_files(self):
-        """Create initial LaTeX and Python files."""
+    def load_last_state(self) -> None:
+        """Load the last plan and critique from files for resuming a session."""
+        # Load last plan
+        if os.path.exists(self.plans_file):
+            try:
+                with open(self.plans_file, 'r') as f:
+                    content = f.read()
+                    # Extract the last plan (after the last separator)
+                    parts = content.split("=" * SEPARATOR_WIDTH)
+                    if len(parts) > 1:
+                        # Get the last non-empty part
+                        for part in reversed(parts):
+                            if part.strip():
+                                self.current_plan = part.strip()
+                                break
+            except (IOError, OSError) as e:
+                print(f"Warning: Could not load plan from {self.plans_file}: {e}")
+                print("  Using default plan: 'No prior plan - beginning research'")
+
+        # Load last critique
+        if os.path.exists(self.critique_file):
+            try:
+                with open(self.critique_file, 'r') as f:
+                    content = f.read()
+                    # Extract the last critique (after the last separator)
+                    parts = content.split("=" * SEPARATOR_WIDTH)
+                    if len(parts) > 1:
+                        # Get the last non-empty part
+                        for part in reversed(parts):
+                            if part.strip():
+                                self.current_critique = part.strip()
+                                break
+            except (IOError, OSError) as e:
+                print(f"Warning: Could not load critique from {self.critique_file}: {e}")
+                print("  Using default critique: 'No prior critique - good luck!'")
+
+    def load_last_generator_response(self) -> Optional[str]:
+        """
+        Load the last generator response from file for resuming at critic phase.
+
+        Returns:
+            The last generator response, or None if file doesn't exist or read fails
+        """
+        if os.path.exists(self.generator_responses_file):
+            try:
+                with open(self.generator_responses_file, 'r') as f:
+                    content = f.read()
+                    # Extract the last generator response (after the last separator)
+                    parts = content.split("=" * SEPARATOR_WIDTH)
+                    if len(parts) > 1:
+                        # Get the last non-empty part that's not a header
+                        # Headers look like "\nITERATION X GENERATOR RESPONSE\n"
+                        for part in reversed(parts):
+                            stripped = part.strip()
+                            # Skip empty parts and header-only parts
+                            if stripped and "GENERATOR RESPONSE" not in stripped[:100]:
+                                return stripped
+            except (IOError, OSError) as e:
+                print(f"Warning: Could not load generator response from {self.generator_responses_file}: {e}")
+                return None
+        return None
+
+    def _initialize_files(self) -> None:
+        """Create initial LaTeX and Python files if they don't exist."""
         initial_latex = r"""\documentclass{article}
 \usepackage{amsmath}
 \usepackage{amsthm}
@@ -66,12 +132,14 @@ class ResearchSession:
 
 \end{document}
 """
-        with open(self.latex_file, 'w') as f:
-            f.write(initial_latex)
+        if not os.path.exists(self.latex_file):
+            with open(self.latex_file, 'w') as f:
+                f.write(initial_latex)
 
         initial_python = "# Research code will be added here\n"
-        with open(self.python_file, 'w') as f:
-            f.write(initial_python)
+        if not os.path.exists(self.python_file):
+            with open(self.python_file, 'w') as f:
+                f.write(initial_python)
 
     def get_state(self) -> Dict[str, str]:
         """
@@ -105,9 +173,9 @@ class ResearchSession:
             'critique': self.current_critique
         }
 
-    def extract_plan(self, text: str) -> str:
+    def _extract_plan_fallback(self, text: str) -> str:
         """
-        Extract next iteration plan from response.
+        Fallback plan extraction using pattern matching (used when structure is unclear).
 
         Args:
             text: Response text containing plan
@@ -135,6 +203,35 @@ class ResearchSession:
 
         return "Continue research"
 
+    def extract_full_plan(self, text: str) -> str:
+        """
+        Extract the full PLAN section from response (everything before code/latex).
+
+        Args:
+            text: Response text containing plan
+
+        Returns:
+            Full plan section text
+        """
+        # Extract everything before ## PYTHON CODE section
+        # This captures the entire plan regardless of internal structure (### headings, etc.)
+
+        # Look for ## PYTHON CODE header
+        python_match = re.search(r'\n##\s+PYTHON\s+CODE', text, re.IGNORECASE)
+        if python_match:
+            # Extract everything before the Python section
+            plan_text = text[:python_match.start()].strip()
+            return plan_text
+
+        # If no ## PYTHON CODE found, look for first code block
+        code_match = re.search(r'\n```', text)
+        if code_match:
+            plan_text = text[:code_match.start()].strip()
+            return plan_text
+
+        # Fallback to pattern-based extraction
+        return self._extract_plan_fallback(text)
+
     def can_make_api_call(self) -> bool:
         """
         Test if we can make an API call with minimal cost.
@@ -154,7 +251,7 @@ class ResearchSession:
 
     def call_claude(self, prompt: str) -> str:
         """
-        Call Claude API with streaming and rate limit handling.
+        Call Claude API with streaming, rate limit handling, and retry logic.
 
         Args:
             prompt: Prompt to send to Claude
@@ -162,7 +259,10 @@ class ResearchSession:
         Returns:
             Response text from Claude
         """
+        import httpx
+
         wait_time = CONFIG['api']['rate_limit_wait']
+        max_retries = 5
 
         params = {
             "model": CONFIG['api']['model'],
@@ -174,8 +274,8 @@ class ResearchSession:
             "messages": [{"role": "user", "content": prompt}]
         }
 
-        # Retry loop with rate limit handling
-        while True:
+        # Retry loop with rate limit and timeout handling
+        for retry_attempt in range(max_retries):
             try:
                 start_time = time.time()
 
@@ -199,6 +299,19 @@ class ResearchSession:
                 print(f"  Rate limited, waiting {wait_time}s...")
                 time.sleep(wait_time)
                 continue
+            except (anthropic.APIStatusError, httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError, anthropic.APIConnectionError) as e:
+                # Handle API errors, overloaded errors, and connection errors
+                if retry_attempt < max_retries - 1:
+                    backoff_time = (2 ** retry_attempt) * 60  # 1min, 2min, 4min, 8min, 16min
+                    error_msg = f"{type(e).__name__}"
+                    if hasattr(e, 'status_code'):
+                        error_msg += f" ({e.status_code}): {str(e)}"
+                    print(f"  API/Connection error: {error_msg}")
+                    print(f"  Attempt {retry_attempt + 1}/{max_retries}, retrying in {backoff_time}s...")
+                    time.sleep(backoff_time)
+                else:
+                    print(f"  Failed after {max_retries} attempts")
+                    raise
 
         self._last_call_time = end_time
         response_time = end_time - start_time
@@ -220,7 +333,27 @@ class ResearchSession:
 
         return response_text
 
-    def process_response(self, response: str, iteration: int):
+    def update_state_from_response(self, response: str) -> None:
+        """
+        Update in-memory state from a generator response without file I/O.
+        Used when resuming at critic with already-saved files.
+
+        Args:
+            response: Generator response text
+        """
+        # Extract full plan for in-memory state
+        self.current_plan = self.extract_full_plan(response)
+
+        # Re-execute code to get execution output
+        code_blocks = extract_code_blocks(response)
+        if code_blocks:
+            exec_result = execute_code("\n\n".join(code_blocks), self.output_dir)
+            output_limit = CONFIG['execution']['output_limit']
+            self.last_execution_output = exec_result['output'][:output_limit]
+        else:
+            self.last_execution_output = "No code executed this iteration"
+
+    def process_response(self, response: str, iteration: int) -> None:
         """
         Process Claude's response and update state.
 
@@ -261,12 +394,14 @@ class ResearchSession:
                 f.write(latex_content)
             self.write_log("✓ LaTeX file updated")
 
-        # Extract plan for next iteration
-        self.current_plan = self.extract_plan(response)
+        # Extract full plan for next iteration
+        self.current_plan = self.extract_full_plan(response)
         self.write_log(f"Next plan: {self.current_plan}")
+
+        # Write full plan section to plans file
         self.write_plan(iteration, self.current_plan)
 
-    def write_log(self, entry: str):
+    def write_log(self, entry: str) -> None:
         """
         Append entry to session log.
 
@@ -277,7 +412,7 @@ class ResearchSession:
         with open(self.log_file, 'a') as f:
             f.write(entry + "\n")
 
-    def write_critique(self, iteration: int, critique: str):
+    def write_critique(self, iteration: int, critique: str) -> None:
         """
         Append critique to critique log.
 
@@ -286,10 +421,10 @@ class ResearchSession:
             critique: Critique text
         """
         with open(self.critique_file, 'a') as f:
-            f.write(f"\n{'='*60}\nITERATION {iteration} CRITIQUE\n{'='*60}\n")
+            f.write(f"\n{'='*SEPARATOR_WIDTH}\nITERATION {iteration} CRITIQUE\n{'='*SEPARATOR_WIDTH}\n")
             f.write(critique + "\n")
 
-    def write_plan(self, iteration: int, plan: str):
+    def write_plan(self, iteration: int, plan: str) -> None:
         """
         Append plan to plans log.
 
@@ -298,8 +433,20 @@ class ResearchSession:
             plan: Plan text
         """
         with open(self.plans_file, 'a') as f:
-            f.write(f"\n{'='*60}\nITERATION {iteration} PLAN\n{'='*60}\n")
+            f.write(f"\n{'='*SEPARATOR_WIDTH}\nITERATION {iteration} PLAN\n{'='*SEPARATOR_WIDTH}\n")
             f.write(plan + "\n")
+
+    def write_generator_response(self, iteration: int, response: str) -> None:
+        """
+        Append generator response to generator responses log.
+
+        Args:
+            iteration: Current iteration number
+            response: Generator response text
+        """
+        with open(self.generator_responses_file, 'a') as f:
+            f.write(f"\n{'='*SEPARATOR_WIDTH}\nITERATION {iteration} GENERATOR RESPONSE\n{'='*SEPARATOR_WIDTH}\n")
+            f.write(response + "\n")
 
     def get_metrics_summary(self) -> Dict[str, Any]:
         """

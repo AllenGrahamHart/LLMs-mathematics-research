@@ -31,7 +31,6 @@ The novelty and complexity is graded on a 5 point scale, where the points corres
 
 o **YES** - The paper contains significant fraud or deception - for example falsifying the results of numerical experiments. Anything that would trigger professional consequences or disciplinary action.
 
-## Part 3: Detailed Feedback
 *(Optional but greatly appreciated)*
 
 **Q4: Mathematical issues** *(if Q1 = NO)*

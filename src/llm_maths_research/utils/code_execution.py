@@ -21,6 +21,13 @@ def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
 
     Returns:
         Dictionary with 'success', 'output', and 'timeout' keys
+
+    Note:
+        Uses daemon threads for timeout enforcement. If timeout is reached, the thread
+        continues running in the background until process exit (Python limitation - threads
+        cannot be forcibly killed). This is acceptable for our use case since the process
+        will eventually exit, but users should be aware that timeouts don't immediately
+        terminate runaway computations.
     """
     stdout_capture = StringIO()
     stderr_capture = StringIO()
@@ -31,10 +38,8 @@ def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
 
     def _safe_savefig(path, *args, **kwargs):
         base = str(path)
-        if os.path.isabs(base):
-            final = base
-        else:
-            final = os.path.join(_abs_out, os.path.basename(base))
+        # Always save to output_dir, just use basename of the provided path
+        final = os.path.join(_abs_out, os.path.basename(base))
         os.makedirs(os.path.dirname(final), exist_ok=True)
         _orig_savefig(final, *args, **kwargs)
         try:
@@ -46,6 +51,7 @@ def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
     plt.savefig = _safe_savefig
 
     namespace = {
+        '__name__': '__main__',
         'np': __import__('numpy'),
         'plt': plt,
         'matplotlib': matplotlib,

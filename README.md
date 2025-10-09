@@ -60,20 +60,30 @@ ANTHROPIC_API_KEY=your-api-key-here
 
 ### Command Line Interface
 
-The `llm-research` command runs research on any problem file:
+Use `run_experiment.py` to run experiments with reference papers:
 
 ```bash
-# Run research on a problem file
-llm-research problems/your_problem.txt
+# Basic usage - provide paper IDs and specify problem file
+python run_experiment.py --papers Turrini2024 --problem problems/my_problem.txt
+
+# Use default problem file (problems/open_research.txt)
+python run_experiment.py --papers Turrini2024
 
 # Specify maximum iterations
-llm-research problems/your_problem.txt --max-iterations 10
+python run_experiment.py --papers Turrini2024 --max-iterations 10
+
+# Multiple reference papers
+python run_experiment.py --papers Turrini2024 Smith2025 --max-iterations 10
 
 # Custom session name
-llm-research problems/your_problem.txt --session-name my_experiment
-```
+python run_experiment.py --papers Turrini2024 --session-name my_experiment
 
-**Note**: The CLI does not accept paper IDs. For paper-based research, use `run_experiment.py` instead.
+# Resume from a specific iteration
+python run_experiment.py --papers Turrini2024 --start-iteration 5
+
+# Resume at critic phase (generator already completed)
+python run_experiment.py --papers Turrini2024 --resume-at-critic 3
+```
 
 ### Python API
 
@@ -102,23 +112,6 @@ researcher = ScaffoldedResearcher(
 researcher.run(problem)
 ```
 
-### Direct Script Execution
-
-The `run_experiment.py` script provides a simpler interface that reads from `problems/open_research.txt`:
-
-```bash
-# Basic usage - provide ArXiv paper IDs
-python run_experiment.py --papers 2501.00123 2501.00456
-
-# Specify maximum iterations
-python run_experiment.py --papers 2501.00123 --max-iterations 10
-
-# Custom session name
-python run_experiment.py --papers 2501.00123 2501.00456 --session-name my_experiment
-```
-
-**Note**: This script automatically uses the problem defined in `problems/open_research.txt`.
-
 ## Project Structure
 
 ```
@@ -130,8 +123,7 @@ llm-maths-research/
 │   ├── utils/                 # Utilities
 │   │   ├── latex.py           # LaTeX compilation
 │   │   └── code_execution.py  # Safe code execution
-│   ├── config.py              # Configuration management
-│   └── cli.py                 # Command-line interface
+│   └── config.py              # Configuration management
 ├── problems/                  # Research problem files
 │   ├── papers/                # ArXiv papers as .txt files (e.g., 2501.00123.txt)
 │   └── open_research.txt      # Default problem for run_experiment.py
