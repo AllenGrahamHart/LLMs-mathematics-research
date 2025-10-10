@@ -134,12 +134,6 @@ def main():
     print(f"Estimated time: {est_hours:.1f} hours ({est_hours/24:.1f} days)")
     print(f"{'='*60}\n")
 
-    if not args.dry_run:
-        response = input("Continue? (y/n): ")
-        if response.lower() != 'y':
-            print("Aborted.")
-            sys.exit(0)
-
     # Run experiments
     start_time = datetime.now()
     completed_count = 0
