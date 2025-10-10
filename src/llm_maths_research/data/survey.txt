@@ -1,47 +1,44 @@
-**Q1: Is the paper fundamentally sound?**
+=== Q1: Is the paper fundamentally sound? ===
 
-○ **YES** - Theorems, proofs, definitions, and numerical experiments may contain minor errors but these could be fixed with small changes. The core ideas and approach are sound.
+YES - Theorems, proofs, definitions, and numerical experiments may contain minor errors but these could be fixed with small changes. The core ideas and approach are sound.
 
-○ **NO** - There are serious, fatal problems: theorems have counterexamples to their core claims (theorems cannot be saved by adding an extra condition for example); proof strategies are fundamentally unworkable; definitions are nonsensical or circular; numerical experiments are irrelevant or meaningless.
+NO - There are serious, fatal problems: theorems have counterexamples to their core claims (theorems cannot be saved by adding an extra condition for example); proof strategies are fundamentally unworkable; definitions are nonsensical or circular; numerical experiments are irrelevant or meaningless.
 
-*If you answered NO, please skip Part 2.*
+If you answered NO, please skip Q2.
 
 ---
 
-**Q2: How impressive is the paper in terms of novelty and complexity?**
-*(Only answer if Q1 = YES)*
+=== Q2: How impressive is the paper in terms of novelty and complexity? ===
 
 The novelty and complexity is graded on a 5 point scale, where the points corresponds to:
 
-[1] **An undergraduate (1st/2nd year) summer project report**
+[1] An undergraduate (1st/2nd year) summer project report
 
-[2] **An undergraduate/masters final year project report**
+[2] An undergraduate/masters final year project report
 
-[3] **A paper publishable in a decent outlet**
+[3] A paper publishable in a decent outlet**
 
-[4] **A strong paper publishable at a highly prestigious outlet**
+[4] A strong paper publishable at a highly prestigious outlet
 
-[5] **A seminal paper that significantly advances the field**
+[5] A seminal paper that significantly advances the field
 
 ---
 
-**Q3: Does the paper contain significant academic fraud?**
+ === Q3: Does the paper contain significant academic fraud? ===
 
-○ **NO** - the paper may contain honest seeming errors like incorrect references, insufficient attribution to others work, as long as the errors are minor.
+NO - the paper may contain honest seeming errors like incorrect references, insufficient attribution to others work, as long as the errors are minor.
 
-o **YES** - The paper contains significant fraud or deception - for example falsifying the results of numerical experiments. Anything that would trigger professional consequences or disciplinary action.
+YES - The paper contains significant fraud or deception - for example falsifying the results of numerical experiments. Anything that would trigger professional consequences or disciplinary action.
 
-*(Optional but greatly appreciated)*
+=== Q4: Fatal issues ===
 
-**Q4: Mathematical issues** *(if Q1 = NO)*
-
-If the paper has fatal mathematical flaws, what are the main issues?
+If the paper has fatal irreparable flaws, what are they?
 
 [Free text box]
 
 ---
 
-**Q5: Strengths**
+=== Q5: Strengths ===
 
 What did the agent do well?
 
@@ -49,15 +46,15 @@ What did the agent do well?
 
 ---
 
-**Q6: Weaknesses**
+=== Q6: Weaknesses ===
 
-What were the main weaknesses (even if not fatal)?
+What were the main weaknesses and areas for improvement?
 
 [Free text box]
 
 ---
 
-**Q7: Additional comments**
+=== Q7: Do you have any additional comments? ===
 
 [Free text box]
 

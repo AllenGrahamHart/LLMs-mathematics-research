@@ -23,7 +23,12 @@ if __name__ == "__main__":
     with open(problem_path, 'r') as f:
         problem = f.read()
 
-    session_name = args.session_name or f"research_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    # Generate session name with paper ID prefix for clarity
+    if args.session_name:
+        session_name = args.session_name
+    else:
+        paper_prefix = "_".join(args.papers) if len(args.papers) <= 2 else args.papers[0]
+        session_name = f"{paper_prefix}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     researcher = ScaffoldedResearcher(
         session_name=session_name,

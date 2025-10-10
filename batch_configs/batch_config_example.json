@@ -1,0 +1,19 @@
+{
+  "experiments": [
+    {
+      "name": "chaos_systems",
+      "papers": ["Inubushi2024", "Hart2020"],
+      "max_iterations": 10
+    },
+    {
+      "name": "stochastic_methods",
+      "papers": ["Souttar2024", "Ni2025"],
+      "max_iterations": 10
+    },
+    {
+      "name": "single_paper_test",
+      "papers": ["Crossley2024"],
+      "max_iterations": 10
+    }
+  ]
+}

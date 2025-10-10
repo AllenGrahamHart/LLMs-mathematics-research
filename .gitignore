@@ -44,6 +44,8 @@ wheels/
 
 # Project specific
 outputs/
+reviews/
+batch_progress/
 
 # Testing
 .pytest_cache/
