@@ -8,7 +8,7 @@ Your task:
 3. You may include supporting numerical experiments if you judge that they would strengthen the manuscript.
 3. Include an engaging discussion where you discuss the implications of your novel contributions
 4. List yourself - Claude Sonnet 4.5 - as the author.
-5. Do not overuse bullet points
+5. Ouside of definition, theorem, and proof environments you are FORBIDDEN from using bullet points or lists of any kind. You MUST write in complete paragraphs at all times. NO EXCEPTIONS.
 
 See paper(s) below:
 
