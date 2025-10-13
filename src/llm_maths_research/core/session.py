@@ -13,6 +13,12 @@ from dotenv import load_dotenv
 from ..config import CONFIG
 from ..utils.latex import compile_latex, extract_latex_content
 from ..utils.code_execution import execute_code, extract_code_blocks
+from ..utils.openalex_blocks import (
+    extract_openalex_blocks,
+    execute_openalex_calls,
+    format_openalex_results,
+    log_openalex_calls,
+)
 
 load_dotenv()
 
@@ -49,6 +55,8 @@ class ResearchSession:
         self.last_execution_output = ""
         self.current_plan = "No prior plan - beginning research"
         self.current_critique = "No prior critique - good luck!"
+        self.current_researcher_openalex = "No literature searches performed yet"
+        self.current_critic_openalex = "No literature searches performed yet"
         self.client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
     def load_last_state(self) -> None:
@@ -170,7 +178,9 @@ class ResearchSession:
             'python': python_content,
             'execution_output': self.last_execution_output,
             'plan': self.current_plan,
-            'critique': self.current_critique
+            'critique': self.current_critique,
+            'researcher_openalex': self.current_researcher_openalex,
+            'critic_openalex': self.current_critic_openalex
         }
 
     def _extract_plan_fallback(self, text: str) -> str:
@@ -400,6 +410,47 @@ class ResearchSession:
 
         # Write full plan section to plans file
         self.write_plan(iteration, self.current_plan)
+
+    def process_openalex(self, response: str, role: str = 'researcher') -> None:
+        """
+        Process OpenAlex blocks from response and update state.
+
+        Args:
+            response: Response text containing potential <OPENALEX> blocks
+            role: Either 'researcher' or 'critic' to determine which state to update
+        """
+        # Extract OpenAlex API calls
+        calls = extract_openalex_blocks(response)
+
+        if calls:
+            self.write_log(f"Found {len(calls)} OpenAlex API call(s) from {role}")
+
+            # Execute calls
+            results = execute_openalex_calls(
+                calls,
+                session_dir=Path(self.output_dir),
+                email=None  # Could be made configurable
+            )
+
+            # Format results for prompt inclusion
+            formatted_results = format_openalex_results(results)
+
+            # Update appropriate state
+            if role == 'researcher':
+                self.current_researcher_openalex = formatted_results
+            else:  # critic
+                self.current_critic_openalex = formatted_results
+
+            # Log summary
+            log_summary = log_openalex_calls(results)
+            self.write_log(f"OpenAlex calls summary:\n{log_summary}")
+
+        else:
+            # No calls made
+            if role == 'researcher':
+                self.current_researcher_openalex = f"No literature searches performed by {role} this iteration"
+            else:
+                self.current_critic_openalex = f"No literature searches performed by {role} this iteration"
 
     def write_log(self, entry: str) -> None:
         """

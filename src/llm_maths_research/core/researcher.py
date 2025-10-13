@@ -109,9 +109,54 @@ When saving figures, ALWAYS use either `savefig("name.png", dpi={CONFIG['output'
    The variable `output_dir` is available and points to the current working directory.
    Do NOT hard-code session paths. Figures must end up in the same directory as `paper.tex`.
 
+LITERATURE SEARCH:
+You have access to OpenAlex API for searching scholarly literature. Use this to:
+- Find relevant papers by keyword search
+- Navigate citation networks (papers citing or cited by a work)
+- Verify citations and get detailed paper information
+- Read abstracts and gather context for your research
+
+To make API calls, include an <OPENALEX> block with a JSON array of calls:
+
+<OPENALEX>
+[
+  {{
+    "function": "search_literature",
+    "arguments": {{
+      "query": "pattern formation Turing",
+      "filters": {{"from_year": 2020, "min_citations": 10}},
+      "max_results": 15
+    }},
+    "purpose": "Find recent highly-cited work on Turing patterns"
+  }},
+  {{
+    "function": "get_paper",
+    "arguments": {{"identifier": "W2100837269"}},
+    "purpose": "Read Turing's original 1952 paper abstract"
+  }}
+]
+</OPENALEX>
+
+Available functions:
+- search_literature(query, filters, max_results): Search by keywords and filters
+  - Filters: from_year, to_year, min_citations, is_open_access, cites (OpenAlex ID), cited_by (OpenAlex ID), doi, title
+- get_paper(identifier): Get full details for a paper by OpenAlex ID, DOI, or URL
+  - Returns: abstract, references, citations, formatted citations (APA, BibTeX)
+
+Use this strategically to:
+- Ground your work in existing literature
+- Verify references cited in your problem statement
+- Find related work to position your contributions
+- Navigate from key papers to recent developments
+
 OUTPUT FORMAT:
 ## PLAN
 [detailed plan over the remaining iterations]
+
+## OPENALEX (optional)
+<OPENALEX>
+[JSON array of API calls]
+</OPENALEX>
 
 ## PYTHON CODE
 ```python
@@ -146,6 +191,12 @@ Iterations remaining after this one: {self.max_iterations - iteration}
 
 --- Critique from Critic ---
 {state['critique']}
+
+--- Your Previous Literature Searches ---
+{state['researcher_openalex']}
+
+--- Critic's Literature Searches ---
+{state['critic_openalex']}
 """
         return experimental_design + state_description
 
@@ -189,6 +240,40 @@ Your job is to:
 1. Identify errors and issues in the current work
 2. Grade their severity (FATAL, SERIOUS, MINOR)
 3. Provide actionable feedback appropriate to the remaining iteration budget
+4. Verify citations and literature references when needed
+
+LITERATURE VERIFICATION:
+You have access to OpenAlex API to verify citations and check literature claims. Use this to:
+- Verify that cited papers exist and match their descriptions
+- Check if claims about prior work are accurate
+- Ensure references are properly attributed
+- Find additional context for evaluating novelty
+
+To make API calls, include an <OPENALEX> block with a JSON array of calls:
+
+<OPENALEX>
+[
+  {{
+    "function": "search_literature",
+    "arguments": {{
+      "filters": {{"doi": "10.1098/rstb.1952.0012"}},
+      "max_results": 1
+    }},
+    "purpose": "Verify citation to Turing (1952)"
+  }},
+  {{
+    "function": "get_paper",
+    "arguments": {{"identifier": "W2100837269"}},
+    "purpose": "Read abstract to verify researcher's claim"
+  }}
+]
+</OPENALEX>
+
+Available functions:
+- search_literature(query, filters, max_results): Search by keywords, DOI, title, etc.
+- get_paper(identifier): Get full details including abstract and references
+
+Use this strategically to verify critical claims before marking them as errors.
 
 ERROR SEVERITY LEVELS - with examples:
 
@@ -228,9 +313,15 @@ MINOR (could fix):
 --- Researcher's Latest Response ---
 {generator_response}
 
+--- Researcher's Literature Searches ---
+{state['researcher_openalex']}
+
+--- Your Previous Literature Searches ---
+{state['critic_openalex']}
+
 === YOUR CRITIQUE ===
 
-Provide your critique in this format:
+Provide your critique in this format (include <OPENALEX> block if you need to verify citations):
 
 FATAL ERRORS:
 [List any fatal errors with clear explanations. If none, write "None identified."]
@@ -302,6 +393,9 @@ In addition to your critique - please complete this survey:
                     # Update in-memory state without overwriting files (they're already correct)
                     self.session.update_state_from_response(generator_response)
 
+                    # Also process OpenAlex calls from the loaded response
+                    self.session.process_openalex(generator_response, role='researcher')
+
                 # Clear flag so we don't skip generator in subsequent iterations
                 self.resume_at_critic = None
             else:
@@ -313,6 +407,9 @@ In addition to your critique - please complete this survey:
                 # Process generator response
                 self.session.process_response(generator_response, self.current_iteration)
 
+                # Process OpenAlex calls from generator
+                self.session.process_openalex(generator_response, role='researcher')
+
                 # Save generator response for potential resume at critic
                 self.session.write_generator_response(self.current_iteration, generator_response)
 
@@ -322,6 +419,9 @@ In addition to your critique - please complete this survey:
             state = self.session.get_state()
             critic_prompt = self.build_critic_prompt(self.current_iteration, state, generator_response)
             critic_response = self.session.call_claude(critic_prompt)
+
+            # Process OpenAlex calls from critic
+            self.session.process_openalex(critic_response, role='critic')
 
             # Store critique for next iteration
             self.session.current_critique = critic_response
