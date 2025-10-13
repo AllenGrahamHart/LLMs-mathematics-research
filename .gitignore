@@ -46,6 +46,8 @@ wheels/
 outputs/
 reviews/
 batch_progress/
+notes.txt
+analysis_of_data.ipynb
 
 # Testing
 .pytest_cache/

@@ -1,0 +1,325 @@
+# Controllable microfluidics through active droplets
+
+**Authors:** Daniel J. Booth and Thomas D. Montenegro-Johnson  
+**Affiliation:** School of Mathematics, University of Warwick, Coventry, United Kingdom  
+**Contact:** daniel.j.booth@warwick.ac.uk, tom.montenegro-johnson@warwick.ac.uk  
+**Published:** Physical Review Fluids 10, 094203 (2025)  
+**Received:** 3 March 2025; accepted 18 August 2025; published 18 September 2025
+
+**DOI:** 10.1103/csrt-n3fx
+
+---
+
+## Abstract
+
+Precise, localized flow control in microfluidic devices remains a difficult challenge. In this paper we demonstrate, theoretically, how active droplets might be harnessed to overcome this challenge. Active droplets are produced along the microchannel wall via stimulation of a responsive hydrogel, and the ensuing phoretic slip flows drive transport and mixing in the microfluidic device. We find optimal transport times for particles traversing the channel, and show that, by switching between two droplet configurations, chaotic mixing can be achieved.
+
+---
+
+## I. INTRODUCTION
+
+Flow control at the micro- and nanoscale is at the heart of many recent developments in microfluidics and lab-on-a-chip devices [1–5]. These developments have revolutionized high throughput chemical analysis and biological screening [5,6]. Flows are often generated in microfluidic devices via syringe pumps, which apply a pressure difference across the device to overcome the viscous friction. However, an alternative method of generating fluid flow is to generate stresses along the channel walls; this method is adopted widely in nature, for example, pumping mucus out of the lungs with cilia [7].
+
+Microfluidic pumping via wall stresses has a number of potential advantages, such as local modulation of flow, and the removal of the requirement for bulky external equipment such as syringe pumps. One proposed wall pumping method entails employing phoretic mechanisms [8,9]. Here, a slip velocity is created along a channel wall due to local gradients in a scalar field [10], such as chemical concentration (diffusiophoresis) [11,12], charge (electrophoresis) [13,14], and temperature (thermophoresis) [15,16]. These propulsive slip velocities in turn drive a fluid flow in the microfluidic device. In particular, diffusiophoresis has been shown theoretically to be capable of pumping fluid in a periodic domain with a geometric asymmetry [8], and in straight channels with three or more patches of different activity [9]. More recently experiments [17] show that a wall of Janus micromotors (small cylinders, where half the surface is chemically active and the other is inert) can be used to drive a shear flow in a microchannel.
+
+In addition to pumping, mixing is an essential function of some microfluidic devices [18–20]. However, due to the laminar nature of microscale flows, mixing is often limited to diffusive processes that can take a long time. To model the feeding of microorganisms, Blake and Otto [21] and Otto et al. [22] propose the blinking Stokeslet, which constitutes two point forces operating at different spatial points with distinct periods of operation. They find that as the period increases particle trajectories become increasingly chaotic, allowing for efficient mixing while in a system with negligible inertia (Stokes flow). Gong et al. [23] show that chaotic mixing can be induced by using colloids which switch the direction of their slip velocity when activated by light.
+
+Many of the examples above are concerned with fixed chemically active surfaces. However, having control over when and where a surface is active would allow for greater control of the fluid flow in a microfluidic device. In this paper, we propose a theoretical model for such a system, inspired by recent developments in active droplets [24,25] and responsive hydrogels [26–28]. We propose that the droplets can be created or removed through the deswelling or swelling of responsive hydrogels. When stimulated, responsive hydrogels have a sharp decrease in their affinity for the fluid [26,29,30], resulting in a large expulsion of the interstitial fluid—thus creating an active droplet pinned on the channel wall. Once the stimulus is removed, the gel regains its affinity for water, causing the droplet to be absorbed back into the hydrogel matrix. This theoretically enables us to create "on" and "off" states for the active droplets, allowing us to control where and when a surface is active. We explore how this system can be employed for particle transport and chaotic mixing.
+
+---
+
+## II. PROBLEM FORMULATION
+
+Our model system is a closed chamber, comprising two rigid walls and two walls formed of a responsive hydrogel, which once activated deswell, releasing fluid that forms an active droplet along the wall of the microfluidic device. Since our system is closed, fluid cannot be pumped through the device, however, we do allow solvent to be replenished at the two rigid walls. The solvent in the fluid reacts with the surface of the active droplet creating a slip velocity, which in turn drives an interior fluid flow (Fig. 1).
+
+Specifically, we consider a two-dimensional closed channel of length, L̂, and height Ĥ. The channel is filled with a Newtonian liquid of viscosity μ̂ and density ρ̂. The walls ŷ = 0 and ŷ = Ĥ are made of responsive hydrogel that, once stimulated, creates a pinned droplet of horizontal extent 2L̂_D. A solute species of local concentration ĉ(x̂, ŷ, t̂) is present in the liquid and interacts with the droplet surface through a short-range potential. When the length scale of interaction is much smaller than the other length scales in the problem the interaction of the droplet boundary with a local solute gradient generates an effective slip velocity [10,11] on the droplet boundary, namely
+
+**u**_slip = M̂ ∇̂_S ĉ,     (1)
+
+where ∇̂_S = (**I** − **nn**) · ∇̂ is the tangential gradient operator, in which **n** is the unit normal vector to the surface, pointing into the fluid. Here, M̂ is the phoretic mobility, which can be positive or negative depending on whether the interaction is attractive or repulsive, respectively. Note that instead of (or alongside) the phoretic slip velocity one could impose a Marangoni stress condition [31], in which one supplies a discontinuity in the stress across the droplet due to gradients in the surface tension; however, this also leads to a slip velocity along the surface of the droplet (see, e.g., Ref. [31]) and would thus result in qualitatively similar behavior. The phoretic slip generates a flow inside the microfluidic channel. We assume the length scale of the device is sufficiently small such that viscous effects dominate inertial effects, thus the fluid velocity, **û** and pressure, p̂, are governed by the Stokes flow equations:
+
+−∇̂p̂ + μ̂∇̂²**û** = 0,     (2a)
+
+∇̂ · **û** = 0.     (2b)
+
+On the side walls and the top and bottom walls where there are no droplets we supply the no-slip condition **û** = 0. Then on the droplet's surface, the interaction due to the solute reactions induces a slip velocity of the form of Eq. (1).
+
+The solute present in the fluid is governed by an advection-diffusion equation:
+
+∂ĉ/∂t̂ + **û** · ∇̂ĉ = D̂∇̂²ĉ,     (3)
+
+where D̂ is the diffusivity. The solute is consumed (or created) at the interface of the droplet at a flux Â, giving the boundary condition
+
+D̂**n** · ∇̂ĉ = −Â, on the droplet's surface.     (4)
+
+Here, we have assumed a fixed flux boundary condition for the solute, a positive value of Â corresponds to emission, and a negative value corresponds to consumption of the solute. The reaction on the surface could also be modeled as a fixed rate one-step reaction by replacing −Â with k̂ĉ, where k̂ is the reaction rate [10]. Even more complicated reaction schemes could be used to capture the effects of when reacted surfactant molecules have different chemical properties [32]. In this work, we focus on the fixed flux case but expect that the fixed rate model would produce qualitatively similar results. Solute depletion could significantly affect the dynamics; however, for the main body of this work we focus on the case where solute is constantly replenished at the side walls of the cell. We explore the effect of solute depletion in Appendix C.
+
+Along nonactivated regions (where there are no droplets) of the wall, we supply a no-flux condition, and on x̂ = 0 and L̂, we impose that the concentration is kept at a constant value ĉ = ĉ₀, and without loss of generality we can set ĉ₀ = 0.
+
+### A. Nondimensionalization
+
+Hereafter, we nondimensionalize the system by scaling lengths with L̂_D (∼O(1–100) µm [24]), velocities with Û = |ÂM̂|/D̂ ∼ O(1–100) µm s⁻¹ [24,33]), the typical phoretic velocity, time with L̂_D/Û, and concentration with |Â|/D̂L̂_D. We denote dimensionless quantities without hats. The dimensionless governing equations are then given by
+
+−∇p + ∇²**u** = 0,     (5a)
+
+∇ · **u** = 0,     (5b)
+
+∂c/∂t + **u** · ∇c = (1/Pe)∇²c.     (5c)
+
+The dimensionless boundary conditions for the fluid are given by
+
+**u** = M∇_S c = ±∇_S c, on the droplet's surface,     (6a)
+
+**u** = 0 elsewhere,     (6b)
+
+and for the solute concentration
+
+**n** · ∇c = −A = ∓1 on the droplet's surface,     (6c)
+
+c = 0 on x = 0 and x = L,     (6d)
+
+**n** · ∇c = 0 elsewhere.     (6e)
+
+The model contains the geometric dimensionless parameters L and H, for the length and height of the device, respectively, and the activity parameters A and M, for the solute flux and the phoretic mobility, respectively. Finally, the Péclet number, Pe = ÛL̂_D/D̂ = |ÂM̂|L̂_D/D̂², is a measure of the strength of convective to diffusive effects.
+
+Additionally, it is straightforward to extend the model to include the effects of multiple droplets along both the top and bottom boundaries of the domain.
+
+The activity parameters A = M = ±1 (due to choice of nondimensionalization), which, when positive (negative), correspond to a solute that is emitted (consumed) by the droplet with an attractive (repulsive) phoretic slip. Changing the sign of either A or M simply reverses the slip velocity and flow rate without changing its magnitude. We assume the activity parameters are the same for all droplets since the droplets are released by the hydrogel and thus must have the same properties. However, in general, each droplet could have different activity parameters, but as long as their sign is consistent, the dynamics would be similar.
+
+### B. Assumptions and limits
+
+**1. Thin-droplet limit**
+
+For now, we shall assume that the droplets are thin compared to the width and length of the channel. This assumption allows us to project the boundary conditions (6a) and (6c) onto y = 0 or H. However, the modeling can easily be adapted for any droplet shape. In Appendix A, we provide a parameter sweep for different channel lengths and droplet contact angles, which we find have the same qualitative behavior as a thin droplet.
+
+**2. Diffusion-dominated limit**
+
+Most studies of active droplets consider their spontaneous motion [24], which requires Pe = O(1) to break the symmetry of the problem. For our system we do not need to break symmetry in the same manner due to the presence of channel walls. In the rest of this paper, we focus on the diffusion-dominated limit (Pe ≪ 1). However, in Appendix B we show solutions for finite-Pe, which we find have the same qualitative behavior.
+
+### C. Reduced-order model
+
+**1. Concentration field**
+
+In the diffusion-dominated limit (i.e., Pe ≪ 1), we expand all our variables in asymptotic expansions of the form f(x,t) ∼ f₀(x,t) + Pe f₁(x,t) + ···. At leading order the fluid equations remain the same and the concentration equation reduces to Laplace's equation
+
+∇²c₀ = 0,     (7)
+
+which decouples from the flow dynamics. Hereafter, we drop the subscript 0 for ease of notation. Furthermore, the thin-droplet limit allows us to project the boundary conditions (6a) and (6c) onto y = 0 or H. The concentration boundary conditions can then be written as
+
+∂c/∂y = −A_bot(x) on y = 0,     (8a)
+
+∂c/∂y = A_top(x) on y = H,     (8b)
+
+where the functions A_bot(x), and A_top(x) take the value A wherever there is a droplet. We can then solve for the concentration analytically through the use of a Fourier sine series to obtain
+
+c(x, y) = Σ_{n=1}^∞ [(a_n L)/(nπ) sinh(nπy/L) + (A_n L − a_n L cosh(nπH/L))/(nπ sinh(nπH/L)) cosh(nπy/L)] sin(nπx/L).     (9)
+
+The Fourier coefficients are given by
+
+a_n = −(2/L)∫₀^L A_bot(x) sin(nπx/L) dx = −(4A)/(nπ) Σ_{i=1}^{N_bot} sin(nπx_i/L) sin(nπ/L),     (10a)
+
+A_n = (2/L)∫₀^L A_top(x) sin(nπx/L) dx = (4A)/(nπ) Σ_{i=1}^{N_top} sin(nπx̃_i/L) sin(nπ/L),     (10b)
+
+where {x_i}_{i=1}^{N_bot} is the set of droplet centers along the bottom of the device, and {x̃_i}_{i=1}^{N_top} is the set of droplet centers along the top of the device.
+
+**2. Fluid dynamics**
+
+To solve for the fluid motion numerically, we employ the boundary element method (BEM). Here, the velocity at a point along the boundary is given by
+
+u_j(x) = −(1)/(2π)∫_∂Ω [S_{ij}(x − ξ)f_i(ξ) − u_i(ξ)T_{ijk}(x − ξ)n_k(ξ)] ds(ξ,η),     (11)
+
+where ξ = (ξ,η) and f_i = σ_{ij}n_j (a priori unknown), summation over repeated indices is assumed here. The two-dimensional Green's functions for Stokes flow (the Stokeslet and stresslet, respectively) are given by
+
+S_{ij}(x̃) = −δ_{ij} log|x̃| + (x̃_i x̃_j)/(|x̃|²), T_{ijk}(x̃) = −4(x̃_i x̃_j x̃_k)/(|x̃|⁴),     (12)
+
+where x̃ = x − ξ. The walls of the channel are discretized into 200 line segments, along which **u** and **f** are assumed constant. This reduces the boundary integral (11) to a dense matrix for the force elements **f**. The singular components of the Green's function are integrated analytically and all other integrals are approximated using an 8-point Gaussian quadrature. Convergence of the numerical scheme has been compared against the use of 20-point quadrature with a maximum relative error of O(10⁻⁸).
+
+---
+
+## III. RESULTS
+
+### A. Solution profiles and streamlines
+
+We plot the concentration profiles and streamlines for a system with a single droplet in Fig. 2(a), and for three droplets in Fig. 2(b). In both examples, the droplet induces circulating flows in the device. This is because the slip velocity (6a) along the droplet is directed toward the droplet center, (for AM > 0, the flow direction is reversed for AM < 0), which then drives the creation of a symmetric circulating flow field. This can be seen more clearly by plotting the surface velocity along the droplet, which we do in Fig. 2(c). We find that the x-direction velocity, u, is positive for x − x_D < 0, and negative for x − x_D > 0, meaning that flow is directed to the center of the droplet. Thus, following Eq. (6a), we find the slip velocity is directed toward the center of the droplet for M > 0, or away from the center for M < 0, inducing circulating flows in the device. Such flow fields have been observed around a confined active droplet in experiments by Ref. [34] and have been observed in experiments of catalytic micropumps [35].
+
+We observe closed streamlines that are akin to those due to Stokeslets oriented perpendicular to a plane boundary. The streamline and the concentration field qualitatively match those for a finite droplet, as shown in Appendix A, Fig. 7. From this point forward, we will continue in the thin droplet limit to simplify the calculations; however, due to the similarities, we expect that the behavior we observe is reproducible with finite-sized droplets.
+
+### B. Particle transport
+
+Previous works [8,9,12] that have designed systems that can pump fluid and thus transport particles rely on a periodic domain. However, microfluidic devices cannot be completely periodic, though these models can be very good for long and thin devices. Here, we demonstrate how our system can be utilized to transport particles from one end of the device to the other, even in a closed channel.
+
+The trajectory of a tracer particle, **x**(t), is simply calculated from the differential equation **ẋ** = **u**(**x**). By only keeping a fixed droplet configuration we observe that the particle will follow a closed streamline (see Fig. 2). However, because of the responsive hydrogel walls, we can change the activated region and hence change the droplet configuration. In doing so, we catch the particle on a new streamline transporting it along the device. This process can be repeated until the particle is in the desired region of the device. Here, we consider two setups: the first is of a single droplet along y = 0 with A = M = 1, and the second is a system of two aligned droplets, one on y = 0, and the other on y = H with A = 1, and M = −1.
+
+To demonstrate this process we start a particle at (1, y_start) and activate the droplets with center x = 3 for a time T, after which we activate the droplets with center x = 5 after another time T we finally activate the droplets with center x = 7 and we end once the particle reaches x = 6. In Fig. 3 we show example trajectories for both setups with y_start = 1 and T = 19 for a single droplet in Figs. 3(a)–3(c), and T = 23 for two droplets in Figs. 3(d)–3(f). We show the three droplet configurations along with the trajectory due to the current configuration in black, with the trajectory due to past configurations in red. In the case of a single droplet, the particle is directed toward the droplet and is thus pulled along the channel by sequentially moving the droplet up the channel. Here, the particle tends to end close to the wall of the device. However, for the two-droplet setup, the particle is instead directed toward the center of the channel, due to the opposite sign of M. Either end position could be desirable for the specific application, for example moving unwanted reagents to the side of the device.
+
+In Fig. 4 we plot the optimal travel time to transport a particle from (1, y_start) to x = 6 for both setups versus y_start. Note that we only plot for the range 0 ≤ y_start ≤ 1.5, because the graph will be symmetric across y_start = 1.5 assuming that the single-droplet setup is always configured such that the droplets are formed on the side the particle is closest to. The single droplet setup is faster than the two-droplet setup for all values of y_start except near y_start = 1.5 close to the center of the channel. This is because, in the single-droplet setup, the particle approaches the droplet and is thus closer to the slip velocity and the region where the velocity magnitude is the largest. In both cases, as the initial position gets closer to the wall the travel time asymptotes because the particle approaches the no-slip condition on the wall of the device. However, this could be overcome by having an initially longer first time-step which allows for the particle to be transported away from the wall.
+
+One can employ active control of the droplet position to decrease the travel time of a particle significantly. Here, we move the droplet at the same x-direction velocity of the particle keeping it in the region of greatest velocity magnitude, like the droplet is dragging the particle along the device. For our purposes, we keep the droplet center at a distance of 0.8 in front of the particle. For example, a particle with y_start = 0.2 has a travel time of only 16.46, significantly shorter than using discrete droplet positions.
+
+### C. Chaotic mixing
+
+A common issue in microfluidics, where inertia is negligible is the production of efficient mixers. Inspired by previous work on the blinking Stokeslet [21,22], we propose the blinking droplet mixing method within our device. This involves switching between two droplet configurations with some time separation, T, for a total period τ = 2T. For demonstrative purposes, we choose the single droplet in Fig. 2(a) and its mirror image in the line y = 1.5, and the three droplet configuration in Fig. 2(b) and its mirror image in the line y = 1.5.
+
+We present our results as Poincaré sections, which are stroboscopic images. We start with 101 points within a circle of radius 0.1 centered at (5,1.5) and plot its position at each t = nT, for n ∈ ℕ, this simulates a blob of dye being placed at the center of the device. We run each simulation for 1000 periods (n = 2000). In Figs. 5(a)–5(c) we plot the Poincaré sections for T = 1, 6, and 12 for the single droplet configurations. We observe that when T = 1 in Fig. 5(a) the particle trajectories are similar to the streamlines produced by simultaneously having both droplets on. Increasing T to 6 in Fig. 5(b) we see the structure disappearing, however, there are large void regions. Finally, increasing to T = 12 in Fig. 5(f), we find that there are no longer any void regions with in the mixed regions, however, the solute is not mixed throughout the entire device and is centralized in a region close to the droplet centers. We do note that the Poincaré sections for T = 12 represent 12 times the time as T = 1, however, we believe that 1000 periods is sufficient to show the flow characteristics.
+
+In Figs. 5(d)–5(f) we plot the Poincaré sections for T = 0.5, 2, and 6 for the three droplet configurations. We observe similar behavior as seen in the single droplet mixer. When T = 0.5 in Fig. 5(d) the particle trajectories are similar to the streamlines produced by simultaneously having all six droplets on. As T is increased, the structure disappears. Finally, increasing to T = 6 in Fig. 5(f), we find that there are no longer any void regions, and thus, the solution is well mixed, with no void regions in the entire device. Using more droplets allows for greater mixing across the entire device, as compared to a single droplet and greater mixing occurs for smaller switching times. We further note that microscale particles also tend to diffuse through Brownian motion. This effect will only enhance the mixing capabilities of the system we have proposed.
+
+We can quantify the amount of mixing in a similar manner to Ref. [21], achieved by considering an initial set of points that lie on a circle of radius 0.1 in the center of the device, {(0.1 cos(2π(i − 1)/N_p), (0.1 cos(2π(i − 1)/N_p))}_{i=1}^{N_p}. Then at each t = nT the particles are in positions {(X_i^(n), Y_i^(n))}_{i=1}^{N_p}. We can then calculate the boundary length at time, t, by defining
+
+d(t) = Σ_{i=1}^{N_p} √[(X_i^(n) − X_{i−1}^(n))² + (Y_i^(n) − Y_{i−1}^(n))²].     (13)
+
+Note that this only gives a useful metric for early times because this is bounded by the size of the finite domain size of the device. However, it is a useful metric for seeing how quickly mixing is achieved in the device.
+
+In Figs. 6(a) and 6(b) we plot d(t) for the single droplet mixer and three droplet mixer, respectively. We find that that d(t) increases at the same rate for all values of T initially. For larger t, however, larger values of T achieve larger values of d(t) implying that these systems are better mixed. We also see that the three droplet mixer attains larger values of d(t), further implying that this system allows for greater mixing than a single droplet.
+
+In Figs. 6(c) and 6(d) we plot d(nT) versus n for the single droplet mixer and three droplet mixer, respectively. This shows how much mixing is achieved after the nth switch. We find that greater mixing occurs between each switch larger values of T this is because larger T allows time for the particles to be transported by the fluid flow before switching to a different configuration.
+
+---
+
+## IV. DISCUSSION
+
+In this paper, we have developed a model system for the responsive control of flow in a microfluidic device. Active droplets are formed along the wall of the device through the activation of a responsive hydrogel. Then chemical reactions at the droplet surface generate a phoretic slip that drives fluid flow in the device. Passive particles can be transported across the device by activating droplets at discrete intervals. If the mobility coefficient M > 0 then by using a single droplet the particle can be directed along the device and finish close to a side wall, whereas if M < 0 the particle finishes in the center of the channel, either of which may be desirable. We calculate optimal travel times for a particle for each starting position, and we find that single droplet transport is generally faster, except near the center of the device because the particle gets closer to the slip velocity in the former case. We show that this can be sped up using active control where the droplet is kept at a constant distance in front of the particle. Finally, we show that the system can induce chaotic mixing by switching between two droplet configurations, with greater mixing occurring for longer switching times.
+
+Our system allows for the precise flow control within a closed channel. This provides new opportunities in lab-on-a-chip devices development for systems that can transport delicate reagents and subsequently mix them effectively. This is achieved in a purely microscale device that does not require a large externally applied pressure gradient. Making it an ideal candidate for chemical and biological analysis, where reagents can be costly and delicate.
+
+The system has potential beyond that explored herein. By coupling this system to a branching channel flow, one could use active droplets to control the resulting fluid flux down each branch. By creating a network of branching channels one could construct microfluidic logic gates akin to those in Ref. [36] or solve microfluidic mazes.
+
+While our system focuses on the use of hydrogels to create active droplets, a similar system could be designed through the use of photosensitive Janus micromotors as used by Ref. [17]. In this system the micromotors will act like the droplets and the response is due to being activated by UV-light. While such a system typically uses hydrogen peroxide as its fuel source [37], which is possibly damaging for the transport of reagents, an advantage of our proposed system is that active droplets use surfactants, which can be chosen for their compatibility.
+
+---
+
+## ACKNOWLEDGMENT
+
+This work was supported by the Leverhulme Trust Research Leadership Award "Shape-Transforming Active Microfluidics" (Grant No. RL-2019-014) to T.D.M.J.
+
+---
+
+## DATA AVAILABILITY
+
+The data that support the findings of this article are openly available [38].
+
+---
+
+## APPENDIX A: FINITE-SIZED DROPLETS
+
+In this Appendix, we show results for finite-sized droplets. We assume that the droplet's length is less than the capillary length and, thus, that the droplet is a circular cap. We can write the droplet surface as
+
+h(x) = − cot θ ± √[csc²θ − (x − x_D)²].     (A1)
+
+The physically relevant solution to Eq. (A1) for 0 ≤ θ ≤ π/2 is given by the plus sign and −1 ≤ x − x_D ≤ 1. If π/2 ≤ θ ≤ π then the physical solution is double valued with the plus sign giving the upper branches of the solution for − csc θ ≤ x − x_D ≤ csc θ and the lower branches are given by the minus sign for − csc θ ≤ x − x_D ≤ −1 and 1 ≤ x − x_D ≤ csc θ.
+
+To solve Eq. (7) numerically in this domain, we employ the BEM. For a point (x, y) along the boundary we can write
+
+(1/2)c(x, y) = ∫_∂Ω [c(ξ,η)(∂/∂n)(φ(x, y; ξ,η)) − φ(x, y; ξ,η)(∂/∂n)c(ξ,η)] ds(ξ,η),     (A2)
+
+where φ(x, y; ξ,η) = − log((x − ξ)² + (y − η)²)/4π, is the Green's function for the 2D-Laplace equation [39], and ∂Ω is the boundary of our domain. Using Eq. (A2) we find the concentration along the boundary of our domain, from which we calculate the slip velocity (1). Then we again use the BEM formulation (11) to solve for the fluid flow.
+
+We show a range of example solutions of a single droplet with different contact angles and in channels of different lengths in Fig. 7 (all examples are with A = 1, however the solution for A = −1 is found by simply taking −c, by the linearity of Laplace's equation). In all examples, the droplet induces circulating flows in the device. This is because the slip velocity (1) along the droplet is directed toward the droplet center (for AM > 0, the flow direction is reversed for AM < 0), which then drives the creation of a symmetric circulating flow field. This can be seen more clearly by plotting the surface velocity along the droplet, which we do in Fig. 8 for the examples in Figs. 7(b), 7(d), and 7(e). In each of these examples we find that the x-direction velocity, u, is positive for x − x_D < 0, and negative for x − x_D > 0, meaning that flow is directed to the center of the droplet. Meanwhile, the y-direction velocity is always positive, again this is due to the flow traveling up toward the center of the droplet. Thus, following (1), we find the slip velocity is directed toward the center of the droplet for M > 0, or away from the center for M < 0 inducing circulating flows in the device.
+
+The concentration profiles and flow fields qualitatively match those for a thin droplet, thus, we conclude that the system will reproduce the behavior seen in this paper for finite-sized droplets.
+
+---
+
+## APPENDIX B: FINITE-PE
+
+Most studies of active droplets consider their spontaneous motion, which requires Pe = O(1). Here we show solutions with finite-Pe behave qualitatively similar to the zero-Pe limit studied in Sec. II B 2. To compute these solutions we use a finite difference scheme that is first order in time and second order in space. At each time step, we calculate the flow field using the marker and cell (MAC) finite difference scheme [40], and we proceed until a steady state is attained. Note that we could also have used the BEM method (11) for the fluid flow, however for the full advection-diffusion equation we need to know the fluid velocity in the interior of the domain, which removes the advantage of using BEM.
+
+In Fig. 9, we show the steady-state concentration profile and streamlines for two examples at moderate values of Pe (Pe = 4 in (a) and Pe = 10 in (b)). We observe that we recover the same behavior as observed in the Pe = 0 limit. Thus in the sections that follow we shall focus on the zero-Pe limit. However, due to the similarity of the steady state profiles we expect the observed phenomena in this paper to be reproducible for finite values of Pe.
+
+---
+
+## APPENDIX C: SOLUTE DEPLETION
+
+To account for solute depletion in our system we suppose the device has an initial constant solute concentration everywhere, with no-flux boundary conditions on the walls. The fixed-flux boundary condition used in the main body of the paper will quickly give rise to unphysical results with a negative solute concentration because it draws out solute at a constant flux. This can be fixed by using the more realistic constant reaction rate boundary condition, which models a one-step chemical reaction; here, the flux is proportional to the local concentration. To include this in our system, Eqs. (5) and (6), we change the fixed flux boundary condition to a fixed rate condition on the droplets surface and adopt no-flux conditions everywhere else. To do this we need to adapt the nondimensionalization the velocity scaling is now U = k̂ĉ₀/L̂_D, and solute scaling is ĉ₀, the initial solute concentration in the system. Thus, in our model, we supply the initial condition that c ≡ 1 everywhere and the boundary conditions:
+
+**n** · ∇c = Dac on the droplet's surface,     (C1a)
+
+**n** · ∇c = 0 elsewhere,     (C1b)
+
+where Da = k̂L̂_D/D̂ is the Damkohler number, which is the dimensionless reaction rate. To compute these solutions, we use a finite difference scheme that is first order in time and second order in space. At each time step, we calculate the flow field using the marker and cell (MAC) finite difference scheme [40].
+
+In Fig. 10, we plot the concentration profiles and streamlines for a system with Pe = 4 and Pe = 10, with Da = 1 at five time points each. We omit results with different Da, because the observed behavior is the same. We observe similar closed streamlines as observed in the fixed flux case (see Fig. 9). However, because the solute is depleting over time the speed of the flow reduces at t is increased. Eventually, the system will run out of solute and cease to generate any flow. However, such a system could be replenished if the concentration becomes too low. We observe that after an initial transient the concentration profiles for different times to show this more clearly we plot the solute concentration along y = 0 (the side wall with the droplet) for different times in Fig. 11(a). Then in Fig. 11(b) we normalize the concentration by the maximum value and the similar concentration profiles become obvious. These imply that the induced flow in the system at each time step is approximately the same up to a multiplicative constant.
+
+---
+
+## REFERENCES
+
+[1] H. A. Stone, A. D. Stroock, and A. Ajdari, Engineering flows in small devices: Microfluidics toward a lab-on-a-chip, Annu. Rev. Fluid Mech. **36**, 381 (2004).
+
+[2] T. M. Squires and S. R. Quake, Microfluidics: Fluid physics at the nanoliter scale, Rev. Mod. Phys. **77**, 977 (2005).
+
+[3] A. P. Iakovlev, A. S. Erofeev, and P. V. Gorelkin, Novel pumping methods for microfluidic devices: A comprehensive review, Biosensors **12**, 956 (2022).
+
+[4] S. Battat, D. A. Weitz, and G. M. Whitesides, An outlook on microfluidics: The promise and the challenge, Lab Chip **22**, 530 (2022).
+
+[5] E. K. Sackmann, A. L. Fulton, and D. J. Beebe, The present and future role of microfluidics in biomedical research, Nature (London) **507**, 181 (2014).
+
+[6] G. M. Whitesides, The origins and the future of microfluidics, Nature (London) **442**, 368 (2006).
+
+[7] M. A. Sleigh, J. R. Blake, and N. Liron, The propulsion of mucus by cilia, Am. Rev. Respir. Dis. **137**, 726 (1988).
+
+[8] S. Michelin, T. D. Montenegro-Johnson, G. De Canio, N. Lobato-Dauzier, and E. Lauga, Geometric pumping in autophoretic channels, Soft Matter **11**, 5804 (2015).
+
+[9] S. Michelin and E. Lauga, Universal optimal geometry of minimal phoretic pumps, Sci. Rep. **9**, 10788 (2019).
+
+[10] S. Michelin and E. Lauga, Phoretic self-propulsion at finite péclet numbers, J. Fluid Mech. **747**, 572 (2014).
+
+[11] J. L. Anderson, Colloid transport by interfacial forces, Annu. Rev. Fluid Mech. **21**, 61 (1989).
+
+[12] G. C. Antunes, P. Malgaretti, J. Harting, and S. Dietrich, Pumping and mixing in active pores, Phys. Rev. Lett. **129**, 188003 (2022).
+
+[13] R. W. O'Brien and L. R. White, Electrophoretic mobility of a spherical colloidal particle, J. Chem. Soc., Faraday Trans. 2 **74**, 1607 (1978).
+
+[14] J. C. Baygents and D. Saville, Electrophoresis of drops and bubbles, J. Chem. Soc. Faraday Trans. **87**, 1883 (1991).
+
+[15] R. Piazza and A. Parola, Thermophoresis in colloidal suspensions, J. Phys.: Condens. Matter **20**, 153102 (2008).
+
+[16] R. Piazza, Thermophoresis: Moving particles with thermal gradients, Soft Matter **4**, 1740 (2008).
+
+[17] T. Yu, A. G. Athanassiadis, M. N. Popescu, V. Chikkadi, A. Güth, D. P. Singh, T. Qiu, and P. Fischer, Microchannels with self-pumping walls, ACS Nano **14**, 13673 (2020).
+
+[18] P. Sajeesh and A. K. Sen, Particle separation and sorting in microfluidic devices: A review, Microfluid. Nanofluid. **17**, 1 (2014).
+
+[19] K. Ward and Z. H. Fan, Mixing in microfluidic devices and enhancement methods, J. Micromech. Microeng. **25**, 094001 (2015).
+
+[20] H. Aref, J. R. Blake, M. Budišic, S. S. S. Cardoso, J. H. E. Cartwright, H. J. H. Clercx, K. El Omari, U. Feudel, R. Golestanian, E. Gouillart, G. J. F. van Heijst, T. S. Krasnopolskaya, Y. Le Guer, R. S. MacKay, V. V. Meleshko, G. Metcalfe, I. Mezic, A. P. S. deMoura, O. Piro, M. F. M. Speetjens, R. Sturman, J. L. Thiffeault, and I. Tuval, Frontiers of chaotic advection, Rev. Mod. Phys. **89**, 025007 (2017).
+
+[21] J. Blake and S. Otto, Ciliary propulsion, chaotic filtration and a "blinking" stokeslet, J. Eng. Math. **30**, 151 (1996).
+
+[22] S. Otto, A. Yannacopoulos, and J. Blake, Transport and mixing in Stokes flow: The effect of chaotic dynamics on the blinking stokeslet, J. Fluid Mech. **430**, 1 (2001).
+
+[23] X. Gong, A. J. T. M. Mathijssen, Z. Bryant, and M. Prakash, Engineering reconfigurable flow patterns via surface-driven light-controlled active matter, Phys. Rev. Fluids **6**, 123104 (2021).
+
+[24] S. Michelin, Self-propulsion of chemically active droplets, Annu. Rev. Fluid Mech. **55**, 77 (2023).
+
+[25] C. C. Maass, C. Krüger, S. Herminghaus, and C. Bahr, Swimming droplets, Annu. Rev. Condens. Matter Phys. **7**, 171 (2016).
+
+[26] M. D. Butler and T. D. Montenegro-Johnson, The swelling and shrinking of spherical thermo-responsive hydrogels, J. Fluid Mech. **947**, A11 (2022).
+
+[27] M. C. Koetting, J. T. Peters, S. D. Steichen, and N. A. Peppas, Stimulus-responsive hydrogels: Theory, modern advances, and applications, Mater. Sci. Eng. R **93**, 1 (2015).
+
+[28] O. Erol, A. Pantula, W. Liu, and D. H. Gracias, Transformer hydrogels: A review, Adv. Mater. Technol. **4**, 1900043 (2019).
+
+[29] T. Tanaka, Collapse of gels and the critical endpoint, Phys. Rev. Lett. **40**, 820 (1978).
+
+[30] F. Afroze, E. Nies, and H. Berghmans, Phase transitions in the system poly (n-isopropylacrylamide)/water and swelling behaviour of the corresponding networks, J. Mol. Struct. **554**, 55 (2000).
+
+[31] M. Morozov and S. Michelin, Nonlinear dynamics of a chemically-active drop: From steady to chaotic self-propulsion, J. Chem. Phys. **150**, 044110 (2019).
+
+[32] R. Seemann, J.-B. Fleury, and C. C. Maass, Self-propelled droplets, Eur. Phys. J.: Spec. Top. **225**, 2227 (2016).
+
+[33] S. Guchhait, S. S. Sontakke, S. Mandal, and R. Dey, Flow fields around active droplets squeezing through tight confinements, Phys. Rev. Fluids **10**, 044202 (2025).
+
+[34] P. Ramesh, B. V. Hokmabad, D. O. Pushkin, A. J. Mathijssen, and C. C. Maass, Interfacial activity dynamics of confined active droplets, J. Fluid Mech. **966**, A29 (2023).
+
+[35] T. R. Kline, W. F. Paxton, Y. Wang, D. Velegol, T. E. Mallouk, and A. Sen, Catalytic micropumps: Microscopic convective fluid flow and pattern formation, J. Am. Chem. Soc. **127**, 17150 (2005).
+
+[36] F. G. Woodhouse and J. Dunkel, Active matter logic for autonomous microfluidics, Nat. Commun. **8**, 15169 (2017).
+
+[37] S. J. Ebbens and J. R. Howse, In pursuit of propulsion at the nanoscale, Soft Matter **6**, 726 (2010).
+
+[38] The code used to generate the figures in this paper is available at https://github.com/djboothmaths/controllable-microfluidics.
+
+[39] C. Pozrikidis, *Boundary Integral and Singularity Methods for Linearized Viscous Flow* (Cambridge University Press, Cambridge, UK, 1992).
+
+[40] F. H. Harlow and J. E. Welch, Numerical calculation of time-dependent viscous incompressible flow of fluid with free surface, Phys. Fluids **8**, 2182 (1965).

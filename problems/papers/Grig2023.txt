@@ -1,0 +1,823 @@
+# Learning strange attractors with reservoir systems
+
+**Lyudmila Grigoryeva¹, Allen Hart², and Juan-Pablo Ortega³**
+
+¹Department of Statistics, University of Warwick, Coventry CV4 7AL, UK.  
+²Department of Mathematical Sciences, University of Bath, Bath BA2 7AY, UK. A.Hart@bath.ac.uk  
+³Division of Mathematical Sciences, Nanyang Technological University, 21 Nanyang Link, Singapore 637371. Juan-Pablo.Ortega@ntu.edu.sg
+
+arXiv:2108.05024v1 [math.DS] 11 Aug 2021
+
+---
+
+## Abstract
+
+This paper shows that the celebrated Embedding Theorem of Takens is a particular case of a much more general statement according to which, randomly generated linear state-space representations of generic observations of an invertible dynamical system carry in their wake an embedding of the phase space dynamics into the chosen Euclidean state space. This embedding coincides with a natural generalized synchronization that arises in this setup and that yields a topological conjugacy between the state-space dynamics driven by the generic observations of the dynamical system and the dynamical system itself. This result provides additional tools for the representation, learning, and analysis of chaotic attractors and sheds additional light on the reservoir computing phenomenon that appears in the context of recurrent neural networks.
+
+**Key Words:** dynamical systems, generalized synchronization, chaos, attractor, Takens embedding, echo state property, fading memory property, asymptotic stability, echo state network.
+
+---
+
+## 1 Introduction
+
+Takens' Theorem [Take 81] and the associated method of delays have been used and studied for decades as they are powerful tools in the reconstruction of qualitative features of a dynamical system out of time series of low dimensional observations. This result is also at the origin of the development of powerful forecasting tools [Saue 91, Kant 03].
+
+In order to put these results in context and to better motivate the contributions in this paper, we start by recalling Huke's formulation [Huke 06] of Takens' Theorem.
+
+**Theorem 1.1 (Takens)** Let M be a compact manifold of dimension q ∈ ℕ and let φ ∈ Diff²(M) be a twice-differentiable diffeomorphism that satisfies the following two properties:
+
+(i) φ has only finitely many periodic points with periods less than or equal to 2q.
+
+(ii) If m ∈ M is any periodic point of φ with period k < 2q, then the eigenvalues of the linear map T_m φ^k : T_m M → T_m M are distinct.
+
+Then for any generic scalar observation function ω ∈ C²(M, ℝ), the (2q + 1)-delay map Φ_(φ,ω): M → ℝ^(2q+1) defined by
+
+Φ_(φ,ω)(m) := (ω(m), ω ∘ φ(m), ω ∘ φ²(m), ..., ω ∘ φ^(2q)(m))  (1.1)
+
+is an embedding in C¹(M, ℝ^(2q+1)).
+
+The first consequence of this result is that, since the map Φ_(φ,ω) is an embedding, then it is necessarily injective and hence it can be used to represent in Φ_(φ,ω)(M) ⊂ ℝ^(2q+1) the dynamics induced by φ on M via the differentiable map ϕ_(φ,ω) := Φ_(φ,ω) ∘ φ ∘ Φ⁻¹_(φ,ω): Φ_(φ,ω)(M) ⊂ ℝ^(2q+1) → Φ_(φ,ω)(M) ⊂ ℝ^(2q+1) (we recall that the inverse function theorem guarantees that the map Φ⁻¹_(φ,ω): Φ_(φ,ω)(M) → M is differentiable). In view of the expression (1.1), this map takes necessarily the form ϕ_(φ,ω)(z₁, ..., z_(2q+1)) := (z₂, z₃, ..., h(z₁, ..., z_(2q+1))), for some differentiable map h : Φ_(φ,ω)(M) ⊂ ℝ^(2q+1) → ℝ. In this situation, we say that the dynamical systems (M, φ) and (Φ_(φ,ω)(M), ϕ_(φ,ω)) are topologically conjugate by the map Φ_(φ,ω). The importance of this representation is that the two systems (M, φ) and (Φ_(φ,ω)(M), ϕ_(φ,ω)) have the same C¹ invariants like Lyapunov exponents, eigenvalues of linearizations, or dimensions of attractors and their computation may be more efficiently carried out in Φ_(φ,ω)(M) ⊂ ℝ^(2q+1).
+
+More recently, the remarkable success of recurrent neural networks and reservoir computing [Luko 09, Tana 19] in the learning, forecasting [Jaeg 04, Path 17, Path 18, Lu 18], and classification [Carr 18] of chaotic attractors of complex nonlinear high-dimensional dynamical systems strongly suggests that these machine learning paradigms have Takens embedding-type properties. This fact has been rigorously established in [Hart 20, Hart 21] where the so called Echo State Networks (ESNs) [Matt 92, Matt 93, Jaeg 04, Grig 18, Gono 20b, Gono 21] driven by one-dimensional observations of a given dynamical system on a compact manifold have been shown, under certain hypotheses, to produce dynamics that are topologically conjugate to that of the original system.
+
+A concept that unifies the recurrent networks and the Takens approaches to the representation of dynamical systems is that of **generalized synchronization (GS)**, as introduced in [Rulk 95] (see [Peco 97, Ott 02, Bocc 02, Erog 17] for self-contained presentations and many references). Generalized synchronizations represent dynamical systems in the space of states ℝ^N of a state-space map F : ℝ^N × ℝ^d → ℝ^N, N, d ∈ ℕ. More specifically, let (M, φ) be the same dynamical systems as above, with M compact and φ ∈ Diff¹(M). Let ω ∈ C¹(M, ℝ^d), d ∈ ℕ, be a map that encodes d-dimensional observations of the dynamical system and define the (φ, ω)-delay map S_(φ,ω): M → ℓ^∞(ℝ^d) as S_(φ,ω)(m) := {ω(φ^t(m))}_(t∈ℤ). Consider now the drive-response system associated to the ω-observations of φ and determined by the recursions:
+
+x_t = F(x_(t-1), S_(φ,ω)(m)_t), t ∈ ℤ, m ∈ M.  (1.2)
+
+We say that a generalized synchronization occurs in this configuration when there exists a map f_(φ,ω,F): M → ℝ^N such that for any x_t, t ∈ ℤ, as in (1.2), it holds that
+
+x_t = f_(φ,ω,F)(φ^t(m)),  (1.3)
+
+that is, the time evolution of the dynamical system in phase space (not just its observations) drives the response in (1.2). We emphasize that the definition (1.3) presupposes that the recursions (1.2) have a (unique) solution, that is, that there exists a sequence x ∈ ℓ^∞(ℝ^N) such that (1.2) holds true. When that existence property holds and, additionally, the solution sequence x is unique, we say that F has the **(φ, ω)-Echo State Property (ESP)** (see [Jaeg 10, Manj 13, Manj 20] for in-depth descriptions of this property). Moreover, in the presence of the (φ, ω)-ESP, the state map F determines a unique causal and time-invariant filter U_F : S_(φ,ω)(M) → (ℝ^N)^ℤ that associates to each orbit S_(φ,ω)(m) the unique solution sequence x ∈ (ℝ^N)^ℤ of (1.2). The existence, continuity, and differentiability of GSs has been established in [Grig 20a] for a rich class of systems that exhibit the so-called fading memory property and that are generated by locally state-contracting maps F.
+
+The relevance of these concepts in relation to the embedding of dynamical systems lays in the fact that Takens' Theorem can be easily reformulated in the language of generalized synchronizations. Indeed, we first note that the map Φ_(φ,ω) introduced in (1.1) is the GS corresponding to the linear state map F(x, z) := Ax + Cz, with A the lower shift matrix in dimension 2q + 1 and C = (1, 0, ..., 0)^⊤ ∈ ℝ^(2q+1). Takens' Theorem can now be stated by saying the the GS Φ_(φ,ω) is an embedding for any generic scalar observation function ω ∈ C²(M, ℝ).
+
+The main result in this paper shows that Takens' Theorem is a particular case of a more general statement that ensures that the GSs associated to generic randomly generated linear state-space systems of the type F(x, z) := Ax + Cz, with A ∈ M_(N,N), C ∈ ℝ^N, and N ≥ 2q + 1, and driven by generic observations ω ∈ C²(M, ℝ) are embeddings.
+
+The term generic is used in the previous statement with two different meanings. First, when we talk about generic randomly generated linear state-space systems, we mean that the embedding condition holds almost surely when A ∈ M_(N,N) and C ∈ ℝ^N are randomly drawn with respect to some probability distribution in a subset of the spaces where those elements are defined. Second, when we write generic observations ω ∈ C²(M, ℝ), we mean that they belong to an open and dense subset of C²(M, ℝ) with respect to a Banach topology in that space that we define later on in the paper.
+
+An important consequence of this result is that it sheds light on the good performance of reservoir computing (RC) [Jaeg 04, Luko 09, Tana 19] in the forecasting of dynamical systems. We recall that RC (also found in the literature under other denominations like Liquid State Machines [Maas 00, Maas 02, Nats 02, Maas 04, Maas 07]) capitalizes on the idea that there are randomly generated systems that attain universal approximation properties without the need to estimate all their parameters. RC has shown unprecedented abilities in the learning of the attractors of complex nonlinear infinite dimensional dynamical systems [Jaeg 04, Path 17, Path 18, Lu 18] and has given rise to forecasting techniques that outperform standard Takens-based strategies.
+
+Our results explicitly contribute in relation to the RC phenomenon by showing that the dynamics of generic observations of invertible dynamical systems is almost surely learnable using randomly generated linear reservoir systems with nonlinear readouts (unlike what is common practice in the RC literature, where readouts are linear). Indeed, let f_(φ,ω,F): M → ℝ^N be a GS associated to a randomly generated linear state-space system that, as above, is driven by generic scalar observations ω ∈ C²(M, ℝ) of φ ∈ Diff²(M). Since our results show that f_(φ,ω,F) is an embedding, it then has an inverse and we can hence construct the readout h := ω ∘ φ ∘ f⁻¹_(φ,ω,F): f(M) ⊂ ℝ^N → ℝ that, applied to the states x_t determined by (1.3) fully characterize the dynamics of the ω-observations {ω(φ^t(m))}_(t∈ℤ) of φ because h(x_t) = ω ∘ φ(f⁻¹_(φ,ω,F)(x_t)) = ω(φ^(t+1)(m)). This observation implies that this dynamics can captured via the learning of the function h := ω ∘ φ ∘ f⁻¹_(φ,ω,F). This is what we call **learnability** (see, for instance, [Lu 20, Verz 20, Gaut 21]). We emphasize that the regularity properties of the map f_(φ,ω,F) that we establish later on in the paper guarantee that the readout h := ω ∘ φ ∘ f⁻¹_(φ,ω,F) can be efficiently approximated by a universal family (for instance neural networks or polynomials) and explains the good performance of this methodology in the applications cited above.
+
+The paper is organized as follows. Section 2 contains a first introduction to the connection between generalized synchronizations and embeddings and provides existence and regularity statements in the linear case (mainly Proposition 2.3) that are used later on in the paper. Section 3 introduces and proves Theorem 3.1, which establishes sufficient conditions for a linear system to yield immersive generalized synchronizations for generic observation maps. In Section 4 we show first (Theorem 4.1) that basically without additional hypotheses, the globally immersive generalized synchronizations whose existence was proved in Theorem 3.1 are injective and hence are necessarily embeddings due to the compactness of M. Finally, it is also shown (Theorem 4.5) in this section that randomly generated linear systems (linear reservoirs) yield synchronization maps f_(φ,ω,F) ∈ C²(M, ℝ^N) that are almost surely embeddings and are hence amenable to learnability from data. Section 5 contains a series of numerical illustrations that show the pertinence of the proposed results for attractor reconstruction, filtering in the presence of noise, and forecasting.
+
+---
+
+## 2 Definitions and preliminary discussion
+
+All along this paper we consider an invertible and discrete-time dynamical system determined by a map φ that belongs to the set of diffeomorphisms Diff¹(M) of a finite-dimensional compact manifold M. Since later on we need to ensure that M can be endowed with a Riemannian metric g, we additionally assume that M is connected, Hausdorff, and second-countable (see [Carm 92, Proposition 2.10]). The d-dimensional observations of the dynamical system are realized by maps ω that belong, most of the time, to C¹(M, ℝ^d). The symbol TM denotes the tangent bundle of M, Tφ : TM → TM the tangent map of φ, and Dω : TM → ℝ^d the differential of the observation map ω. Now, for any f ∈ C¹(M, ℝ^N), define
+
+‖Df‖_∞ = sup_(m∈M) {‖Df(m)‖} with ‖Df(m)‖ = sup_(v∈T_mM, v≠0) (‖Df(m)·v‖ / (g(m)(v,v))^(1/2))
+
+Analogously, if φ : M → M is a C¹ map, we can define:
+
+‖Tφ‖_∞ = sup_(m∈M) {‖T_mφ‖} with ‖T_mφ‖ = sup_(v∈T_mM, v≠0) ((g(φ(m))(T_mφ·v, T_mφ·v))^(1/2) / (g(m)(v,v))^(1/2))
+
+It can be proved by using the results in Chapter 2 of [Abra 67] that the norm ‖·‖_(C¹) defined by
+
+‖f‖_(C¹) := ‖f‖_∞ + ‖Df‖_∞  (2.1)
+
+endows C¹(M, ℝ^N) with a Banach space structure. Additionally, (see [Abra 67, Theorem 11.2 (ii)]) this norm generates a topology in C¹(M, ℝ^N) that is independent of the choice of Riemannian metric g and coincides with the weak and strong topologies introduced in Chapter 2 of [Hirs 76]. These notions can be extended to higher order differentiable maps in a straightforward manner.
+
+The embeddings that are at the core of this paper will be constructed using generalized synchronizations associated to linear systems. That is why we start by recalling a result proved in [Grig 20a] in relation with the existence of these objects in a rich variety of situations. The statement requires the following constants defined with respect to a subset V ⊂ ℝ^N:
+
+L^x_F := sup_((x,z)∈V×ω(M)) {‖D_xF(x,z)‖}, L^z_F := sup_((x,z)∈V×ω(M)) {‖D_zF(x,z)‖},
+L^(xx)_F := sup_((x,z)∈V×ω(M)) {‖D_(xx)F(x,z)‖}, L^(xz)_F := sup_((x,z)∈V×ω(M)) {‖D_(xz)F(x,z)‖},  (2.2)
+
+**Theorem 2.1 (Existence and uniqueness of differentiable generalized synchronizations)** Let φ ∈ Diff¹(M) be a dynamical system on the compact manifold M and consider the observation ω ∈ C¹(M, ℝ^d) and state F ∈ C²(D_N × D_d, D_N) maps, with D_N ⊂ ℝ^N and D_d ⊂ ℝ^d open subsets such that ω(M) ⊂ D_d. Let V ⊂ D_N be a closed convex subset and suppose that F(V × ω(M)) ⊂ V. Suppose that the bounds for the partial derivatives of F introduced in (2.2) are all finite and that, additionally,
+
+L^x_F < min{1, 1/‖Tφ⁻¹‖_∞}.  (2.3)
+
+Then there exists a compact and convex subset W ⊂ V such that F(W × ω(M)) ⊂ W and:
+
+(i) The system determined by F : W × ω(M) → W and driven by the ω-observations of φ has the (φ, ω)-ESP and a generalized synchronization f_(φ,ω,F): M → W exists and is well-defined by the relation U_F(S_(φ,ω)(m))_t = f_(φ,ω,F)(φ^t(m)), for any t ∈ ℤ, m ∈ M.
+
+(ii) The map f_(φ,ω,F) belongs to C¹(M, W) and it is the only one that satisfies the identity:
+
+f_(φ,ω,F)(m) = F(f_(φ,ω,F)(φ⁻¹(m)), ω(m)), for all m ∈ M.
+
+If we now consider the linear system
+
+F(x, z) := Ax + Cz, with A ∈ M_(N,N), C ∈ ℝ^N, N ∈ ℕ,  (2.4)
+
+in the context of the previous theorem, we obtain the following corollary that is a straightforward consequence of the fact that, in this case, A = D_xF(x, z), for all x ∈ ℝ^N and z ∈ ℝ, and hence L^x_F = ‖A‖. We shall refer to A as the **connectivity matrix** and to the vector C as the **input mask**.
+
+**Corollary 2.2** Let φ ∈ Diff¹(M) be a dynamical system on the compact manifold M and consider the observation map ω ∈ C¹(M, ℝ). Let F : ℝ^N × ℝ → ℝ^N be the linear state map given by F(x, z) := Ax + Cz with A ∈ M_(N,N), C ∈ ℝ^N, N ∈ ℕ, such that
+
+‖A‖ < min{1, 1/‖Tφ⁻¹‖_∞}.  (2.5)
+
+(i) The system determined by F : ℝ^N × ω(M) → ℝ^N and driven by the ω-observations of φ has the (φ, ω)-ESP and a generalized synchronization f_(φ,ω,F): M → ℝ^N given by
+
+f_(φ,ω,F)(m) = Σ_(j=0)^∞ A^j C ω(φ⁻^j(m)).  (2.6)
+
+(ii) The map f_(φ,ω,F) belongs to C¹(M, ℝ^N) and it is the only one that satisfies the identity:
+
+f_(φ,ω,F)(m) = Af_(φ,ω,F)(φ⁻¹(m)) + Cω(m), for all m ∈ M.
+
+The features of the linear case allow us to prove the existence of generalized synchronizations in situations that go beyond those spelled out in Theorem 2.1 and Corollary 2.2. More specifically, an argument similar to what can be found in Proposition 4.2 in [Grig 20b] allows us to drop the compactness condition on the manifold M and to replace the hypotheses on the design matrix A by more general ones based on its spectral radius ρ(A).
+
+**Proposition 2.3** Let φ ∈ Diff¹(M) be a dynamical system on the manifold M (not necessarily compact) and consider the observation map ω ∈ C¹(M, ℝ). Let F : ℝ^N × ℝ → ℝ^N be a linear state map given by F(x, z) := Ax + Cz with A ∈ M_(N,N), C ∈ ℝ^N, N ∈ ℕ.
+
+(i) If the spectral radius of A satisfies that ρ(A) < 1 and ω maps into a bounded set of ℝ then the GS f_(φ,ω,F): M → ℝ^N introduced in (2.6) exists and it is a continuous map.
+
+(ii) Additionally, let r ∈ ℕ and suppose that φ ∈ Diff^r(M) and that there exist constants k₁, ..., k_r ∈ ℕ such that ‖A^(k_i)‖‖T^iφ^(-k_i)‖_∞ < 1, ‖T^iφ⁻¹‖_∞ < ∞ for all i ∈ {1, ..., r}. Then for any ω ∈ C^r(M, ℝ) such that ‖D^iω‖_∞ < ∞, for all i ∈ {1, ..., r}, the map f_(φ,ω,F) belongs to C^r(M, ℝ^N) and the higher order derivatives are given by:
+
+D^i f_(φ,ω,F)(m) = Σ_(j=0)^∞ A^j C D^i(ω ∘ φ^(-j))(m), for all i ∈ {1, ..., r}.  (2.7)
+
+(iii) Suppose now that M is compact. In the hypotheses of points (i) and (ii) above, the map
+
+Θ_(φ,F): C^r(M, ℝ) → C^r(M, ℝ^N)
+ω ↦ f_(φ,ω,F)  (2.8)
+
+is continuous. Moreover, the subsets Ω_i and Ω_e of C^r(M, ℝ) for which the corresponding GS are immersions and embeddings, respectively, are open.
+
+**Proof.** (i) This statement is obtained out of a combination Weierstrass M-test (see [Apos 74, Theorem 9.6]) and Gelfand's formula for the spectral radius (see [Lax 02]), that is, lim_(k→∞) ‖A^k‖^(1/k) = ρ(A). Since by hypothesis ρ(A) < 1, we can guarantee the existence of a number k₀ ∈ ℕ such that ‖A^(k₀)‖ < 1, for all k ≥ k₀. Consider now the series Σ_(j=0)^∞ A^j Cω(φ^(-j)(m)) in (2.6) that defines f_(φ,ω,F)(m). Given that for any j ∈ ℕ there exist l ∈ ℕ and i ∈ {0, ..., k₀ - 1} such that A^j = A^(lk₀+i), we then have that,
+
+‖A^j Cω(φ^(-j)(m))‖ ≤ ‖A^(k₀)‖^l ‖C‖ K_A K_ω,  (2.9)
+
+with K_A = max{1, ‖A‖, ..., ‖A^(k₀-1)‖} and K_ω ∈ ℝ a constant that satisfies that |ω(m)| ≤ K_ω for any m ∈ M and that is available by the boundedness hypothesis on ω(M).
+
+The inequality (2.9) and the Weierstrass M-test guarantee that the series Σ_(j=0)^∞ A^j Cω(φ^(-j)(m)) converges absolutely and uniformly on M and that
+
+‖f_(φ,ω,F)(m)‖ = ‖Σ_(j=0)^∞ A^j Cω(φ^(-j)(m))‖ ≤ Σ_(j=0)^∞ ‖A^(k₀)‖^l ‖C‖ K_A K_ω = (‖C‖ K_A K_ω)/(1 - ‖A^(k₀)‖).
+
+Finally, since each of the summands in the series is a continuous function then so is f_(φ,ω,F).
+
+(ii) The result that we just proved guarantees that if the differentials D^i f_(φ,ω,F)(m), i ∈ {1, ..., r}, exist then they are given by the series Σ_(j=0)^∞ A^j C D^i(ω ∘ φ^(-j))(m) that, using again the Weierstrass M-test and the hypotheses in the statement, will be now shown to uniformly converge to a continuous map. Indeed, using again the decomposition A^j = A^(lk_i+s) in terms of the element k_i ∈ ℕ such that ‖A^(k_i)‖‖T^iφ^(-k_i)‖_∞ < 1 we can conclude that each summand of this series satisfies that
+
+‖A^j C D^i(ω ∘ φ^(-j))(m)‖ ≤ ‖A^(k_i)‖‖Tφ^(-k_i)‖_∞^l ‖C‖ K^i_A K_(T^iφ⁻¹) ‖D^iω‖_∞,  (2.10)
+
+with K^i_A := max{1, ‖A‖, ..., ‖A^(k_i-1)‖} and K_(T^iφ⁻¹) := max{1, ‖T^iφ⁻¹‖_∞, ..., ‖T^iφ⁻¹‖_∞^(k_i-1)}, which proves the desired convergence and that D^i f_(φ,ω,F)(m) = Σ_(j=0)^∞ A^j C D^i(ω ∘ φ^(-j))(m). Moreover,
+
+‖D^i f_(φ,ω,F)(m)‖ = ‖Σ_(j=0)^∞ A^j C D^i(ω ∘ φ^(-j))(m)‖ ≤ (‖C‖ K^i_A K_(T^iφ⁻¹) ‖D^iω‖_∞)/(1 - ‖A^(k_i)‖ ‖T^iφ^(-k_i)‖_∞).  (2.11)
+
+(iii) We start by noting that if the map (2.8) is continuous then the subsets Ω_i and Ω_e are indeed open because by Theorems 1.1 and 1.4 in [Hirs 76] the immersions and the embeddings in C^r(M, ℝ^N) are open and hence Ω_i and Ω_e are the preimages of those open sets by the continuous map Θ_(φ,F). We establish now the continuity of Θ_(φ,F) by showing that if the sequence {ω_n}_(n∈ℕ) in C^r(M, ℝ) converges to some element ω ∈ C^r(M, ℝ) then so does {Θ_(φ,F)(ω_n)}_(n∈ℕ) ⊂ C^r(M, ℝ^N) with respect to Θ_(φ,F)(ω) ∈ C^r(M, ℝ^N). Indeed, if ω_n → ω then, using the notation introduced in (2.11), we have that for a given ε > 0 and for n sufficiently large
+
+(‖C‖ K^i_A K_(T^iφ⁻¹))/(1 - ‖A^(k_i)‖ ‖T^iφ^(-k_i)‖_∞) ‖D^iω_n - D^iω‖_∞ < ε/r.
+
+Then,
+
+‖Θ_(φ,F)(ω_n) - Θ_(φ,F)(ω)‖_(C^r(M,ℝ^N)) = Σ_(i=0)^r ‖D^i f_(φ,ω_n,F) - D^i f_(φ,ω,F)‖_∞
+
+= Σ_(i=0)^r ‖Σ_(j=0)^∞ A^j C D^i((ω_n - ω) ∘ φ^(-j))(m)‖
+
+≤ Σ_(i=0)^r (‖C‖ K^i_A K_(T^iφ⁻¹))/(1 - ‖A^(k_i)‖ ‖T^iφ^(-k_i)‖_∞) ‖D^iω_n - D^iω‖_∞ < ε/r + ··· + ε/r = ε,
+
+as required. ∎
+
+---
+
+## 3 Immersive generalized synchronizations
+
+As we discussed in the introduction, the fact that the Takens delay map is an embedding under certain circumstances guarantees that the representation of the dynamical system associated to it can be used to learn the dynamics of its observations. In this section we take the first steps to show that similar results can be achieved by using the generalized synchronizations introduced in Proposition 2.3. More specifically, we shall spell out conditions on linear state-space systems that guarantee that the resulting generalized synchronizations are immersions for generic scalar observations ω ∈ C²(M, ℝ). All along this section, the phase space manifold M of the dynamical system φ ∈ Diff²(M) is compact and hence genericity in C²(M, ℝ) is stated with respect to the topology associated to the extension to second-order differentiable functions of the Banach structure introduced in (2.1). The next theorem is the main statement of this section.
+
+**Theorem 3.1** Let φ ∈ Diff²(M) be a dynamical system on a compact manifold M of dimension q that exhibits finitely many periodic orbits. Let F : ℝ^N × ℝ → ℝ^N be a linear state map as in (2.4) with N ≥ 2q whose connectivity matrix satisfies that ρ(A) < 1 and such that for any observation map ω ∈ C²(M, ℝ) the corresponding generalized synchronization f_(φ,ω,F) ∈ C²(M, ℝ^N) and, moreover, the map Θ_(φ,F): C²(M, ℝ) → C²(M, ℝ^N) introduced in (2.8) is continuous. Suppose also that the two following conditions hold:
+
+(i) For each periodic orbit m of φ with period n ∈ ℕ, the derivative T_m φ^(-n) has q distinct eigenvalues λ₁, λ₂, ..., λ_q. Let λ_(max) be the eigenvalue with the highest absolute value among the eigenvalues of all those linear maps and let n_(min) be the smallest period. Suppose that ρ(λ_(max)A^(n_(min))) < 1 and that for any periodic point m, the vectors
+
+{(I - λ_j A^n)^(-1)(I - A)^(-1)(I - A^n)C}_(j∈{1,...,q}), with λ_j eigenvalue of T_m φ^(-n)  (3.1)
+
+form a linearly independent set.
+
+(ii) The vectors {A^j C}_(j∈{0,1,...,N-1}) form a linearly independent set.
+
+Then, for generic ω ∈ C²(M, ℝ^N) the generalized synchronization f_(φ,ω,F) ∈ C²(M, ℝ) is an immersion.
+
+### About the hypotheses of the theorem
+
+All the hypotheses in this statement can be either easily guaranteed or, even better, they generically hold. More specifically, the condition on the linear state map F to produce GS maps f_(φ,ω,F) ∈ C²(M, ℝ^N) for any observation map ω ∈ C²(M, ℝ) and the continuity of Θ_(φ,F) can be enforced by using the second and third parts of Proposition 2.3. The condition on φ exhibiting finitely many periodic orbits holds generically due to the Kupka-Smale Theorem [Kupk 63, Smal 63].
+
+As to the condition (3.1), we shall see later on (see Proposition 4.4) that it holds almost surely in a very specific sense. Regarding the hypothesis in point (ii), this is a very important condition that amounts to **reachability** in a control theoretical sense (see [Kalm 10, Sont 98]). It has been shown in [Gono 20a] that if A is diagonalizable then this condition holds if and only if all the eigenvalues in the spectrum σ(A) of A are distinct and in the linear decomposition C = Σ_(i=1)^N c_i v_i, with {v₁, ..., v_N} a basis of eigenvectors of A, all the coefficients c_i, with i ∈ {1, ..., N}, are non-zero. This condition can be equivalently reformulated by saying that the Krylov space [Kryl 31] generated by A and C has maximal dimension.
+
+### Relation with Takens' Theorem
+
+The system spelled out in the introduction that allows us to see Takens's delay embedding Φ_(φ,ω) as the GS corresponding to a linear state map trivially satisfies the hypotheses of the theorem. Indeed, since in that case A is the lower shift matrix in dimension 2q + 1 and C = (1, 0, ..., 0)^⊤ ∈ ℝ^(2q+1), the set in condition (ii) coincides with the canonical basis in ℝ^N which is a trivially linearly independent set. Regarding the conditions in (i), as A is nilpotent then all its eigenvalues are zero and hence the hypotheses are trivially satisfied.
+
+Based on this observation, we can formulate a more general statement by saying that any linear system with nilpotent connectivity matrix A that has an input mask C for which the vectors {A^j C}_(j∈{0,1,...,N-1}) form a linearly independent set also satisfies the hypotheses of the theorem. Equivalently, with the terminology of the previous paragraph, we can rephrase this by writing that any reachable linear system with nilpotent connectivity matrix A satisfies the hypotheses of the theorem.
+
+### System isomorphisms
+
+Given the linear state map introduced in (2.4) and a linear isomorphism of ℝ^N with associated matrix P ∈ M_(N,N), consider the new map F̃(x, z) := PAP^(-1)x + PCz. Let now h : ℝ^M → ℝ^m be a readout for the state map F. In this setup, it is easy to see that the state-space systems (F, h) and (F̃, h̃ := h ∘ P^(-1)) are isomorphic in the sense that, in the presence of the echo state property, they determine identical input/output systems.
+
+In view of this observation, it is important to emphasize that the hypotheses of Theorem 3.1 are invariant under linear system isomorphisms. More explicitly, if we replace in the statement A and C by Ã := PAP^(-1) and C̃ := PC, respectively, then ρ(Ã) = ρ(A) and the validity of the hypotheses (i) and (ii) is not altered. Indeed, regarding (i), it suffices to notice that
+
+(I - λ_j Ã^n)^(-1)(I - Ã)^(-1)(I - Ã^n)C̃ = (Σ_(i=0)^∞ λ_j^i(Ã^n)^i)(Σ_(i=0)^∞ λ_j^i Ã^i)(I - Ã^n)C̃
+
+= P(Σ_(i=0)^∞ λ_j^i(A^n)^i)P^(-1)P(Σ_(i=0)^∞ λ_j^i A^i)P^(-1)(PP^(-1) - PA^nP^(-1))PC
+
+= P((I - λ_j A^n)^(-1)(I - A)^(-1)(I - A^n)C).
+
+As to (ii), notice that {Ã^j C̃}_(j∈{0,1,...,N-1}) = {PA^j C}_(j∈{0,1,...,N-1}). Since P is an invertible matrix, in both cases the linear independence is preserved.
+
+Another observation that is worth pointing out is that the class of linear systems for which Theorem 3.1 hold is strictly larger than the one determined (up to linear isomorphisms) by Takens' Theorem. As it was mentioned in the previous paragraph, Takens' result is associated to a linear system with nilpotent connectivity matrix A (whose eigenvalues are hence all zero). It is easy to see that when the entries of C are all non-zero then one can always find a non-singular diagonal matrix A for which the hypotheses of Theorem 3.1 hold. Such system is not in the same isomorphism class as Takens' system.
+
+### Proof of the Theorem
+
+We proceed in two steps. In the first one we show that f_(φ,ω,F) ∈ C²(M, ℝ) is an immersion at periodic points and in the second one we take care of the remaining points. We emphasize that equilibria can be seen as periodic points with period 1.
+
+**Step 1. Immersion at periodic points.** We start this part with two preparatory lemmas.
+
+**Lemma 3.2** Consider a connectivity matrix that satisfies the conditions ρ(A) < 1 and also that ρ(λ_(max)A^(n_(min))) < 1 as in part (i) of the statement of the theorem. Then, for any periodic point m with period n and any eigenvalue λ_j of T_m φ^(-n), we have that ρ(λ_j A^n) < 1 and
+
+(I - λ_j A^n)^(-1) = Σ_(k=0)^∞ λ_j^k A^(nk).  (3.2)
+
+**Proof.** Firstly, recall the general fact already used in the proof of Proposition 2.3 (see also Proposition 4.2 in [Grig 20b]) that for any square matrix B such that ρ(B) < 1 then (I - B)^(-1) = Σ_(j=0)^∞ B^j. Let now m be a periodic point with period n and let λ_j be an eigenvalue of T_m φ^(-n). This implies that in order for (3.2) to hold we just need to show that ρ(λ_j A^n) < 1. This is indeed true since any element in the spectrum of λ_j A^n can be written as λ_j μ_k^n with μ_k ∈ ℂ an eigenvalue of A. Moreover, let c < 1 such that |λ_j| = c|λ_(max)|. Then
+
+|λ_j μ_k^n| = c|λ_(max)μ_k^(n_(min))||μ_k^(n-n_(min))| < 1,
+
+as required. Notice that in the last inequality we used that ρ(λ_(max)A^(n_(min))) < 1 and that ρ(A) < 1. ∎
+
+**Lemma 3.3** In the hypotheses of the statement of the theorem, let m ∈ M be a periodic point of φ ∈ Diff²(M) with period n ∈ ℕ. Let {v₁, ..., v_p} be a basis of eigenvectors associated to the distinct eigenvalues λ₁, λ₂, ..., λ_q. Suppose that the set
+
+{(I - λ_j A^n)^(-1) Σ_(k=0)^(n-1) A^k CD(ω ∘ φ^(-k))(m)v_j}_(j∈{1,...,q})  (3.3)
+
+is linearly independent. Then f_(φ,ω,F) is an immersion at the periodic point m for generic ω ∈ C²(M, ℝ^N).
+
+**Proof.** Since the eigenvalues λ_j are distinct and the eigenvectors v_j are hence linearly independent, it therefore suffices to show that the set {Df_(φ,ω,F)(m)v_j}_(j∈{1,...,q}) is linearly independent to conclude that Df_(φ,ω,F)(m) is injective. Then, by the expression (2.7):
+
+Df_(φ,ω,F)(m)v_j = Σ_(l=0)^∞ A^l CD(ω ∘ φ^(-l))(m)v_j = Σ_(l=0)^∞ Σ_(k=0)^(n-1) A^(ln+k) CD(ω ∘ φ^(-(ln+k)))(m)v_j
+
+= Σ_(l=0)^∞ Σ_(k=0)^(n-1) A^(ln+k) CD(ω ∘ φ^(-k))(m)[Dφ^(-n)(m)]^l v_j = Σ_(l=0)^∞ Σ_(k=0)^(n-1) A^(ln+k) CD(ω ∘ φ^(-k))(m)λ_j^l v_j
+
+= Σ_(l=0)^∞ (λ_j A^n)^l Σ_(k=0)^(n-1) A^k CD(ω ∘ φ^(-k))(m)v_j = (I - λ_j A^n)^(-1) Σ_(k=0)^(n-1) A^k CD(ω ∘ φ^(-k))(m)v_j,
+
+which proves the statement. ∎
+
+We now use this result to show that, for generic ω ∈ C²(M, ℝ^N), the generalized synchronization f_(φ,ω,F) ∈ C²(M, ℝ) is an immersion at the periodic points of φ. Let m₁, ..., m_P ∈ M be the distinct periodic points of φ, each of which have periods n₁, ..., n_P ∈ ℕ, respectively (the equilibria of φ are on this list with periods equal to one). The term distinct means that none of those points are in the orbits of the others. We now choose P disjoint open neighborhoods B_i that contain each of the distinct periodic points m_i. Since there is a finite number of periodic points, the open sets B_i can be chosen small enough so that, additionally, all the open sets {φ^(-t)(B_i) for all t ∈ {0, ..., n_i} and i ∈ {1, ..., P}} are disjoint.
+
+Now, given any of the distinct periodic points m_i ∈ M on the list, we show that f_(φ,ω,F) for generic ω ∈ C²(M, ℝ^N), that is, the set of observation maps ω for which f_(φ,ω,F) is an immersion at m_i is open and dense in C²(M, ℝ^N). The openness is a consequence of the hypothesis on the continuity of the map Θ_(φ,F) and of an argument identical to the beginning of the proof of part (iii) of Proposition 2.3. Regarding the density, we show that if f_(φ,ω,F) is not an immersion at m_i, then there is a perturbation ω' of ω in C²(M, ℝ) for which f_(φ,ω',F) is an immersion at m_i. Indeed, set
+
+ω' = ω + Σ_(l=0)^(n_i-1) ψ_l^i  (3.4)
+
+where ψ_l^i ∈ C^∞(M, ℝ) are bump functions whose supports are contained in φ^(-l)(B_i) and, additionally, are chosen to satisfy
+
+D(ψ_l^i ∘ φ^(-l))(m_i) = εv^⊤, l ∈ {0, ..., n_i - 1},
+
+for some small constant ε > 0 and v ∈ ℝ^p the unique vector that solves the linear system
+
+[v₁^⊤; ...; v_p^⊤]v = [1; ...; 1],  (3.5)
+
+with {v₁, ..., v_p} a basis of eigenvectors of T_(m_i) φ^(-n_i). Note that by construction and for any l ∈ {0, ..., n_i - 1},
+
+D(ω' ∘ φ^(-l))(m_i) = D(ω ∘ φ^(-l))(m_i) + D(ψ_l^i ∘ φ^(-l)) = D(ω ∘ φ^(-l))(m_i) + εv^⊤.  (3.6)
+
+We now consider the vectors (3.3) in Lemma 3.3 with respect to the perturbed observation map in (3.4). Indeed, by (3.6) and the way in which the vector v has been chosen in (3.5):
+
+(I - λ_j A^(n_i))^(-1) Σ_(k=0)^(n_i-1) A^k CD(ω' ∘ φ^(-k))(m_i)v_j
+
+= (I - λ_j A^(n_i))^(-1) Σ_(k=0)^(n_i-1) A^k CD(ω ∘ φ^(-k))(m_i)v_j + ε(I - λ_j A^(n_i))^(-1) Σ_(k=0)^(n_i-1) A^k Cv^⊤v_j
+
+= (I - λ_j A^(n_i))^(-1) Σ_(k=0)^(n_i-1) A^k CD(ω ∘ φ^(-k))(m_i)v_j + ε(I - λ_j A^(n_i))^(-1)(I - A)^(-1)(I - A^(n_i))C.
+
+Given that when we vary j ∈ {1, ..., p} in the previous expression the vectors in the second summand form by hypothesis a linearly independent set, we can use Lemma 6.1 to choose ε > 0 so that the family {(I - λ_j A^(n_i))^(-1) Σ_(k=0)^(n_i-1) A^k CD(ω' ∘ φ^(-k))(m_i)v_j}_(j∈{1,...,p}) forms a linearly independent set and, at the same time, ω' is as close to ω in C²(M, ℝ) as desired. This shows by Lemma 3.3 that f_(φ,ω',F) is an immersion at m_i.
+
+The choice of the open sets B_i implies that we can keep perturbing ω in order to make f_(φ,ω',F) immersive at the other periodic points without spoiling that condition for the previous ones. This shows in particular that a perturbation of the type
+
+ω' = ω + Σ_(i=1)^P Σ_(l=0)^(n_i-1) ψ_l^i  (3.7)
+
+can be constructed so that f_(φ,ω',F) is immersive at all the periodic points of φ, as required.
+
+**Step 2. Immersion at the remaining points.** Having just proved that for generic ω ∈ C²(M, ℝ^N) the generalized synchronization f_(φ,ω,F) ∈ C²(M, ℝ) is an immersion at the periodic points of φ, the Immersion Theorem (see [Abra 88, Theorem 3.5.7]) guarantees that the same holds for the open set formed by the union of certain open neighborhoods around those points. Let M̄ ⊂ M be the compact subset of M obtained by removing that immersed open set. Our goal is now to show that f_(φ,ω,F) ∈ C²(M, ℝ) is also an immersion at M̄ for generic ω ∈ C²(M, ℝ^N).
+
+Recall first that the hypotheses that we imposed on M in the beginning of Section 2 imply that it can be endowed with a Riemannian metric which makes it into a complete metric space by the Hopf and Rinow Theorem (see [Boot 03, Theorem 7.7]). This implies in turn that the compact subset M̄ ⊂ M is also a complete metric space which allows us to define open balls B_r(m) of radius r > 0 around each point m ∈ M̄. Using this notation, in the next paragraphs we show that for any ω ∈ C²(M, ℝ^N) and m ∈ M̄ we can find a n(m) ∈ ℕ and a perturbation ω' ∈ C²(M, ℝ^N) as close to ω as desired such that the restriction of f_(φ,ω',F) to B_(2^(-n(m)))(m) is an immersion.
+
+Indeed, take an arbitrary m ∈ M̄ and define a collection of balls B_(2^(-n))(m) centered at m with radius 2^(-n), n ∈ ℕ. For a fixed n consider the infinite trajectory φ^(-t)(B_(2^(-n))(m)), t ∈ ℕ. Choose now n₁ ∈ ℕ large enough so that, for any n > n₁ the balls φ^(-t)(B_(2^(-n))(m)) are disjoint for t = 0, ..., N - 1 and B_(2^(-n))(m) ⊂ U where (U, h) is an admissible chart of M. Given that φ ∈ Diff²(M), we note that the family (U_t, h_t), t ∈ ℕ, defined by U_t = φ^(-t)(U) and h_t := h ∘ φ^t is made of admissible charts and that φ^(-t)(B_(2^(-n))(m)) ⊂ U_t, for all n > n₁. Let T(n) denote the largest integer such that φ^(-t)(B_(2^(-n))(m)) are disjoint for t = 0, ..., T(n) - 1.
+
+Now, for each n > n₁ and t = 0, ..., N - 1 we define functions ψ_t^n ∈ C^∞(M, ℝ) that have their support included in φ^(-t)(B_(2^(-n))(m)) and satisfy
+
+∂(ψ_t^n h_t^(-1))/∂u_j = 1  (3.8)
+
+on h_t(φ^(-t)(B_(2^(-(n+1)))(m))) = h(B_(2^(-(n+1)))(m)). We impose further that ψ_t^n = ψ_t^(n+1) on φ^(-t)(B_(2^(-(n+2)))(m)) for all n > n₁, and that there is some κ > 0 independent of n and t such that ‖ψ_t^n h_t^(-1)‖_(C¹) ≤ κ. These functions can be constructed by setting
+
+ψ_t^n(m) = λ_t^n(m) Σ_(j=1)^q ξ_j(m)
+
+where ξ_j is the j-th coordinate map for the chart h_t and λ_t^n ∈ C^∞(M, ℝ) are bump functions that have support included in φ^(-t)(B_(2^(-n))(m)) and satisfy λ_t^n|_(φ^(-t)(B_(2^(-(n+1)))(m))) = 1. Define now the perturbation ω_n of ω by
+
+ω_n = ω + Σ_(t=0)^(N-1) ε_t ψ_t^n,  (3.9)
+
+where ε_t are the components of a vector ε ∈ ℝ^N with positive entries. By construction, for any m' ∈ B_(2^(-n))(m) and t = 0, ..., N - 1, we have that ω_n φ^(-t)(m') = ω φ^(-t)(m') + ε_t ψ_t^n(m') and moreover by (3.8) and for any m' ∈ B_(2^(-(n+1)))(m):
+
+∂(ω_n φ^(-t) h^(-1))/∂u_j (h(m')) = ∂(ω φ^(-t) h^(-1))/∂u_j (h(m')) + ε_t.  (3.10)
+
+Let Φ : M → ℝ^N be a backwards version of the Takens delay map introduced in (1.1), that is,
+
+Φ(m) := (ω(m), ω ∘ φ^(-1)(m), ..., ω ∘ φ^(-(N-1))(m))^⊤,
+
+and let Φ_n : M → ℝ^N be its perturbed version defined by
+
+Φ_n(m) := (ω_n(m), ω_n ∘ φ^(-1)(m), ..., ω_n ∘ φ^(-(N-1))(m))^⊤.
+
+Using these objects, we can rewrite (3.10) in vector form as
+
+∂(Φ_n h^(-1))/∂u_j (h(m')) = ∂(Φ h^(-1))/∂u_j (h(m')) + ε,  (3.11)
+
+for any m' ∈ B_(2^(-(n+1)))(m) and where ε ∈ ℝ^N. Next, for any t = N, ..., T(n) - 1 notice that ω_n φ^(-t)(m) = ω φ^(-t)(m). (3.12)
+
+Finally, if t ≥ T(n) then
+
+ω_n φ^(-t)(m) = ω φ^(-t)(m) + Σ_(τ=0)^(N-1) ε_τ ψ_τ^n φ^(-t)(m).  (3.13)
+
+We now consider the perturbed generalized synchronization f_(φ,ω_n,F): M → ℝ^N given by
+
+f_(φ,ω_n,F) = Σ_(t=0)^∞ A^t Cω_n φ^(-t) = Σ_(t=0)^(N-1) A^t Cω_n φ^(-t) + Σ_(t=N)^∞ A^t Cω_n φ^(-t) = QΦ_n + Σ_(t=N)^∞ A^t Cω_n φ^(-t)
+
+where Q is the N × N real matrix with (t + 1)-th column A^t C. Now we take the partial derivatives with respect to u_j at points in h(B_(2^(-(n+1)))(m)) and observe that by (3.11), (3.12), and (3.13):
+
+∂(f_(φ,ω_n,F) h^(-1))/∂u_j = Q ∂(Φ_n h^(-1))/∂u_j + Σ_(t=N)^∞ A^t C ∂(ω_n φ^(-t) h^(-1))/∂u_j
+
+= Q ∂(Φ h^(-1))/∂u_j + Qε + Σ_(t=N)^∞ A^t C ∂(ω_n φ^(-t) h^(-1))/∂u_j
+
+= Q ∂(Φ h^(-1))/∂u_j + Qε + Σ_(t=N)^(T(n)-1) A^t C ∂(ω_n φ^(-t) h^(-1))/∂u_j + Σ_(t=T(n))^∞ A^t C ∂(ω_n φ^(-t) h^(-1))/∂u_j
+
+= Q ∂(Φ h^(-1))/∂u_j + Qε + Σ_(t=N)^(T(n)-1) A^t C ∂(ω φ^(-t) h^(-1))/∂u_j + Σ_(t=T(n))^∞ A^t C ∂(ω_n φ^(-t) h^(-1))/∂u_j
+
+= Q ∂(Φ h^(-1))/∂u_j + Qε + Σ_(t=N)^(T(n)-1) A^t C ∂(ω φ^(-t) h^(-1))/∂u_j + Σ_(t=T(n))^∞ A^t C ∂(ω φ^(-t) h^(-1))/∂u_j + Σ_(t=T(n))^∞ A^t C (Σ_(τ=0)^(N-1) ε_τ ∂(ψ_τ^n φ^(-t) h^(-1))/∂u_j)
+
+= Q ∂(Φ h^(-1))/∂u_j + Qε + Σ_(t=N)^∞ A^t C ∂(ω φ^(-t) h^(-1))/∂u_j + Σ_(t=T(n))^∞ A^t C (Σ_(τ=0)^(N-1) ε_τ ∂(ψ_τ^n φ^(-t) h^(-1))/∂u_j)
+
+= Σ_(t=0)^(N-1) A^t C ∂(ω φ^(-t) h^(-1))/∂u_j + Qε + Σ_(t=N)^∞ A^t C ∂(ω φ^(-t) h^(-1))/∂u_j + Σ_(t=T(n))^∞ A^t C (Σ_(τ=0)^(N-1) ε_τ ∂(ψ_τ^n φ^(-t) h^(-1))/∂u_j)
+
+= Σ_(t=0)^∞ A^t C ∂(ω φ^(-t) h^(-1))/∂u_j + Qε + Σ_(t=T(n))^∞ A^t C (Σ_(τ=0)^(N-1) ε_τ ∂(ψ_τ^n φ^(-t) h^(-1))/∂u_j)
+
+= ∂(f_(φ,ω,F) h^(-1))/∂u_j + Qε + Σ_(t=T(n))^∞ A^t C (Σ_(τ=0)^(N-1) ε_τ ∂(ψ_τ^n φ^(-t) h^(-1))/∂u_j).  (3.14)
+
+In order to prove that f_(φ,ω,F) is an immersion at the points in h(B_(2^(-(n+1)))(m)) for a generic observation ω, we shall find an arbitrarily small vector ε for which the vectors corresponding to the ε-perturbed observation ω_n
+
+{∂(f_(φ,ω_n,F) h^(-1))/∂u_j}_(j∈{1,...,q})
+
+are a linearly independent family. We will proceed inductively by showing that if we assume for some s satisfying 1 ≤ s < q that the vectors
+
+{∂(f_(φ,ω,F) h^(-1))/∂u_j}_(j∈{1,...,s})  (3.15)
+
+are linearly independent, then we can choose an arbitrarily small vector ε such that the family corresponding to the perturbed observation ω_n defined in (3.9) satisfies that {∂(f_(φ,ω_n,F) h^(-1))/∂u_j}_(j∈{1,...,s+1}) is a linearly independent family. To this end, we define the map Ψ : ℝ^s × h(U) → ℝ^N as
+
+Ψ(α, u) = Σ_(j=1)^s α_j ∂(f_(φ,ω,F) h^(-1))/∂u_j - ∂(f_(φ,ω,F) h^(-1))/∂u_(s+1).
+
+The hypothesis on the statement of the theorem about f_(φ,ω,F) ∈ C²(M, ℝ^N) for any observation map ω ∈ C²(M, ℝ) implies that Ψ is of class C¹ and maps a manifold of dimension s + q to a manifold of dimension N. Since by hypothesis s + q < 2q ≤ N, then the set ℝ^N \ Ψ(ℝ^s × h(U)) is dense in ℝ^N (see [Hirs 76, Chapter 3, Proposition 1.2]). This implies that we can choose an arbitrarily small vector δ ∈ (ℝ^N \ Ψ(ℝ^s × h(U))) such that if we set ε := Q^(-1)δ then we have that the vector
+
+∂(f_(φ,ω,F) h^(-1))/∂u_(s+1) + Qε
+
+is independent of the vectors in (3.15) when evaluated at any point in h(U). Since the linear independence is stable under small perturbations we can choose ε small enough so that it is actually the family {∂(f_(φ,ω,F) h^(-1))/∂u_j + Qε}_(j∈{1,...,s+1}) that is linearly independent. Now, in view of the identity (3.14) we note that the value n ∈ ℕ can be chosen large enough so that the residual terms
+
+Σ_(t=T(n))^∞ A^t C (Σ_(τ=0)^(N-1) ε_τ ∂(ψ_τ^n φ^(-t) h^(-1))/∂u_j), j ∈ {1, ..., s + 1},
+
+are small enough so that the family
+
+{∂(f_(φ,ω,F) h^(-1))/∂u_j + Qε + Σ_(t=T(n))^∞ A^t C (Σ_(τ=0)^(N-1) ε_τ ∂(ψ_τ^n φ^(-t) h^(-1))/∂u_j)}_(j∈{1,...,s+1}) = {∂(f_(φ,ω_n,F) h^(-1))/∂u_j}_(j∈{1,...,s+1})
+
+is linearly independent, as required. Notice that this equality is a consequence of (3.14). The possibility to shrink the residual term comes from the convergence of the series
+
+Σ_(t=0)^∞ A^t C (Σ_(τ=0)^(N-1) ε_τ ∂(ψ_τ^n φ^(-t) h^(-1))/∂u_j), j ∈ {1, ..., s + 1},
+
+which is guaranteed by the hypothesis on the differentiability of f_(φ,ω,F) for any observation map ω ∈ C²(M, ℝ) and the expression (2.7). In this case the bump functions play the role of the observations for which we assumed the existence of a uniform bound κ over τ and n such that ‖ψ_τ^n‖_(C¹) < κ.
+
+If we recursively apply this procedure, we can conclude the existence of a small perturbation ω_n of ω obtained as a sequence of perturbations of the type (3.9) for which the family {∂(f_(φ,ω_n,F) h^(-1))/∂u_j}_(j∈{1,...,q}) is linearly independent when evaluated at m ∈ M̄, which proves that f_(φ,ω_n,F) ∈ C²(M, ℝ^N) is an immersion at m ∈ M̄.
+
+Finally, observe that we just showed that for any m ∈ M̄, there exists an n(m) ∈ ℕ such that the restriction of the perturbation f_(φ,ω_(n(m)),F) to B_(2^(-n(m)))(m) is an immersion. We note that the union
+
+⋃_(m∈M̄) B_(2^(-n))(m)
+
+is clearly an open cover of M̄. Since M̄ is compact, it admits a finite subcover. The finite subcover comprises sets for which, one at a time, we can construct an immersion using the procedure described earlier in this proof. For each set, we ensure that the perturbation is sufficiently small not to spoil the immersion on any other set.
+
+This argument completes the proof of the immersion of the GS at the points of M̄ and therefore, together with the Step 1, shows that there exists a small perturbation of f_(φ,ω_n,F) ∈ C²(M, ℝ^N) of f_(φ,ω,F) that is an immersion at all the points in M, as required. ∎
+
+---
+
+## 4 Linear reservoir embeddings
+
+We continue in this section by showing two important facts. Firstly, we prove that without additional hypotheses, the globally immersive generalized synchronizations whose existence we proved in Theorem 3.1 are injective and hence are necessarily embeddings due to the compactness of M (see [Hirs 76]). As we already pointed out in the introduction this is very important in relation to the learnability question, that is, at the time of using the embedded state representation of the dynamical system to learn from data the dynamics of its observations. The second fact is related with the reservoir computing phenomenon as we show that randomly generated linear systems yield synchronization maps f_(φ,ω_n,F) ∈ C²(M, ℝ^N) that are almost surely embeddings and are hence amenable to learnability from data.
+
+**Theorem 4.1** Assume that the hypotheses of Theorem 3.1 hold true and that, additionally, N > max{2q, ℓ} with ℓ ∈ ℕ the lowest common multiple of all the periods of the finite periodic points of φ. Then, for generic ω ∈ C²(M, ℝ^N), the generalized synchronization f_(φ,ω,F) ∈ C²(M, ℝ^N) is an embedding.
+
+**Proof.** As in the previous theorem, we proceed in two steps.
+
+**Step 1. Injectivity around the periodic set.** We start by showing that the observations corresponding to the globally immersive generalized synchronizations whose existence we proved in Theorem 3.1 can be slightly perturbed in C²(M, ℝ) so that the resulting GS is injective in an open subset V_P that includes all the periodic points of φ. We start this part of the discussion with a preparatory lemma.
+
+**Lemma 4.2** In the hypotheses of the theorem, let m₁, ..., m_P ∈ M be the distinct periodic points of φ, each of which have periods n₁, ..., n_P ∈ ℕ, respectively. Let ℓ ∈ ℕ be the lowest common multiple of all the periods and denote by M_P the set of all periodic points of φ (that is, the set that comprises {m₁, ..., m_P} and all the corresponding orbits). Then, the restriction f_(φ,ω,F)|_(M_P) of a generalized synchronization f_(φ,ω,F) ∈ C²(M, ℝ^N) to M_P is injective if and only if the map g_(φ,ω,F): M_P → ℝ^N defined by
+
+g_(φ,ω,F) = Σ_(k=0)^(ℓ-1) A^k C(ω ∘ φ^(-k))
+
+is injective.
+
+**Proof of the Lemma.** Let m₁, m₂ ∈ M_P be such that f_(φ,ω,F)(m₁) = f_(φ,ω,F)(m₂). This equality is equivalent to the following expressions:
+
+Σ_(t=0)^∞ A^t Cω φ^(-t)(m₁) = Σ_(t=0)^∞ A^t Cω φ^(-t)(m₂),
+
+Σ_(t=0)^∞ Σ_(k=0)^(ℓ-1) A^(tℓ+k) Cω φ^(-(tℓ+k))(m₁) = Σ_(t=0)^∞ Σ_(k=0)^(ℓ-1) A^(tℓ+k) Cω φ^(-(tℓ+k))(m₂),
+
+Σ_(t=0)^∞ (A^ℓ)^t Σ_(k=0)^(ℓ-1) A^k Cω φ^(-k)(m₁) = Σ_(t=0)^∞ (A^ℓ)^t Σ_(k=0)^(ℓ-1) A^k Cω φ^(-k)(m₂).
+
+Given that ρ(A) < 1 then ρ(A^ℓ) < 1 necessarily and hence this equality can be rewritten as
+
+(I - A^ℓ)^(-1) Σ_(k=0)^(ℓ-1) A^k Cω φ^(-k)(m₁) = (I - A^ℓ)^(-1) Σ_(k=0)^(ℓ-1) A^k Cω φ^(-k)(m₂),
+
+which is equivalent to Σ_(k=0)^(ℓ-1) A^k Cω φ^(-k)(m₁) = Σ_(k=0)^(ℓ-1) A^k Cω φ^(-k)(m₂) and hence, by definition, to g_(φ,ω,F)(m₁) = g_(φ,ω,F)(m₂), which proves the statement. ∎
+
+If we now define Φ_(ℓ,ω): M → ℝ^ℓ as
+
+Φ_(ℓ,ω)(m) := (ω(m), ω ∘ φ^(-1)(m), ..., ω ∘ φ^(-(ℓ-1))(m))^⊤,
+
+we note that the map g_(φ,ω,F) can be rewritten as g_(φ,ω,F) = QΦ_(ℓ,ω), where Q ∈ M_(N,ℓ) is a matrix whose (k + 1)th-column is set to the vector A^k C. The hypotheses on the vectors {A^j C}_(j∈{0,1,...,N-1}) forming a linearly independent set and that N > ℓ guarantee that rank Q = N and hence that the associated linear map Q : ℝ^ℓ → ℝ^N is injective. With this notation we now show that if g_(φ,ω,F) is not injective in M_P then a perturbation ω' ∈ C²(M, ℝ^N) of ω can be chosen so that g_(φ,ω',F) is. More specifically, define
+
+ω' := ω + Σ_(i=1)^P Σ_(j=1)^(n_i) ε_(ij)Ψ_(ij),  (4.1)
+
+where Ψ_(ij) are bump functions with non-intersecting supports U_(ij) such that m_(ij) := φ^(-(j-1))(m_i) ∈ U_(ij) and, moreover, Ψ_(ij)(φ^(-(j-1))(m_i)) = Ψ_(ij)(m_(ij)) = 1/L(i, j). The symbol L(i, j) ∈ ℕ denotes the ordinal of the pair (i, j) in lexicographic order.
+
+We now show that the constants ε_(ij) can be chosen so that ω' is as close as we want to ω and, at the same time, g_(φ,ω',F) is injective. Firstly, it is easy to see that, by construction,
+
+Φ_(ℓ,ω')(m) := Φ_(ℓ,ω)(m) + Σ_(i=1)^P Σ_(j=1)^(n_i) ε_(ij)(Ψ_(ij)(m), Ψ_(ij) ∘ φ^(-1)(m), ..., Ψ_(ij) ∘ φ^(-(ℓ-1))(m))^⊤.
+
+Second, if m_(i₁j₁) and m_(i₂j₂) are two different periodic points then
+
+g_(φ,ω',F)(m_(i₁j₁)) - g_(φ,ω',F)(m_(i₂j₂)) = g_(φ,ω,F)(m_(i₁j₁)) - g_(φ,ω,F)(m_(i₂j₂)) + Q(ε_(i₁j₁)v_(i₁j₁) - ε_(i₂j₂)v_(i₂j₂)),  (4.2)
+
+where the vectors v_(i₁j₁) ∈ ℝ^(CardM_P) have entries equal to zero except at the slots that are multiples of the period of the corresponding periodic point. More specifically, if the periodic point m_(ij) has period n_(ij), then
+
+(v_(ij))_i := {1/L(i, j) when i = 1 or i - 1 is a multiple of n_(ij), 0 otherwise}.  (4.3)
+
+Using the injectivity of Q and Lemma 4.2, we now show that we can choose the perturbation constants ε_(ij) so that the restriction of g_(φ,ω',F) to M_P is injective. Let
+
+ε_(ij) := κ‖g_(φ,ω,F)(m_(ij))‖, for some constant κ > 0.  (4.4)
+
+We now show that if κ > 0 is chosen so that
+
+κ max_((i₁,j₁),(i₂,j₂)) {‖Q(‖g_(φ,ω,F)(m_(i₁j₁))‖v_(i₁j₁) - ‖g_(φ,ω,F)(m_(i₂j₂))‖v_(i₂j₂))‖} < min_((i₁,j₁),(i₂,j₂)) {‖g_(φ,ω,F)(m_(i₁j₁)) - g_(φ,ω,F)(m_(i₂j₂))‖}  (4.5)
+
+then the injectivity of g_(φ,ω',F)|_(M_P) is guaranteed. Indeed, consider first the case of two distinct periodic points m_(i₁j₁) and m_(i₂j₂) for which g_(φ,ω,F) fails to be injective, that is, g_(φ,ω,F)(m_(i₁j₁)) = g_(φ,ω,F)(m_(i₂j₂)). In that case, by (4.2) and (4.4) we have that
+
+g_(φ,ω',F)(m_(i₁j₁)) - g_(φ,ω',F)(m_(i₂j₂)) = κ‖g_(φ,ω,F)(m_(i₁j₁))‖Q(v_(i₁j₁) - v_(i₂j₂)).  (4.6)
+
+Given that v_(i₁j₁) - v_(i₂j₂) ≠ 0 (notice, for instance, that (v_(i₁j₁) - v_(i₂j₂))¹ = 1/L(i₁, j₁) - 1/L(i₂, j₂) ≠ 0) and Q is injective then Q(v_(i₁j₁) - v_(i₂j₂)) ≠ 0 and hence g_(φ,ω',F)(m_(i₁j₁)) ≠ g_(φ,ω',F)(m_(i₂j₂)) necessarily by (4.6). In the case g_(φ,ω,F)(m_(i₁j₁)) ≠ g_(φ,ω,F)(m_(i₂j₂)) the same conclusion can be drawn because the choice of κ > 0 in (4.5) guarantees that
+
+‖Q(ε_(i₁j₁)v_(i₁j₁) - ε_(i₂j₂)v_(i₂j₂))‖ < ‖g_(φ,ω,F)(m_(i₁j₁)) - g_(φ,ω,F)(m_(i₂j₂))‖
+
+which by (4.2) ensures that, again, g_(φ,ω',F)(m_(i₁j₁)) ≠ g_(φ,ω',F)(m_(i₂j₂)), as required.
+
+We now show that if f_(φ,ω,F)|_(M_P) is injective then there exists an open set V_P such that M_P ⊂ V_P and f_(φ,ω,F)|_(V_P) is also injective. By the Immersion Theorem [Abra 88, Theorem 3.5.7] we know that there exists n ∈ ℕ such that the balls B_(2^(-n))(m_(ij)) do not intersect and that the restriction of f_(φ,ω,F) to each of them is a collection of injective maps. It could still be, however, that the images of different balls intersect. The continuity of f_(φ,ω,F) and the fact that f_(φ,ω,F)|_(M_P) is injective implies that n can be chosen sufficiently high so that this does not happen. Indeed, if this was not the case for the balls around the periodic points, say, m_(i₁j₁) and m_(i₂j₂), then it would be possible to construct two sequences {m_(i₁j₁,l)}_(l∈ℕ) and {m_(i₂j₂,l)}_(l∈ℕ) with limits m_(i₁j₁) and m_(i₂j₂) for which f_(φ,ω,F)(m_(i₁j₁,l)) = f_(φ,ω,F)(m_(i₂j₂,l)) for each l ∈ ℕ. By continuity this implies that f_(φ,ω,F)(m_(i₁j₁)) = f_(φ,ω,F)(m_(i₂j₂)) which is in contradiction with the injectivity of f_(φ,ω,F)|_(M_P) and hence proves the injectivity of f_(φ,ω,F) restricted to V_P = ⋃_(ij) B_(2^(-n))(m_(ij)), with n chosen so that the properties of the corresponding balls designed above are satisfied. Notice that by doubling n, if necessary, it is also easy to ensure the injectivity of f_(φ,ω,F)|_(V_P).
+
+**Step 2: Global injectivity.** We firstly prove an important local intermediate result.
+
+**Lemma 4.3** If M is a compact differentiable manifold endowed with a metric d and f : M → ℝ^N is an immersion, then there exists a constant r > 0 such that for any m ∈ M the restriction f|_(B_r(m)) of f to the open ball B_r(m) ⊂ M of radius r and center m is injective.
+
+**Proof.** The Immersion Theorem ([Abra 88, Theorem 3.5.7]) implies that each m ∈ M has an open neighborhood U_m ⊂ M such that f|_(U_m) is injective. The collection of sets {U_m}_(m∈M) forms an open cover of M. Then, by Lebesgue's number lemma [Munk 14, Lemma 27.5], there exists a δ > 0 such that every set of diameter δ is contained in some set in the family {U_m}_(m∈M). The lemma is proved by choosing r = δ/2. ∎
+
+Since M is compact and f_(φ,ω,F): M → ℝ^N is an immersion, this lemma implies the existence of a constant r > 0 such that for any m ∈ M the restriction f_(φ,ω,F)|_(B_r(m)) of f_(φ,ω,F) to the open ball B_r(m) is injective. We now define the set W ⊂ M × M as follows using the open set V_P whose existence we proved in Step 1.
+
+W := {(m₁, m₂) ∈ (M × M) \ (V_P × V_P) | d(m₁, m₂) ≥ r}.
+
+The set W comprises pairs (m₁, m₂) ∈ M whose entries satisfy one of two conditions:
+
+1. Neither m₁ nor m₂ are in V_P.
+2. One of m₁ and m₂ is in V_P and the other is not.
+
+In view of this, the injectivity of f_(φ,ω,F)|_(V_P) proved in the Step 1 together with Lemma 4.3 imply that if we show that f_(φ,ω,F)(m₁) ≠ f_(φ,ω,F)(m₂) for all (m₁, m₂) ∈ W then f_(φ,ω,F) is globally injective and the proof is concluded.
+
+We start the proof of this fact by first defining, for each m ∈ M, a collection of nested balls {B_(2^(-n))(m) | n ∈ ℕ} centered at m with radius 2^(-n). Let (m₁, m₂) ∈ W, and assume from now on without loss of generality that m₁ ∈ W \ V_p. Let T(n, m₁, m₂) denote the largest integer such that the following two properties hold. Firstly, the sets {B_(2^(-n))(φ^(-t)(m₁))}_(t=0,...,T(n,m₁,m₂)-1) are disjoint and secondly B_(2^(-n))(φ^(-t)(m₁)) ∩ B_(2^(-n))(φ^(-s)(m₂)) = ∅ for all t, s ∈ {0, ..., T(n, m₁, m₂) - 1}.
+
+Notice now that by the continuity of φ, for each n ∈ ℕ and pair (m₁, m₂) ∈ W there is an open neighbourhood U_(m₁,m₂) ⊂ M × M of (m₁, m₂) such that T(n, m'₁, m'₂) = T(n, m''₁, m''₂) for all (m'₁, m'₂), (m''₁, m''₂) ∈ U_(m₁,m₂). The collection {U_(m₁,m₂)| (m₁, m₂) ∈ W} covers W and since it is a compact set we can extract a finite subcover {U_a | a ∈ A}, where A is a finite set. Then we can choose one pair (m^a₁, m^a₂) ∈ U_a for each a ∈ A and notice that
+
+min_((m₁,m₂)∈W) {T(n, m₁, m₂)} = min_{(m^a₁,m^a₂) | a∈A} {T(n, m^a₁, m^a₂)}.
+
+The importance of this equality is that, since A is a finite set, the minimum on the right hand side is realized by a pair (m*₁, m*₂) ∈ W. Let T(n) = T(n, m*₁, m*₂) = min_((m₁,m₂)∈W) T(n, m₁, m₂). Observe that as n → ∞ the families {B_(2^(-n))(φ^(-t)(m*₁))}_(t∈ℕ) and {B_(2^(-n))(φ^(-t)(m*₂))}_(t∈ℕ) converge to {φ^(-t)(m*₁)}_(t∈ℕ) and {φ^(-t)(m*₂)}_(t∈ℕ) respectively. The point m*₁ is not periodic so the infinite orbit {φ^(-t)(m*₁)}_(t∈ℕ) of singletons is disjoint, and furthermore does not intersect any point in {φ^(-t)(m*₂)}_(t∈ℕ). This allows us to conclude that T(n) → ∞ as n → ∞.
+
+The fact that we just proved guarantees the existence of a ν ∈ ℕ such that T(ν) = N. Thus for all pairs (m₁, m₂) ∈ W, the collection {B_(2^(-ν))(φ^(-t)(m₁))}_(t=0,...,N-1) is disjoint and B_(2^(-n))(φ^(-t)(m₁)) ∩ B_(2^(-n))(φ^(-s)(m₂)) = ∅ for all t, s ∈ {0, ..., N - 1}.
+
+Now for any n > ν the collection C_n = {B_(2^(-(n+1)))(m) | m ∈ M} forms on open cover of M from which we can extract a finite subcover {B_i| i ∈ J_n} for J a finite set with cardinality ℓ(n) ∈ ℕ. Now define a partition of unity {λ_i| i ∈ J_n} subordinate to {B_i| i ∈ J_n}. We impose on this partition of unity the special property that for each m ∈ M there exists an i ∈ J_n such that λ_i(m) ≥ 1/2. Now we define the perturbed observation function
+
+ω_n = ω + Σ_(i=1)^(ℓ(n)) κ_iλ_i
+
+where κ_i ∈ ℝ is the ith component of a vector κ ∈ ℝ^(ℓ(n)) with positive entries. Then we define Ψ_n : M × M × ℝ^(ℓ(n)) → ℝ^N by
+
+Ψ_n(m₁, m₂, κ) = f_(φ,ω_n,F)(m₁) - f_(φ,ω_n,F)(m₂).  (4.7)
+
+Let Δ = {(m, m) ∈ M × M | m ∈ M} be the diagonal set. Given an arbitrary open neighborhood 𝒩 ⊂ C¹(M, ℝ) of the observation function ω ∈ C²(M, ℝ) our goal is to find κ ∈ ℝ^(ℓ(n)) such that ω_n ∈ 𝒩 and that for all (m₁, m₂) ∈ (M × M) \ Δ we have that Ψ_n(m₁, m₂, κ) ≠ 0.
+
+First of all, we observe that for any pair (m₁, m₂) ∈ (M × M) \ W either d(m₁, m₂) < r or both m₁, m₂ ∈ V_P. In the former case, Ψ_n(m₁, m₂, 0) ≠ 0 unless (m₁, m₂) ∈ Δ by Lemma 4.3, and in the latter case, Ψ_n(m₁, m₂, 0) ≠ 0 unless (m₁, m₂) ∈ Δ because f_(φ,ω,F)|_(V_P) is injective by the Step 1. Now Ψ_n is continuous so there is an open neighbourhood U₀ ⊂ ℝ^(ℓ(n)) of 0 ∈ ℝ^(ℓ(n)) such that for all κ ∈ U₀ we have Ψ_n(m₁, m₂, κ) ≠ 0 for all (m₁, m₂) ∈ (M × M) \ W unless (m₁, m₂) ∈ Δ. So all that remains is to find κ ∈ U₀ ⊂ ℝ^(ℓ(n)) such that Ψ_n(m₁, m₂, κ) ≠ 0 for all (m₁, m₂) ∈ W.
+
+We start by noting that if 0 ∈ ℝ^N is not in the image of Ψ_n|_(W×{0}) then we are done so we shall assume the opposite. In that case we proceed by showing that Ψ_n|_(W×{0}) is a submersion. If that is the case, then for some open set X ⊂ (M × M × ℝ^(ℓ(n))) containing W × {0} then the restriction Ψ_n|_X is also a submersion and hence by the Submersion Theorem [Abra 88, Theorem3.5.4] the inverse image Ψ_n|_X^(-1)(0) is a closed submanifold of dimension 2q + ℓ(n) - N of the open submanifold X ⊂ M × M × ℝ^ℓ. Moreover, if π : M × M × ℝ^(ℓ(n)) → ℝ^(ℓ(n)) is the canonical projection defined by π(m₁, m₂, κ) := κ, in these circumstances the complement ℝ^(ℓ(n)) \ π(Ψ_n|_X^(-1)(0)) is a dense subset of ℝ^(ℓ(n)). Indeed, since π is a continuously differentiable map, then so is its restriction π|_(Ψ_n|_X^(-1)(0)×ℝ^ℓ) : Ψ_n|_X^(-1)(0) → ℝ^ℓ which by [Hirs 76, Chapter 3, Proposition 1.2] guarantees the density of ℝ^(ℓ(n)) \ π(Ψ_n|_X^(-1)(0)). This implies that we can choose κ ∈ (ℝ^(ℓ(n)) \ π(Ψ_n|_X^(-1)(0))) as small as we want so that κ ∈ U₀ and ω_n ∈ 𝒩. We fix this κ and see that for any (m₁, m₂) ∈ W the map Ψ_n(m₁, m₂, κ) ≠ 0, as required. Consequently, all that remains to be done is to find n sufficiently large so that Ψ_n|_(W×{0}) is a submersion, and then the proof will be complete.
+
+We start by observing that by (4.7) ω_n ∘ φ^(-t) = ω ∘ φ^(-t) + Σ_(i=1)^(ℓ(n)) κ_iλ_i ∘ φ^(-t) hence
+
+∂(ω_n ∘ φ^(-t))/∂κ_j = λ_j ∘ φ^(-t).
+
+Now we consider an arbitrary (m₁, m₂) ∈ W assuming once again without loss of generality that m₁ ∈ M \ V_p. For each point in the orbit {φ^(-t)(m₁)}_(t=0,...,T(n)-1) there exists a j(t) ∈ J_n such that λ_(j(t))(φ^(-t)(m₁)) ≥ 1/2 by the special property that we imposed earlier on the partition of unity {λ_i| i ∈ J_n}. Now the support of λ_(j(t)) is a ball B_(j(t)) of radius 2^(-(n+1)) which contains φ^(-t)(m₁). Hence the ball B_(j(t)) ⊂ B_(2^(-n))(φ^(-t)(m₁)). Now since the sets in the family {B_(2^(-n))(φ^(-t)(m₁))}_(t=0,...,T(n)-1) are disjoint then so are {B_(j(t))}_(t=0,...,T(n)-1). Furthermore, since B_(2^(-n))(φ^(-t)(m₁)) ∩ B_(2^(-n))(φ^(-s)(m₂)) = ∅ for all t, s ∈ {0, ..., T(n) - 1} hence λ_(j(t))(φ^(-t)(m₂)) = 0 for t ∈ {0, ..., T(n) - 1}. Thus ∂(ω_n ∘ φ^(-t))/∂κ_(j(t))(m₂) = 0.
+
+Now,
+
+Ψ_n(m₁, m₂, κ) = Σ_(t=0)^(T(n)-1) A^t C(ω_n(φ^(-t)(m₁)) - ω_n(φ^(-t)(m₂))) + Σ_(t=T(n))^∞ A^t C(ω_n(φ^(-t)(m₁)) - ω_n(φ^(-t)(m₂)))
+
+hence for t = 0, ..., T(n) - 1
+
+∂Ψ_n/∂κ_(j(t))(m₁, m₂, κ) = A^t C(λ_(j(t))(φ^(-t)(m₁))) + Σ_(t=T(n))^∞ A^t C(λ_(j(t))(φ^(-t)(m₁)) - λ_(j(t))(φ^(-t)(m₂))).
+
+By assumption {A^t C}_(t=0,...,N-1) are linearly independent, hence the vectors {A^t C(λ_(j(t))(φ^(-t)(m₁)))}_(t∈{0,...,T(n)-1}) necessarily span ℝ^N because since n > ν then T(n) ≥ N. Crucially, for any n the property λ_(j(t))(φ^(-t)(m₁)) ≥ 1/2 holds and therefore, the residual term
+
+Σ_(t=T(n))^∞ A^t C(λ_(j(t))φ^(-t)(m₁) - λ_(j(t))φ^(-t)(m₂))
+
+may only spoil the spanning property of the vectors {A^t C(λ_(j(t))φ^(-t)(m₁))}_(t=0,...,N-1) if it is sufficiently large. Since by hypothesis ρ(A) < 1, the residual term converges uniformly over (m₁, m₂) ∈ W to 0 as n grows. We choose consequently n large enough so that for all (m₁, m₂) ∈ W the residual term is too small to spoil the spanning property of {A^t C(λ_(j(t))φ^(-t)(m₁))}_(t∈{0,...,N-1}). With this choice of n we have that Ψ_n|_(W×{0}) is a submersion and the proof is complete. ∎
+
+### Linear reservoir embeddings
+
+We conclude the theoretical part of the paper by showing that the embeddings whose existence we proved in Theorem 4.1 using generic observation maps ω ∈ C²(M, ℝ^N) may be almost surely obtained, as it is customary in reservoir computing, by randomly drawing the connectivity matrix A and the vector C of the linear system F(x, z) := Ax + Cz. This result hinges on an important fact in random matrix theory whose proof has been kindly communicated to us by Friedrich Philipp and that is contained in the following statement. We recall that a random variable X : Ω → T defined on a probability space (P, ℱ, ℙ) and with values on a Borel measurable space T is **regular** or **non-singular** whenever ℙ(X = a) = 0 for all a ∈ T.
+
+**Proposition 4.4 (Friedrich Philipp)** Let N ∈ ℕ, A ∈ M_(N,N), and C ∈ ℝ^N and assume that the entries of A and C are drawn using independent regular real-valued distributions. Then the following statements hold:
+
+(i) The vectors C, AC, A²C, ..., A^(N-1)C are linearly independent almost surely
+
+(ii) Given m distinct complex numbers λ₁, ..., λ_m ∈ ℂ, where m ≤ N, the event that 1, λ₁, ..., λ_m ∉ σ(A) (σ(A) is the spectrum of A) and that the vectors
+
+(I - λ_jA)^(-1)(I - A)^(-1)(I - A^N)C, j = 1, ..., m
+
+are linearly independent holds almost surely.
+
+**Proof.** The vectors C, AC, A²C, ..., A^(N-1)C are linearly independent if and only if
+
+det(C|AC|A²C|···|A^(N-1)C) = 0
+
+which, in the notation of Lemma 6.3, can be written as
+
+det(p₀(A)C, p₁(A)C, p₂(A)C, ..., p_(N-1)(A)C) = 0
+
+using the linearly independent polynomials p_j(A) := A^j, j ∈ {0, ..., N - 1}. Part (i) of the statement hence follows directly from Lemma 6.3. Now we turn our attention to part (ii). First of all, λ_j is an eigenvalue of A if and only if λ_j is a root of the characteristic polynomial of A. This event has probability 0 by Lemma 6.2 and hence 1, λ₁, ..., λ_m ∉ σ(A) almost surely. On this event, the inverses (I - λ_jA)^(-1) and (I - A)^(-1) exist. Furthermore, the product
+
+∏_(i=1)^m (I - λ_iA)
+
+is an invertible matrix. Therefore, the vectors
+
+(I - λ_jA)^(-1)(I - A)^(-1)(I - A^N)C, with j = 1, ..., m,
+
+are linearly independent if and only if
+
+∏_(i=1)^m (I - λ_iA)(I - λ_jA)^(-1)(I - A)^(-1)(I - A^N)C, with j = 1, ..., m,  (4.8)
+
+are linearly independent. We can now rewrite the vectors in (4.8) as
+
+∏_(i=1)^m (I - λ_iA)(I - λ_jA)^(-1)(I - A)^(-1)(I - A^N)C = ∏_(i≠j) (I - λ_iA)(I - A)^(-1)(I - A^N)C = ∏_(i≠j) (I - λ_iA) Σ_(k=0)^(N-1) A^k C,
+
+where we used the relation
+
+(I - A^N) = (I - A) Σ_(k=0)^(N-1) A^k
+
+and hence that (I - A)^(-1)(I - A^N) = Σ_(k=0)^(N-1) A^k.
+
+Now, if we are able to show that the family
+
+p_j(x) = ∏_(i≠j) (1 - λ_ix) Σ_(k=0)^(N-1) x^k, with j ∈ {1, ..., m}
+
+is linearly independent, then we can conclude by Lemma 6.3 that the vectors (4.8) are linearly independent almost surely, which would complete the proof. This is indeed the case because if μ₁, ..., μ_n ∈ ℝ are such that Σ_(j=1)^n μ_jp_j(x) = 0 then (Σ_(k=0)^(N-1) x^k)(Σ_(j=1)^n μ_j ∏_(i≠j) (1 - λ_ix)) = 0.
+
+Given that the polynomial Σ_(k=0)^(N-1) x^k is non-zero, the previous equality is equivalent to Σ_(j=1)^n μ_j ∏_(i≠j) (1 - λ_ix) = 0 which, evaluated at x = 1/λ_k, implies that
+
+0 = Σ_(j=1)^n μ_j ∏_(i≠j) (1 - λ_i(1/λ_k)) = μ_k ∏_(i≠k) (1 - λ_i(1/λ_k)).
+
+Given that, by hypothesis, the values λ₁, ..., λ_m ∈ ℂ are all different, we can conclude that ∏_(i≠k) (1 - λ_i/λ_k) ≠ 0 and hence μ_k = 0, necessarily. Since procedure can be repeated to obtain that μ₁, ..., μ_n = 0, the result follows. ∎
+
+This proposition together with Theorem 4.1 can be used to prove the following statement which is the main result of the paper.
+
+**Theorem 4.5 (Linear reservoir embeddings)** Let φ ∈ Diff²(M) be a dynamical system on a compact manifold M of dimension q that exhibits finitely many periodic orbits. Suppose that for each periodic orbit m of φ with period n ∈ ℕ, the derivative T_m φ^(-n) has q distinct eigenvalues λ₁, λ₂, ..., λ_q. Let now ℓ ∈ ℕ be the lowest common multiple of all the periods of the finite periodic points of φ and let N ∈ ℕ such that N > max{2q, ℓ}.
+
+Construct now A ∈ M_(N,N) and C ∈ ℝ^N by drawing their entries using independent regular real-valued distributions. Then, there exist rescaled versions Ã and C̃ of A and C respectively such that the generalized synchronization f_(φ,ω,F) ∈ C²(M, ℝ) associated to the state map F(x, z) := Ãx + C̃z is almost surely an embedding for generic ω ∈ C²(M, ℝ^N).
+
+**Proof.** Proposition 4.4 guarantees that the randomly drawn elements A and C satisfy almost surely the hypotheses in parts (i) and (ii) of the statement of Theorem 3.1. However, in order to be able to invoke Theorem 4.1, we need to use a linear state map F whose connectivity matrix Ã is such that ρ(Ã) < 1 and, for any observation map ω ∈ C²(M, ℝ), the corresponding generalized synchronization f_(φ,ω,F) ∈ C²(M, ℝ^N) and the map Θ_(φ,F): C²(M, ℝ) → C²(M, ℝ^N) introduced in (2.8) are continuous. It is obvious from parts (i) and (ii) in Proposition 2.3 that this can be achieved by rescaling the matrix A and hence the statement follows from Theorem 4.1. ∎
+
+---
+
+## 5 Numerical illustrations of attractor reconstruction, filtering, and forecasting
+
+In this section we illustrate how the embeddings proposed in Theorem 4.5 are able to reconstruct the attractor of various dynamical systems out of one-dimensional observations and, additionally, we show that randomly generated linear reservoir systems are efficient in the filtering and prediction of dynamical systems observations in the presence of additive noise.
+
+Following the prescription proposed in the statement of Theorem 4.5, we shall randomly generate linear systems of the form F(x, z) = Ax + Cz to which we shall feed in the input variable z finite-length one-dimensional ω observations of three different dynamical systems φ, namely, the Rössler system, the Van der Pol oscillator, and the Lorenz system. For each of these systems we shall create reservoir states x_t according to the recursion
+
+x_(t+1) = Ax_t + Cω(φ^t(m)).  (5.1)
+
+Due to the results in the paper, we expect that the states x_t shall approximate f_(φ,ω,F)(φ^t(m)) as t → ∞ where f_(φ,ω,F) is the corresponding embedding generalized synchronization introduced in Section 2. This will be done in practice by keeping only the states x_t for all t > T, for some T ∈ ℕ where [0, T] is called the **washout period**. The embedding properties of f_(φ,ω,F) will become apparent in plots that will show that the dynamics of the original system and the state dynamics induced by its observations are topologically conjugate.
+
+In order to illustrate the embedding properties of f_(φ,ω,F) for the three dynamical systems we set up a reservoir system by following the steps:
+
+1. Randomly generate a 7 by 7 matrix A₀ with IID uniform entries in the interval [-0.5, 0.5].
+2. Define the reservoir matrix A := A₀/‖A₀‖.
+3. Randomly generate a vector C ∈ ℝ⁷ with IID uniform entries in the interval [-0.5, 0.5].
+
+### The Rössler System
+
+The Rössler system under a popular choice of parameters is described by the differential equations:
+
+u̇ = -v - w,
+v̇ = u + v/10,
+ẇ = 1/10 + w(u - 14).
+
+Using Python 3.7 and scipy.integrate.odeint we simulate a trajectory of the Rössler system from the initial condition (u₀, v₀, w₀) = (2, 1, 5) for T = 120 time units, with time step h = 0.01. The result is plotted in Figure 1 after using the interval [0, 60] as washout period.
+
+We then generate reservoir states using the recursion (5.1) and taking as observation map ω(u, v, w) := u, that is, the first component of the Rössler system. A depiction of the projection of the corresponding states x_t onto the first 3 principal components is shown in Figure 2.
+
+### The Van der Pol Oscillator
+
+We now repeat the same embedding procedure for the limit cycle of the Van der Pol oscillator with damping parameter μ is described by the differential equation in two dimensions
+
+u̇ = v,
+v̇ = μ(1 - u²)v - u.
+
+Using the same discretization scheme as before we simulated trajectories of the Van der Pol oscillator for 40 time units with time step h = 0.01 for five different damping parameter values μ = 0.5, 1, 1.5, 2, 2.5 but using always the same initial condition (u₀, v₀) = (-4, 5). The result is plotted in Figure 3.
+
+Regarding the reservoir embedding we use a random linear system of dimension five using the same distributions for the entries as in previous paragraphs and we use as input the first component of the Van der Pol oscillator. A depiction of the projection of the corresponding states x_t onto the first two principal components is shown in Figure 4 for each of the five different damping parameter values under consideration.
+
+### The Lorenz system. Attractor reconstruction
+
+The Lorenz system with the parameter values given in the original paper [Lore 63] is determined by the differential equation
+
+u̇ = 10(u - v),
+v̇ = u(28 - w) - v,
+ẇ = uv - 8w/3.
+
+The discretization of this differential equation with time step h yields a time evolution operator given by
+
+φ(u₀, v₀, w₀) = (u₀, v₀, w₀) + ∫₀^h (u̇(t), v̇(t), ẇ(t)) dt
+
+where the curve (u(t), v(t), w(t)) solves the Lorenz equations with initial condition (u₀, v₀, w₀). In this paragraph we follow the same modeling prescriptions that we used for the Rössler and Van der Pol systems. We take the initial condition as (u₀, v₀, w₀) = (0, 1, 1.05) and time step h = 0.01 and the result for T = 40 is plotted in Figure 5. Regarding the reservoir embedding we use the same dimensionality that we took for Rössler and we also use the u component as the input for state generation. A depiction of the projection of the corresponding states x_t onto the first 3 principal components is shown in Figure 6. The corresponding states x_t in the interval (20, 40), that is, after a washout period of (0, 20) are plotted in Figure 7 after a projection onto the first three principal components.
+
+### The Lorenz system. Forecasting in the presence of noise
+
+In this paragraph we follow closely the experiment design that we previously used for attractor reconstruction but with a few modifications that we now list below. More precisely, we use the same parameters, initial point, and time step, but we consider T = 11000 time units with a 1000 time units long washout period. The result for this particularly choice of time interval is plotted in Figure 8. Consider now a reservoir system constructed according to the following prescription:
+
+1. Randomly generate a random orthogonal 20 by 20 matrix A₀ drawn from the unique invariant Haar distribution in the Lie group O(20).
+2. Define the reservoir matrix A := 0.9 · A₀/‖A₀‖.
+3. Randomly generate a vector C₀ ∈ ℝ²⁰ with IID uniform entries in the interval [-1, 1].
+4. Define the reservoir input vector C := C₀/‖C₀‖.
+
+We now choose a readout h : ℝ^M → ℝ^m for the state map using a deep neural network with 10 hidden layers of 20 neurons each and taking a scaled logistic map as activation function of the form σ(s) = (z_(max) - z_(min))/(1 + e^(-s)) + z_(min). This readout is trained using states that are obtained with inputs of the form u'_t := u_t + ε_t, where u_t is the u-component of the Lorenz system and ε_t is a Gaussian distributed random variable with mean zero and variance 0.25 for all t ∈ (1000, 11000). We illustrate a Lorenz trajectory for (u', v, w) in Figure 9. The corresponding states x_t are then subsequently used as the input of the deep neural network. The weights of the neural network are obtained by solving the empirical risk minimization problem where the one-step ahead shifted time series of the original u-component of the Lorenz system is taken as the target and the mean squared error is taken as the empirical risk. The learning task hence consists in the filtering of the noisy input and in the one-step ahead forecasting of the u-component of the dynamical Lorenz system. We implement the training of the deep neural network with the help of the Adam Optimizer in Keras in eight iterations with early stopping parametrized by the patience parameter of 500 epochs. Each iteration consists of 7000 epochs of batch size 10000 and the learning rate is taken in a decreasing manner for each subsequent iteration out of the set of values {5e-3, 3e-3, 1e-3, 9e-4, 7e-4, 5e-4, 5e-5, 3e-5}.
+
+The results on a testing sample are demostrated in Figure 10. We complement the illustration with Figure 11 which supports the pertinence of the methodology that we propose for denoising and forecasting since the reconstructed attractor is difficult to distinguish from the original one given in Figure 8.
+
+---
+
+## 6 Appendices
+
+### 6.1 Elementary fact in linear algebra
+
+**Lemma 6.1** Let A and B two square matrices of the same size such that det(A) = 0 and det(B) ≠ 0. Then, there exists ε > 0 such that
+
+det(A - εB) ≠ 0.
+
+**Proof.** Consider the singular matrix B^(-1)A and let λ₀ be its non-zero eigenvalue that has the smallest absolute value. Then, for any 0 < ε < |λ₀| we necessarily have that det(B^(-1)A - εI) ≠ 0 because otherwise ε would be an eigenvalue of B^(-1)A which is impossible by the minimality of λ₀. This implies that C := B^(-1)A - εI is invertible and hence so is BC = A - εB, as required. ∎
+
+As a corollary of this lemma we can conclude that if V := {v₁, ..., v_n} and W := {w₁, ..., w_n} are two n-sets of vectors in ℝ^n, then there exists ε > 0 such that the set {v₁ + εw₁, ..., v_n + εw_n} is made of linearly independent vectors. This fact is used at the end of the proof of Step 1 of Theorem 3.1.
+
+### 6.2 Two lemmas about random matrices
+
+**Lemma 6.2** Let X₁, ..., X_n be independent real-valued non-singular random variables and let p be a non-trivial polynomial in n complex variables. Then
+
+ℙ(p(X₁, ..., X_n) = 0) = 0.
+
+**Proof.** Define μ_j(·) := ℙ(X_j ∈ ·), j = 1, ..., n, and let Z = {x ∈ ℂ^n | p(x) = 0} be the set of complex roots of the polynomial p. Then, since X₁, ..., X_n are independent we have that
+
+ℙ(p(X₁, ..., X_n) = 0) = ℙ((X₁, ..., X_n) ∈ Z) = (μ₁ ⊗ ... ⊗ μ_n)(Z).
+
+We now proceed by induction over n. For n = 1 we have that ℙ(p(X₁) = 0) = μ₁(Z) = 0 since Z is finite and X₁ is non singular. Let the claim be true for n - 1. For fixed x₁ ∈ ℂ set p_(x₁)(x₂, ..., x_n) := p(x₁, ..., x_n) and let
+
+Z_(x₁) := {(x₂, ..., x_n) ∈ ℂ^(n-1) | p_(x₁)(x₂, ..., x_n) = 0}.
+
+The set F := {x₁ ∈ ℝ | p_(x₁) ≡ 0} is a finite set, so
+
+ℙ(p(X₁, ..., X_n) = 0) = ∫_ℂ (μ₂ ⊗ ... ⊗ μ_n)(Z_(x₁))dμ₁(x₁) = ∫_(ℂ-F) (μ₂ ⊗ ... ⊗ μ_n)(Z_(x₁))dμ₁(x₁) = 0,
+
+since we assumed that X₁ is non-singular and (μ₂⊗, ..., ⊗μ_n)(Z_(x₁)) = 0 for x₁ ∉ F by the induction hypothesis. ∎
+
+**Lemma 6.3** Let N ∈ ℝ^N, let A be a real N × N matrix, and let C be a random vector in ℝ^N. Assume the entries of A and C have been drawn using independent non-singular real valued random variables. Moreover, let p₁, ..., p_n ∈ ℂ[x] be linearly independent polynomials in one variable of degree at most n - 1. Then
+
+ℙ(det(p₁(A)C|p₂(A)C|···|p_n(A)C) = 0) = 0.
+
+Equivalently, the vectors p₁(A)C, p₂(A)C, ..., p_n(A)C are linearly independent almost surely.
+
+**Proof.** The expression det(p₁(A)C|···|p_n(A)C) is a polynomial p in the n² + n variables a_(ij) and b_j, i, j ∈ {1, ..., n} that constitute the entries of A and C, respectively, and which in turn are by hypothesis non-singular random variables. As long as the polynomial p is not identically zero, the result follows directly from the Lemma 6.2. So all that remains is to show that p is not identically zero, that is, that there exist particular choices of A and C such that det(p₁(A)C|···|p_n(A)C) is non-zero. So, we choose C = (1, ..., 1)^⊤ and A = diag(a₁, ..., a_n) with distinct real numbers a₁, ..., a_n. We expand the polynomials p_j in terms of their coefficients γ_(j1), ..., γ_(jn) so
+
+p_j(x) = Σ_(k=0)^(n-1) γ_(jk)x^k.
+
+The vectors γ_j = (γ_(j1), ..., γ_(jn))^⊤, j ∈ {1, ..., n}, are by hypothesis linearly independent. We now show that with these choices, the vectors p₁(A)C, p₂(A)C, ..., p_n(A)C are linearly independent and hence det(p₁(A)C|p₂(A)C|···|p_n(A)C) ≠ 0, as required. Indeed, let c₁, ..., c_n ∈ ℝ and suppose that Σ_(j=1)^n c_jp_j(A)C = 0. Additionally, we can write
+
+Σ_(j=1)^n c_jp_j(A)C = Σ_(j=1)^n c_j Σ_(k=0)^(n-1) γ_(kj)A^k C = Σ_(k=0)^(n-1) Σ_(j=1)^n c_jγ_(jk) [a₁^k; a₂^k; ...; a_n^k] = Vx
+
+where
+
+V = [1  a₁  a₁²  ...  a₁^(n-1);
+     1  a₂  a₂²  ...  a₂^(n-1);
+     ⋮   ⋮   ⋮   ⋱   ⋮;
+     1  a_n  a_n²  ...  a_n^(n-1)]
+
+and x = Σ_(j=1)^n c_jγ_j.
+
+Since the diagonal entries of A are all different and the determinant of the Vandermonde matrix V is given by
+
+det(V) = ∏_(1≤i<j≤n) (a_i - a_j)
+
+we can conclude that V is invertible and hence the identity Σ_(j=1)^n c_jp_j(A)C = Vx = 0 implies that x = 0. By the linear independence of the vectors γ₁, ..., γ_n we have that c₁, ..., c_n = 0 necessarily. It follows that the vectors p₁(A)C, p₂(A)C, ..., p_n(A)C are linearly independent, as required. ∎
+
+### Acknowledgments
+
+We thank Friedrich Philipp for kindly communicating to us the proof of Proposition 4.4. We also thank Henrik Brautmeier for his assistance with some of the numerical illustrations in the paper. AH is supported by a scholarship from the EPSRC Centre for Doctoral Training in Statistical Applied Mathematics at Bath (SAMBa), project EP/L015684/1. JPO acknowledges partial financial support coming from the Swiss National Science Foundation (grant number 200021 175801/1).
+
+---
+
+## References
+
+[Abra 67] R. Abraham and J. Robbin. *Transversal Mappings and Flows*. W. A. Benjamin, Inc, 1967.
+
+[Abra 88] R. Abraham, J. E. Marsden, and T. S. Ratiu. *Manifolds, Tensor Analysis, and Applications*. Vol. 75, Applied Mathematical Sciences. Springer-Verlag, 1988.
+
+[Apos 74] T. Apostol. *Mathematical Analysis*. Addison Wesley, second Ed., 1974.
+
+[Bocc 02] S. Boccaletti, J. Kurths, G. Osipov, D. L. Valladares, and C. S. Zhou. "The synchronization of chaotic systems". *Physics Reports*, Vol. 366, pp. 1–101, 2002.
+
+[Boot 03] W. M. Boothby. *An Introduction to Differentiable Manifolds and Riemannian Geometry*. Academic Press, Inc., second rev Ed., 2003.
+
+[Carm 92] M. P. do Carmo. *Riemannian Geometry*. Birkhäuser Boston, 1992.
+
+[Carr 18] T. L. Carroll. "Using reservoir computers to distinguish chaotic signals". *Physical Review E*, Vol. 98, No. 5, p. 52209, 2018.
+
+[Erog 17] D. Eroglu, J. S. W. Lamb, and T. Pereira. "Synchronisation of chaos and its applications". *Contemporary Physics*, Vol. 58, No. 3, pp. 207–243, 2017.
+
+[Gaut 21] D. J. Gauthier, E. Bollt, A. Griffith, and W. A. S. Barbosa. "Next Generation Reservoir Computing". arXiv preprint arXiv:2106.07688, 2021.
+
+[Gono 20a] L. Gonon, L. Grigoryeva, and J.-P. Ortega. "Memory and forecasting capacities of nonlinear recurrent networks". *Physica D*, Vol. 414, No. 132721, pp. 1–13., 2020.
+
+[Gono 20b] L. Gonon and J.-P. Ortega. "Reservoir computing universality with stochastic inputs". *IEEE Transactions on Neural Networks and Learning Systems*, Vol. 31, No. 1, pp. 100–112, 2020.
+
+[Gono 21] L. Gonon and J.-P. Ortega. "Fading memory echo state networks are universal". *Neural Networks*, Vol. 138, pp. 10–13, 2021.
+
+[Grig 18] L. Grigoryeva and J.-P. Ortega. "Echo state networks are universal". *Neural Networks*, Vol. 108, pp. 495–508, 2018.
+
+[Grig 20a] L. Grigoryeva, A. G. Hart, and J.-P. Ortega. "Chaos on compact manifolds: Differentiable synchronizations beyond Takens". Preprint arXiv:2010.03218, 2020.
+
+[Grig 20b] L. Grigoryeva and J.-P. Ortega. "Dimension reduction in recurrent networks by canonicalization". Preprint arXiv:2007.12141, 2020.
+
+[Hart 20] A. G. Hart, J. L. Hook, and J. H. P. Dawes. "Embedding and approximation theorems for echo state networks". *Neural Networks*, Vol. 128, pp. 234–247, 2020.
+
+[Hart 21] A. G. Hart, J. L. Hook, and J. H. P. Dawes. "Echo State Networks trained by Tikhonov least squares are L2(µ) approximators of ergodic dynamical systems". *Physica D: Nonlinear Phenomena*, p. 132882, 2021.
+
+[Hirs 76] M. W. Hirsch. *Differential Topology*. Springer Verlag, 1976.
+
+[Huke 06] J. P. Huke. "Embedding nonlinear dynamical systems: a guide to Takens' theorem". Tech. Rep., Manchester Institute for Mathematical Sciences. The University of Manchester, 2006.
+
+[Jaeg 04] H. Jaeger and H. Haas. "Harnessing Nonlinearity: Predicting Chaotic Systems and Saving Energy in Wireless Communication". *Science*, Vol. 304, No. 5667, pp. 78–80, 2004.
+
+[Jaeg 10] H. Jaeger. "The 'echo state' approach to analysing and training recurrent neural networks with an erratum note". Tech. Rep., German National Research Center for Information Technology, 2010.
+
+[Kalm 10] R. Kalman. "Lectures on Controllability and Observability". In: *Controllability and Observability*, pp. 1–149, Springer Berlin Heidelberg, Berlin, Heidelberg, 2010.
+
+[Kant 03] H. Kantz and T. Schreiber. *Nonlinear Time Series Analysis*. Cambridge University Press, second Ed., 2003.
+
+[Kryl 31] A. N. Krylov. "On the numerical solution of equation by which are determined in technical problems the frequencies of small vibrations of material systems". *News Acad. Sci. USSR*, Vol. 7, pp. 491–539, 1931.
+
+[Kupk 63] I. Kupka. "Contributiona la théorie des champs génériques". *Contributions to differential equations*, Vol. 2, pp. 457–484, 1963.
+
+[Lax 02] P. Lax. *Functional Analysis*. Wiley-Interscience, 2002.
+
+[Lore 63] E. N. Lorenz. "Deterministic nonperiodic flow". 1963.
+
+[Lu 18] Z. Lu, B. R. Hunt, and E. Ott. "Attractor reconstruction by machine learning". *Chaos*, Vol. 28, No. 6, 2018.
+
+[Lu 20] Z. Lu and D. S. Bassett. "Invertible generalized synchronization: A putative mechanism for implicit learning in neural systems". *Chaos*, Vol. 30, No. 063133, 2020.
+
+[Luko 09] M. Lukoševičius and H. Jaeger. "Reservoir computing approaches to recurrent neural network training". *Computer Science Review*, Vol. 3, No. 3, pp. 127–149, 2009.
+
+[Maas 00] W. Maass and E. D. Sontag. "Neural Systems as Nonlinear Filters". *Neural Computation*, Vol. 12, No. 8, pp. 1743–1772, aug 2000.
+
+[Maas 02] W. Maass, T. Natschläger, and H. Markram. "Real-time computing without stable states: a new framework for neural computation based on perturbations". *Neural Computation*, Vol. 14, pp. 2531–2560, 2002.
+
+[Maas 04] W. Maass, T. Natschläger, and H. Markram. "Fading memory and kernel properties of generic cortical microcircuit models". *Journal of Physiology Paris*, Vol. 98, No. 4-6 SPEC. ISS., pp. 315–330, 2004.
+
+[Maas 07] W. Maass, P. Joshi, and E. D. Sontag. "Computational aspects of feedback in neural circuits". *PLoS Computational Biology*, Vol. 3, No. 1, p. e165, 2007.
+
+[Manj 13] G. Manjunath and H. Jaeger. "Echo state property linked to an input: exploring a fundamental characteristic of recurrent neural networks". *Neural Computation*, Vol. 25, No. 3, pp. 671–696, 2013.
+
+[Manj 20] G. Manjunath. "Stability and memory-loss go hand-in-hand: three results in dynamics & computation". To appear in *Proceedings of the Royal Society London Ser. A Math. Phys. Eng. Sci.*, pp. 1–25, 2020.
+
+[Matt 92] M. B. Matthews. *On the Uniform Approximation of Nonlinear Discrete-Time Fading-Memory Systems Using Neural Network Models*. PhD thesis, ETH Zürich, 1992.
+
+[Matt 93] M. B. Matthews. "Approximating nonlinear fading-memory operators using neural network models". *Circuits, Systems, and Signal Processing*, Vol. 12, No. 2, pp. 279–307, jun 1993.
+
+[Munk 14] J. Munkres. *Topology*. Pearson, second Ed., 2014.
+
+[Nats 02] T. Natschläger, W. Maass, and H. Markram. "The "Liquid Computer": a novel strategy for real-time computing on time series". Special Issue on Foundations of Information Processing of TELEMATIK, Vol. 8, No. 1, pp. 39–43, 2002.
+
+[Ott 02] E. Ott. *Chaos in Dynamical Systems*. Cambridge University Press, second Ed., 2002.
+
+[Path 17] J. Pathak, Z. Lu, B. R. Hunt, M. Girvan, and E. Ott. "Using machine learning to replicate chaotic attractors and calculate Lyapunov exponents from data". *Chaos*, Vol. 27, No. 12, 2017.
+
+[Path 18] J. Pathak, B. Hunt, M. Girvan, Z. Lu, and E. Ott. "Model-Free Prediction of Large Spatiotemporally Chaotic Systems from Data: A Reservoir Computing Approach". *Physical Review Letters*, Vol. 120, No. 2, p. 24102, 2018.
+
+[Peco 97] L. M. Pecora, T. L. Carroll, G. A. Johnson, D. J. Mar, and J. F. Heagy. "Fundamentals of synchronization in chaotic systems, concepts, and applications". *Chaos*, Vol. 7, No. 4, pp. 520–543, 1997.
+
+[Rulk 95] N. F. Rulkov, M. M. Sushchik, L. S. Tsimring, and H. D. I. Abarbanel. "Generalized synchronization of chaos in directionally coupled chaotic systems". *Physical Review E*, Vol. 51, No. 2, p. 980, 1995.
+
+[Saue 91] T. Sauer, J. A. Yorke, and M. Casdagli. "Embedology". *Journal of Statistical Physics*, Vol. 65, No. 3, pp. 579–616, 1991.
+
+[Smal 63] S. Smale. "Stable manifolds for differential equations and diffeomorphisms". *Annali della Scuola Normale Superiore di Pisa-Classe di Scienze*, Vol. 17, No. 1-2, pp. 97–116, 1963.
+
+[Sont 98] E. Sontag. *Mathematical Control Theory: Deterministic Finite Dimensional Systems*. Springer-Verlag, 1998.
+
+[Take 81] F. Takens. "Detecting strange attractors in turbulence". pp. 366–381, Springer Berlin Heidelberg, 1981.
+
+[Tana 19] G. Tanaka, T. Yamane, J. B. Héroux, R. Nakane, N. Kanazawa, S. Takeda, H. Numata, D. Nakano, and A. Hirose. "Recent advances in physical reservoir computing: A review". *Neural Networks*, Vol. 115, pp. 100–123, 2019.
+
+[Verz 20] P. Verzelli, C. Alippi, and L. Livi. "Learn to Synchronize, Synchronize to Learn". 2020.

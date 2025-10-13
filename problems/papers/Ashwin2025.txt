@@ -1,0 +1,486 @@
+# Early warning skill, extrapolation and tipping for accelerating cascades
+
+**Peter Ashwin¹, Robbin Bastiaansen²,³,⁴, Anna S. von der Heydt²,⁴ and Paul D. L. Ritchie¹**
+
+¹Department of Mathematics and Statistics, University of Exeter, Exeter EX4 4QF, UK  
+²Department of Physics, Institute for Marine and Atmospheric Research Utrecht, ³Mathematical Institute, and ⁴Centre for Complex Systems Studies, Utrecht University, Utrecht, The Netherlands
+
+*Proc. R. Soc. A* **481**: 20250405  
+https://doi.org/10.1098/rspa.2025.0405
+
+Received: 8 May 2025  
+Accepted: 15 July 2025
+
+---
+
+## Abstract
+
+We investigate how nonlinear behaviour (both of forcing in time and of the system itself) can affect the skill of early warning signals (EWS) to predict tipping in (directionally) coupled bistable systems when using measures based on critical slowing down (CSD) due to the breakdown of extrapolation. We quantify the skill of early warnings with a time horizon using a receiver–operator methodology for ensembles where noise realizations and parameters are varied to explore the role of extrapolation and how it can break down. We highlight cases where this can occur in an accelerating cascade of tipping elements, where very slow forcing of a slowly evolving 'upstream' system forces a more rapidly evolving 'downstream' system. If the upstream system crosses a tipping point, this can shorten the time scale of valid extrapolation. In particular, 'downstream-within-upstream' tipping will typically have warnings only on a time scale comparable to the duration of the upstream tipping process, rather than the time scale of the original forcing.
+
+---
+
+## 1. Introduction
+
+Nonlinear systems subjected to a slow varying input parameter (external forcing) can respond to forcing with abrupt behaviours even for arbitrarily slow forcing. This includes periods of rapid change due to stable states ceasing to exist (B-tipping), failure to track an attractor as a parameter is changed too rapidly (R-tipping) or due to large fluctuations in stochastic forcing (N-tipping) [1]. We focus here on tipping points or critical transitions that arise due to B-tipping, i.e. for slow variation of a forcing in the system and only low-amplitude noise. The mathematics of tipping points in non-autonomous systems has applications in climate and ecological systems, where nonlinear feedback can result in periods of rapid change in response to slow natural or anthropogenic changes [2,3].
+
+Driven by the need to understand the predictability and risks associated with tipping points [4,5], there has been a particular interest in finding early warning signals (EWS) or precursors of impending tipping points. Critical slowing down (CSD) in response to stochastic variability is one tool that can warn of an approach to such a tipping point [6,7]. EWS using CSD consider an observation that is examined for signs of loss of stability that may be associated with approach to a bifurcation. This loss of stability is signalled by an increase in the variance and an approach of the lag-one autocorrelation towards 1 [3,8]; see §2b for more details. We take the approach that the return time is a more fundamental measure of stability than the autocorrelation, as this is independent of sampling rate. We refer the interested reader to [6,9–18] and references therein for further discussion of EWS for tipping points.
+
+There is some debate as to how much prediction CSD signals can show [9,17]. The danger is that by choosing observables, filtering schemes and/or thresholds, it is possible to find accurate signals of historical tipping points but these may give false positives (FPs) or false negatives when applied to predictions of future tipping points [19,20]. One could give up any claim of predictive ability of an EWS, but this somewhat defeats the utility of an 'early warning'.
+
+In this paper, we aim to bring this issue into focus by discussing factors needed for an EWS based on CSD to have good predictive skill of an approaching B-tipping. To make the problem tractable, we specify a prediction time (time horizon) Δ > 0 and aim to make predictions forward over that time horizon and for passage through fold bifurcations. For a prediction to be skilful, we claim that all of the following will be needed:
+
+- Good separation of time scales between slow forcing and fast system time scales.
+- Good separation of nonlinear dynamics signal and low-amplitude noise.
+- Reliable estimation of the stability of a system and quantification of the uncertainty of that estimation.
+- Reliable estimation of an extrapolation time scale over which a significant trend in stability can be extrapolated into the future.
+
+Many of these points have been discussed in previous literature on the topic (notably (a–c) in [21] and (d) in [9]). In particular, (c) a very good fit to a trend, even over a long period, is no guarantee of (d) that the trend will extrapolate to a tipping point [22].
+
+On a related topic, there is much interest in cascades of tipping elements [4,23–25], where tipping of one system may influence tipping of another. This is a particular issue in the coupled climate-ecology literature [4] and in biological or epidemiological systems [26,27]. In this context, we consider how a tipping event in an 'upstream' system influences tipping of a 'downstream' system within a cascade of tipping elements. Various studies have highlighted how upstream tipping can influence downstream tipping depending on the systems and their coupling, in particular [28] and examples such as [29,30]. In this paper, we focus on examples of what we call an accelerating cascade of tipping elements, where each system can potentially tip and the downstream system evolves on a faster time scale than the upstream system. Tipping of the upstream system can then be viewed as a slow change in the forcing of the downstream system.
+
+We find cases where early warning of tipping of the upstream system is possible, but early warning for the downstream system is not possible.
+
+The paper aims to identify general barriers to skill of EWS predictions due to lack of extrapolation. This may come from a single system (§3) or as an emergent effect due to coupling between systems (§4), and proceeds by a number of illustrative examples. It is organized as follows. In §2, we discuss an EWS for future tipping based on extrapolation of the trend of the return rate, as in [21], but limited to the finite time horizon so we can test the skill of the prediction. We discuss a method to estimate the skill of this test using the specified time horizon and a receiver–operator characteristic/area under curve (ROC/AUC) methodology [31]. In §3, we present examples where this extrapolation is skilful for a range of time horizons and examples where there are obstructions to extrapolation for various distinct reasons. In §4, we consider an example of two coupled systems, each with a tipping point and with coupling between them. We state criteria such that an upstream system crossing a tipping point may (or may not) cause a downstream system to tip. We study a specific example of coupled one-dimensional systems to test how the coupling between systems affects tipping. In §4b, we examine a stochastic version of this coupled system and explore cases where skilful early warning for tipping of the downstream system is possible. We find that the downstream tipping may remain deeply unpredictable in cases of downstream-within-upstream tipping. Finally, in §5, we discuss some implications and potential applications of this work.
+
+---
+
+## 2. Time scales and tipping points
+
+In this section, we consider a nonlinear system whose state x ∈ ℝⁿ is governed by
+
+$$\frac{d}{dt}x = f(x, \Lambda(rt))$$ (2.1)
+
+where Λ(s) characterizes the forcing input to the system, r > 0 represents the rate of change of forcing and f : ℝⁿ⁺ᵖ → ℝⁿ is a smooth function. We assume that Λ : ℝ → ℝᵖ is piecewise continuous. In the limit where r > 0 is small (and so Λ is slowly varying), bifurcation-induced tipping points (B-tipping) of equation (2.1) can be understood using methods discussed in [1,32,33]; i.e. tipping in equation (2.1) can be understood in terms of bifurcations of attractors of the associated frozen system
+
+$$\frac{d}{dt}x = f(x, \lambda)$$ (2.2)
+
+on varying λ ∈ ℝᵖ and for convenience we suppose that
+
+$$\Lambda(s) \to \lambda_{\pm} \text{ as } s \to \pm\infty,$$
+
+so there are limiting autonomous past and future systems. If Λ(s) remains in a region of parameter space where there is a branch of stable equilibria for equation (2.2), then, for small enough r > 0, solutions will track the branch of equilibria. On the other hand, if Λ crosses a fold (saddle-node) bifurcation where a stable equilibrium ceases to exist, then this implies solutions will undergo B-tipping.
+
+We assume for small enough r > 0 there is a (local) pullback attractor x[r](t) of equation (2.1) that limits to X₋ in the past and X₊ in the future [32], for some attractors X± of equation (2.2) with λ = λ±. We say there is *end-point tracking* of an attractor from X₋ to X₊ if there is a branch of attractors X(Λ(s)) of the frozen system such that
+
+$$X_- = X(\lambda_-) \text{ and } X_+ = X(\lambda_+).$$
+
+Bifurcation-induced tipping (B-tipping) occurs if for all small enough r > 0 there is no such branch that connects X₋ and X₊, and (in the limit of small r) occurs when Λ(rt) crosses some bifurcation point λf.
+
+Noise added to a system such as equation (2.1) can give rise to EWS or precursors of B-tipping because the response to noise gives information about the stability of equilibria of the noise-free system. Consider a stochastic version of equation (2.1):
+
+$$dx = f(x, \Lambda(rt)) dt + \sigma dW_t$$ (2.3)
+
+where σ is small, Wₜ is an ℝⁿ-valued standard Wiener process with covariance
+
+$$\mathbb{E}((W_t - W_0)^T(W_t - W_0)) = t\Sigma$$
+
+for some positive definite Σ and suppose that equation (2.2) has a branch of stable equilibria.
+
+### (a) Early warning prediction
+
+The goal of EWS is to predict future tipping from data up to time t = tₚ. To make this more tangible, we focus here on predicting whether tipping is going to happen within some specific time horizon, i.e. between t = tₚ and t = tₚ + Δ for some Δ > 0.
+
+To quantify prediction skill, we need a clear notion of whether a system tips. We say a tipping event is underway at time t if some chosen (derived) scalar property or observable Ψ of the system passes a chosen threshold θ. Using such a definition, we compute the minimum value δ such that Ψ(x(tₚ + δ)) ≥ θ. If this value is below Δ, that means tipping is happening in the time horizon of interest. This can be expressed as an indicator function Iₜᵢₚ,Δ(tₚ) that returns 1 if a tipping happens in this time horizon and 0 otherwise, i.e.
+
+$$I_{\text{tip},\Delta}(t_p) := \mathbb{I}_{\min\{s\geq 0 : \Psi(x(t_p+s))\geq\theta\}\in[0,\Delta]}$$ (2.4)
+
+An early warning predictor is a function IEwS,Δ(tₚ) ∈ {0, 1} derived from the time series up to prediction time tₚ that is a predictor for Iₜᵢₚ,Δ(tₚ). We derive such a predictor using a *scoring classifier* [31]; this is a real-valued function C_Δ(tₚ). Given threshold κ, we consider
+
+$$I_{\text{EWS},\Delta,\kappa}(t_p) := \mathbb{I}_{C_\Delta(t_p)\leq\kappa}$$
+
+as an estimator for Iₜᵢₚ,Δ(tₚ). The threshold κ can be chosen to optimize the skill of the predictor by balancing the ability to correctly detect negatives or positives. Note that for any κ < κ', we have
+
+$$I_{\text{EWS},\Delta,\kappa}(t_p) \leq I_{\text{EWS},\Delta,\kappa'}(t_p).$$
+
+Moreover, note that for all Δ > 0 and tₚ, and almost all realizations, we have
+
+$$\lim_{\kappa\to-\infty} I_{\text{EWS},\Delta,\kappa}(t_p) = 0 \text{ and } \lim_{\kappa\to+\infty} I_{\text{EWS},\Delta,\kappa}(t_p) = 1,$$ (2.5)
+
+i.e. there are limiting thresholds where IEwS,Δ,κ systematically predicts no tipping or inevitable tipping.
+
+The prediction will be maximally skilful if there is a choice of threshold that minimizes FPs and false negatives. For some test ensemble, we can quantify the proportion of FPs and true positives (TPs) for that ensemble as a function of the threshold κ using an ROC/AUC analysis [31]. This approach has been used to understand the skill of EWS for example in [14,18,34,35]; see [26] for a comprehensive review with particular emphasis on surrogate methods.
+
+Note that the ROC goes from (FP, TP) = (0, 0) to (1, 1) on varying κ; for too low κ, the predictor always predicts no tipping, whereas for too high κ, the predictor always predicts tipping. The optimal choice for the threshold is the value κ = κOpt(tₚ, Δ) that corresponds to the closest point to (0, 1), i.e. that minimizes both false negatives and FPs. In general, this will depend on tₚ, Δ and the ensemble considered. How optimal this choice can be made is expressed by the AUC for this ROC [26,31]. The closer that the AUC is to one, the more skilful a test can be made by judicious choice of κ. This will clearly depend on the ensemble, the quality of the estimator and the quality of the fit to a trend, as well as prediction time tₚ and time horizon Δ. We remark that there are criteria other than AUC for assessing the quality of the prediction, but note that AUC close to one is necessary for there to be a good choice of threshold.
+
+### (b) Estimating stability from CSD
+
+In this section, we consider an explicit early warning predictor based on return rate extrapolation. For given λ, suppose there is a stable equilibrium of equation (2.2) at x*(λ). For x close to x*, we can approximate the stochastic parameter frozen version of equation (2.3), that is,
+
+$$dx = f(x, \lambda) dt + \sigma dW_t$$ (2.6)
+
+as a linear stochastic differential equation (SDE) whose solutions are (multi-dimensional) Ornstein–Uhlenbeck processes
+
+$$dx = Df(x^*, \lambda)(x - x^*) dt + \sigma dW_t$$ (2.7)
+
+If we assume there is a unique least stable (or leading) eigenvalue of the Jacobian Df(x*, λ), that is −α with α > 0, then we say α is the return rate. When this approaches zero, that is a sign of loss of stability [36]. There is locally a projection of x onto an SDE for z ∈ ℝ that, if linearized, has the form
+
+$$dz = -\alpha(z - \mu) dt + \sigma dV_t$$ (2.8)
+
+for some Wiener process Vₜ. A more general observable may include noise from other components [16], and determining z from data of a high-dimensional system might be hard in practice, but in this paper we shall ignore those issues and assume obtaining such a projection is possible.
+
+We can estimate α from time series z(t) at some prediction time tₚ by computing the AR1 coefficient ρ of zᵢ = z(tᵢ) in an observation window at times {tᵢ}ⁿʷᵢ₌₀ with tᵢ = tₚ + (i − nw)δ. That is, we fit to
+
+$$z_{i+1} = \rho(z_i - \mu) + \sigma e_i$$ (2.9)
+
+for i = 0, ..., nw where eᵢ is normally distributed and 0 < ρ < 1 corresponds to ρ = e⁻ᵅᵟ. For ρ close to 1, approximate maximum likelihood estimators for μ and ρ [21] are
+
+$$\hat{\mu} = \frac{1}{n_w + 1}\sum_{i=0}^{n_w} z_i \text{ and } \hat{\rho} = \frac{\sum_{i=1}^{n_w}(z_{i-1} - \hat{\mu})(z_i - \hat{\mu})}{\sum_{i=0}^{n_w}(z_i - \hat{\mu})^2}$$ (2.10)
+
+An estimator for the return rate α > 0 is therefore
+
+$$\hat{\alpha} = -\frac{\ln(\hat{\rho})}{\delta}$$ (2.11)
+
+In the case 0 < αδ ≪ 1, the standard deviation of the estimator ρ̂ can be approximated as σ̂ = √(2ρδ/nw), as in [21]. Hence, an estimator of two standard deviations of α is given by α̂± = − ln(ρ̂ ∓ 2σ̂)/δ. Note that these estimators will be biased except in the limit where 1 − ρ̂ and σ̂/ρ̂ are small.
+
+### (c) Early warning prediction from extrapolation
+
+In the previous subsection, we have obtained an estimator α̂ based on an observation window. If the system is non-autonomous but slowly varying (i.e. the rate of change is slower than that observation window length), then we obtain a time-dependent estimator α̂(t). In this subsection, we show how to do this by extrapolating α̂(t) to obtain the family of early warning predictors IEwS,Δ,κ(t).
+
+We assume linear drift of a parameter through a fold (saddle-node) bifurcation, as discussed in [21]. For transverse passage through a fold bifurcation, equation (2.3) is locally topologically equivalent to a normal form
+
+$$f(x, \lambda) = a_0x^2 + a_1\lambda$$ (2.12)
+
+where a₀ ≠ 0 and a₁ ≠ 0. In this case, there is a near identity transformation that removes higher order terms in x and λ [37]. If the parameter passes through the fold bifurcation with non-zero speed at t = t₀, then we have equation (2.3) with
+
+$$f(x, \Lambda(rt)) = a_0x^2 + \tilde{a}_1(t - t_0)$$
+
+for some ã₁ ≠ 0. We assume a₀ã₁ < 0 so that, in the absence of noise, the quasistatic system has an equilibria at x± = ±√((t − t₀)ã₁/a₀) with eigenvalue α(t) = Df(x±) = ±2a₀√((t − t₀)ã₁/a₀) for t < t₀. This suggests (see, e.g. [21]) that near the fold bifurcation, we can expect a linear relationship between time and the square of the eigenvalue α²:
+
+$$\alpha^2(t) = 4|a_0\tilde{a}_1|(t_0 - t).$$
+
+Hence, Ditlevsen & Ditlevsen [21] propose a linear fit of α² over the period t ∈ [tₚ − n₂δ, tₚ] to obtain
+
+$$\hat{\alpha}^2_{t_p}(t) \approx \beta_0(t_p) + \beta_1(t_p)(t - t_p)$$ (2.13)
+
+This gives values for βᵢ(tₚ) where β₀(tₚ) ≥ 0 and β₁(tₚ) > 0 (resp. β₁(tₚ) < 0) correspond to a trend with increasing (resp. decreasing) stability.
+
+One can extrapolate equation (2.13) to predict a tipping point such that α̂²ₜₚ(tₜᵢₚ) = 0 which will be at time
+
+$$t_{\text{tip}} = t_p - \frac{\beta_0(t_p)}{\beta_1(t_p)}$$ (2.14)
+
+This is in the future if and only if β₁(tₚ) < 0, i.e. if there is a decreasing trend. This can be used to infer a distribution of future tipping times tₜᵢₚ as in [21]. However, it is hard to judge the skill of this in cases tₜᵢₚ > tₚ + Δ where the errors may be dominated by extrapolation.
+
+This suggests the scoring classifier C_Δ(tₚ) (see §2a):
+
+$$C_\Delta(t_p) := \beta_0(t_p) + \beta_1(t_p)\Delta$$ (2.15)
+
+The construction of this classifier is shown in figure 1. We use C_Δ(tₚ) to define a family of early warning predictors:
+
+$$I_{\text{EWS},\Delta,\kappa}(t_p) = \mathbb{I}_{C_\Delta(t_p)\leq\kappa}$$ (2.16)
+
+Note that the predictor equation (2.16) is monotonic in κ and has limits as in equation (2.5). Hence, we can use the ROC/AUC methodology outlined at the end of §2a to quantify the skill of the predictor.
+
+---
+
+## 3. Predictive skill and extrapolation problems
+
+In §3a, we first verify, using the classifier from §2c and an ROC/AUC methodology, that an early warning predictor based on this classifier can have good skill in case of a monotonic passage through a fold bifurcation. However, the remainder of the section highlights three independent reasons for the breakdown of extrapolation—and thus the loss of skill—via examples. Section 3b highlights a problem due to non-monotonic forcing in time, §3c highlights a problem due to predicting outside a region of validity of a normal form; §3d highlights a problem due to existence of other stable eigenvalues.
+
+### (a) Example of quantification of skill using ROC/AUC
+
+Consider a system with state x ∈ ℝ governed by
+
+$$dx = f(x, \Lambda(rt)) dt + \eta dW_t$$ (3.1)
+
+where f(x, λ) := 3x − x³ + λ. This has a region of bistability for λ ∈ [−2, 2] with fold bifurcations at λᵤ = 2 and λₗ = −2. We consider a family of monotonic parameter shifts of the form
+
+$$\Lambda(s) := \lambda_- + \frac{1}{2}(\lambda_+ - \lambda_-)(\tanh(s) + 1)$$ (3.2)
+
+We fix parameters
+
+$$\lambda_- = 1, \quad \eta = 0.05, \quad r = 0.025$$ (3.3)
+
+The other parameter (λ₊) will be varied in the ensemble considered for ROC/AUC analysis. Note that if λ₊ > 2, then (in the absence of noise) B-tipping occurs, whereas there is end-point tracking for λ₊ < 2. In figure 2, an example trajectory, including stability estimation and early warning predictor, is given in case of B-tipping occurring, i.e. with λ₊ = 3.
+
+Figure 2 shows (a) the time variation of Λ(rt), (b) a number of realizations starting at time t = −100 close to the lower branch, (c) an estimator ρ̂ for the AR1 coefficient up to prediction time tₚ = −40 or tₚ = −10 and (d) the estimator α̂² for the return rate (red) and the actual value of the Jacobian at the current trajectory position (black). In (c) and (d), the pink window shows the length of the moving window over which detrending and estimation take place. The light green window is used to fit a linear passage through a fold bifurcation. The green line shows the best fit in this window, extrapolated into the future. The value of this extrapolation at time tₚ + Δ is the scoring classifier as shown in figure 1 and discussed in §2c.
+
+The upper panels of figure 3 correspond to a ROC/AUC analysis of an ensemble of such monotonic forcing scenarios. The ROC/AUC are computed for this example using an ensemble of realizations where λ₊ is chosen randomly and i.i.d. from {1, 3}, λ₋ = 0, r = 0.05 and other parameters as in equation (3.3). To construct the curves, 1000 simulations were performed (with λ₊ randomly sampled). Then, for each prediction time tₚ and horizon Δ, out of those 1000 simulations an ensemble was created by picking the first 100 that show tipping and the first 100 that do not show tipping within the time window [tₚ, tₚ + Δ]. If such an ensemble cannot be created, no ROC/AUC analysis was performed. (a) shows examples of ROC curves computed for three cases of prediction time tₚ and horizon Δ corresponding to the starred locations in (b). The plot on (b) shows AUC computed in the coloured region where there are a sufficient number of tipping events in [tₚ, tₚ + Δ] (to be able to compute statistics for FPs/negatives properly). Observe that tₚ needs to be close to the threshold crossing if there is one, for the AUC to be computable—but good skill can definitely be achieved by choosing the threshold κ careful when Δ is small and tₚ is close to the threshold crossing. However, the skill quickly drops off as Δ becomes larger or tₚ is farther away from the threshold crossing, even in this idealized case.
+
+### (b) Example: lack of extrapolation due to non-monotonic forcing
+
+Next, we turn to cases in which the early warning prediction might break down. For this, we first consider the same system equation (3.7), but with non-monotonic parameter shifts of the form
+
+$$\Lambda(s) := \lambda_- + \frac{1}{2}(\lambda_+ - \lambda_-)(\tanh(s) + 1) + \tilde{\lambda} \text{bump}(as + b)$$ (3.4)
+
+where we define
+
+$$\text{bump}(s) = \begin{cases} \exp\left[\frac{x^2}{x^2-1}\right] & \text{if } |x| < 1, \\ 0 & \text{otherwise.} \end{cases}$$
+
+By choosing the coefficients in equation (3.2), we can explore paths with limits λ± as t → ±∞ that may be non-monotonic if λ̃ ≠ 0. Figure 2 shows a monotonic parameter shift with λ₊ = 3 and λ̃ = 0 that lead to B-tipping. By contrast, figure 4 shows examples with this non-monotonic forcing with λ₊ = 1, λ̃ = 1.9, a = 1 and b = 0 (other parameters as in equation (3.3)). This gives a parameter shift that comes close to, but avoids, crossing λᵤ = 2—and hence (in the absence of noise) no B-tipping occurs. For figure 2, the decreasing trend in α is identified, predicting a tipping point close to the actual tipping event. By contrast, figure 4 shows that a decreasing trend in α is correctly identified, but extrapolation close to the minimum yields a prediction of tipping although no tipping occurs in this case.
+
+Figure 5 shows a ROC/AUC analysis of an ensemble of such non-monotonic forcing scenarios. To construct these ROC curves, we take λ₋ = λ₊ = 0 < λᵤ = 2, a = 0.05 and b = 0, and chosen the bump strength λ̃ uniformly from {1.5, 2.5}. For some of the ensemble, λᵤ = 2 is crossed and B-tipping does happen: (a) shows examples of ROC curves computed for three different prediction times tₚ and Δ corresponding to the starred locations in (b). It can be seen that the predictive skill for the early warning predictor is less for the non-monotonic forcing ensemble even for optimal choice of threshold. In particular, it shows that all predictive skill can be lost when tₚ is too far before a potential tipping and/or Δ is too large. This indicates that in such non-monotonic forcing scenarios, an early warning predictor may need to be hyper-tuned to have good prediction skill—and even then prediction can only be expected close to a potential tipping.
+
+### (c) Example: lack of extrapolation due to being outside region of validity of the normal form
+
+The extrapolation step might also break down when the assumption of the normal form equation (2.12) does not hold. To illustrate this, consider the system
+
+$$dx = (F(x) - \Lambda(rt)) dt + \eta dW_t$$ (3.5)
+
+where F(x) is a smooth function and Λ monotonically increases from λ₋ to λ₊. The turning points of F (i.e. where DF(x₀) = 0) correspond to bifurcations of the noise-free (η = 0) system when Λ = −F(x₀). For example, figure 6 shows a bifurcation diagram for
+
+$$F(x) = -x(x^2 - 1)(x - 1.4)(x - 1.8) + 2$$ (3.6)
+
+which has four fold bifurcations in the region illustrated, two of which will be responsible for B-tipping as λ increases. Indeed, for monotonic increase of λ, a trajectory starting on the upper branch will pass through two fold bifurcations A and then B in sequence. The red rectangle approximates a region of validity of the normal form for the fold B. Note that trajectories can only enter the red region after passing fold A and so trends from the upper branch cannot be extrapolated to reliably given a prediction of passing the fold B.
+
+### (d) Example: lack of extrapolation due to change of leading eigenvalue
+
+Consider an example where (x, y) ∈ ℝ² is governed by
+
+$$dx = (f(x, \Lambda(rt)) + \xi_{12}y) dt + \eta_1 dV_t$$
+$$\text{and } dy = (\xi_{21}x + \xi_{22}y) dt + \eta_2 dW_t$$ (3.7)
+
+where f(x, λ) := 3x − x³ + λ, Vₜ and Wₜ are independent Brownian processes, parameters otherwise as in equations (3.2)–(3.3) and additionally we set
+
+$$\xi_{12} = \xi_{21} = 0.2, \quad \xi_{22} = -\sqrt{8}, \quad \eta_1 = \eta_2 = 0.05$$
+
+A steady state of this system has two eigenvalues. One of them is close to −8 for all λ values, whereas the second one organizes the fold bifurcation; this second one is more negative than −8 unless λ is close to the threshold crossing. Hence, if we project (x, y) onto the leading eigendirection at the end of each window and find the return rate from the AR1 coefficient, we typically find the eigenvalue that does not organize the fold bifurcation. Specifically, as shown in figure 7, the presence of a second eigenvalue α₂ ≈ 8 means that the least stable eigenvalue has no significant trend until shortly before the tipping point, suggesting extrapolation is only skilful close to tipping. In this simulation, we exploit the fact that the Jacobian is known explicitly and so we project onto the least stable eigenvalue at the end of each window in which the AR1 coefficient is calculated. More generally, it will be necessary to approximate this, for example, by using a principal component analysis decomposition in the averaging window.
+
+---
+
+## 4. Extrapolation and tipping cascades
+
+In this section, we turn our attention to tipping cascades and their predictability. We focus on a simple case of an upstream system coupled to a downstream system, with external forcing and time-scale separation. We suppose that, as summarized in a block diagram in figure 8, there is a slowly forced upstream (sub)system for x(t):
+
+$$\frac{d}{dt}x = f(x, \Lambda(rt))$$ (4.1)
+
+and this forces a downstream (sub)system with state y ∈ ℝᵐ governed by
+
+$$\epsilon\frac{d}{dt}y = g(y, M(x(t)))$$ (4.2)
+
+We consider first the behaviour of the deterministic dynamics before introducing stochastic forcing in §4b. Note that r is the rate of forcing, ε is the ratio of times scales of x and y, M : ℝⁿ → ℝᵍ and g : ℝᵐ⁺ᵍ → ℝᵐ is smooth. Note also that equation (4.2) is forced by a function of the output from the upstream system. We assume r > 0 is small (the system is slowly forced) and ε is small (the downstream dynamics evolves on a faster time scale than the upstream) and say the cascade of tipping elements accelerates. See Ritchie et al. [29] for discussion of the deterministic dynamics in more detail.
+
+For an accelerating cascade, tipping of the upstream system x may or may not cause a tipping of the fast downstream system y, depending on properties of M and the tipping trajectory of x. Writing the downstream system in the downstream time scale τ = t/ε, we see that y(τ) satisfies
+
+$$\frac{d}{d\tau}y = g(y, M(x(\varepsilon\tau)))$$ (4.3)
+
+One can understand the behaviour of equation (4.3) in relation to the upstream forcing M(x(ετ)) and the frozen downstream system
+
+$$\frac{d}{d\tau}y = g(y,\mu)$$ (4.4)
+
+where μ ∈ ℝᵍ. The similarity of system equations (4.1) and (4.3) means similar methods can be used to understand how tipping in equation (4.1) relates to tipping in equation (4.3).
+
+Assume that Λ(s) is bi-asymptotically constant, i.e. there are constants
+
+$$\lambda_{\pm} := \lim_{s\to\pm\infty} \Lambda(s).$$
+
+For λ = λ₋, the frozen past limit system for equations (4.1) and (4.2) is
+
+$$\frac{d}{dt}x = f(x, \lambda)$$
+$$\text{and } \epsilon\frac{d}{dt}y = g(y, M(x))$$ (4.5)
+
+We suppose there is a linearly stable equilibrium (X₋, Y₋), and we start within a neighbourhood of this equilibrium. By results in [32], there is a unique trajectory (x̃(t), ỹ(t)) that is a pullback point attractor of the non-autonomous system equations (4.1) and (4.2) with past limit
+
+$$\lim_{t\to-\infty} (\tilde{x}(t), \tilde{y}(t)) = (X_-, Y_-)$$
+
+and this will attract all initial conditions close enough to (X₋,Y₋) in the far past (i.e. in pullback sense). Note that x̃ depends on Λ and r while ỹ depends on Λ, r and ε.
+
+The question of whether the system starting at (X₋,Y₋) will undergo B-tipping is determined by the behaviour of this pullback attractor, and whether there is bifurcation-induced tipping of x or y. In a forthcoming paper [29], we demonstrate how tipping for a pullback attractor of equations (4.1) and (4.2) can be understood in terms of the dynamics of the frozen system equation (4.5) and how this is affected by the coupling. Note that we can view the full system as a pair of non-autonomous systems equation (4.1) and (4.2) and the frozen system equation (4.5) as the system equations (2.2) and (4.2).
+
+In the limit of small r and ε, tipping behaviour can be studied in terms of the path (Λ(rt), M(x̃(t))) in the (λ,μ)-plane as shown schematically in figure 9. Suppose there is a bifurcation at λ = λc where the branch containing X₋ undergoes B-tipping (in the frozen upstream system (equation (2.2)) and a bifurcation at μ = μc where the branch containing Y₋ undergoes B-tipping (in the frozen downstream system (equation (4.4)), then the tipping behaviour is determined by how the forcing path crosses λ = λc or μ = μc. Figure 9 illustrates possible cases where upstream and downstream tipping may or may not occur and highlights the sequence in which they occur. The blue star shows where upstream tipping occurs (which leads to a period of faster change of M(x̃(t))) while the orange star shows where downstream tipping occurs. Note that there may be (a) no tipping, (b) only upstream, (c) only downstream tipping or (e,f) where one tipping follows the other over time scales determined by the external forcing. If there is a sequence of tippings, then we note that this may or may not follow the direction of coupling.
+
+The case (d) in figure 9 denotes that downstream-within-upstream tipping is particularly interesting; in this case, downstream tipping starts and finishes while upstream tipping is still underway. This presents a challenge to finding a skilful early warning prediction of downstream tipping in that extrapolation can only be expected to be accurate for a period of time while the upstream tipping event is underway. We note that this feature of an accelerating cascade cannot be distinguished in the taxonomy of [28] as it requires a time scale separation in the coupled elements.
+
+### (a) An example with coupled tipping elements
+
+We consider a system where upstream and downstream tipping elements are one-dimensional systems with hysteresis to illustrate the discussion of the previous section. For x ∈ ℝ and y ∈ ℝ, let
+
+$$\frac{d}{dt}x = f(x, \Lambda(rt))$$
+$$\text{and } \epsilon\frac{d}{dt}y = f(y, M(x))$$ (4.6)
+
+where, as before, f(x, λ) := 3x − x³ + λ is bistable for −2 < λ < 2 and where, as before, there are fold bifurcations at λᵤ = 2, λₗ = −2. We assume r > 0 and ε > 0 are small. We denote by Xᵤ and Xₗ the upper and lower stable branches of equilibria for the frozen subsystem
+
+$$\dot{x} = f(x, \lambda)$$
+
+at x = Xₗ(λ) for λ < λᵤ and x = Xᵤ(λ) for λ > λₗ. These are connected by an unstable branch x = U(λ) for λₗ < λ < λᵤ, where Xₗ(λ) < U(λ) < Xᵤ(λ). We force the system equation (4.6) via the monotonic parameter shift equation (3.2) and consider a coupling function that includes linear and localized coupling:
+
+$$M(x) = a_1 + a_2x + a_3 \text{bump}(a_4(x - a_5))$$ (4.7)
+
+with bump(x) defined as in (§3b). Depending on the values of a₁, ..., a₅, the behaviour of M(x) can drive the downstream system over a tipping point. We write pullback attracting trajectory limiting to the lower branch Xₗ(λ₋) in the limit t → −∞ as x[r](t) and define
+
+$$X_- := \lim_{t\to-\infty} x^{[r]}(t) \text{ and } X^{[r]}_+ := \lim_{t\to\infty} x^{[r]}(t).$$
+
+Note that X₋ = Xₗ(λ₋). Using the monotonic nature of Λ, we can classify the behaviour of x[r](t) as follows:
+
+- If λ₊ < λᵤ, then for all r > 0 there will be end-point tracking; i.e. X[r]₊ = Xₗ(λ₊).
+- If λ₊ > λᵤ, then for all r > 0 there will be B-tipping; i.e. X[r]₊ = Xᵤ(λ₊).
+
+We write the effective forcing of the y dynamics as
+
+$$\mu^{[r]}(t) := M(x^{[r]}(t))$$
+
+and define M₋ := M(X₋) = limₜ→₋∞ μ[r](t). If we assume that M₋ < λᵤ, then for any r > 0, ε > 0, there is a unique (pullback attracting) trajectory (x[r](t), y[r,ε](t)) of equation (4.6) where y[r,ε](t) limits in the past to Xₗ(M₋) that is,
+
+$$Y_- := X_l(M_-) = \lim_{t\to-\infty} y^{[r,\varepsilon]}(t)$$ (4.8)
+
+We can classify the behaviour of the downstream system y[r,ε](t) as tracking or tipping purely in terms of the effective forcing. Given x[r](t), we define
+
+$$M_+ = \lim_{t\to\infty} \mu^{[r]}(t).$$
+
+Note that M₊ may depend on r. If supₜ μ[r](t) < λᵤ, then we have end-point tracking; i.e. limₜ→∞ y[r,ε](t) = Xₗ(M₊) for small enough ε. If M₊ > λᵤ, then we have B-tipping; i.e. limₜ→∞ y[r,ε](t) = Xᵤ(M₊) for small enough ε. If M₊ < λᵤ and there is a t (depending on r) such that μ[r](t) > λᵤ, then for all r and small enough ε there is B-tipping for the downstream system, while for large enough ε there is end-point tracking. Observe that threshold overshoots can occur if μ[r](t) is non-monotonic. This is the case where for large enough ε, one can have a safe overshoot as discussed in [38]. For a more detailed discussion of the dynamics of this system in terms of its bifurcation structure, we refer to [29].
+
+### (b) EWS for prediction of downstream tipping
+
+Let us now consider a stochastic version of equation (4.6), that is,
+
+$$dx = f(x, \Lambda(rt)) dt + \eta_1 dV_t$$
+$$\text{and } \epsilon dy = f(y, M(x)) dt + \eta_2 dW_t$$ (4.9)
+
+with ηᵢ small. We consider r and ε small quantities representing time scale separation, Vₜ and Wₜ are independent standard Wiener processes with amplitudes ηᵢ (we consider only additive isotropic noise for simplicity here). Consider forcing as in equation (3.2) and coupling as in equation (4.7) and choose default parameters:
+
+$$\lambda_- = 0, \quad \lambda_+ = 4,$$
+$$a_1 = a_2 = 0, \quad a_3 = 2.5, \quad a_4 = 2, \quad a_5 = 0.5,$$
+$$\epsilon = 0.05, \quad r = 0.05, \quad \eta_1 = \eta_2 = 0.1$$ (4.10)
+
+that determine the forcing of the upstream system and the coupling from upstream to downstream systems. We compute early warning predictors for upstream and downstream systems as outlined in §2c. Early warning indicators are calculated over some time interval up to tₚ and the linear fit to α²(t) over a fitting range of tₚ is extrapolated to time tₚ + Δ: this value is used as a scoring classifier for tipping in the interval from tₚ to tₚ + Δ, and ROC/AUC is calculated as discussed in §2a.
+
+Recall that figure 3 shows ROC/AUC curves for the upstream system where λ₊ is assumed to be chosen randomly with equal probability from {1, 3}, such that approximately half of the realizations will avoid tipping while the other half tip. That figure suggests that the predictor provides a skilful prediction for detecting tipping in the upstream system for short enough prediction windows. The optimal threshold approaches zero for prediction times tₚ close to the crossing of the bifurcation point and for moderate time horizons Δ.
+
+Figure 10 shows (a) downstream versus upstream forcing as well as (b) ROC and (c) AUC for the downstream system with linear coupling and a scenario with first upstream tipping and then downstream tipping (scenario (e) in figure 9), i.e. parameters are as in equation (4.10) except that a₃ = 0 and a₂ ∼ U[0, 1] (and a₁ = a₂√3 for each Monte Carlo simulation). This is chosen such that there is approximately an even split between the number of realizations that undergo tipping and those that do not. Interestingly, the early warning predictor applied to the downstream system still provides some skilful prediction, although degraded relative to the upstream system. This is due to the large variation in peak amplitudes. This is further reflected by the optimal scoring classifier being far away from zero.
+
+By contrast, figure 11 shows that all skill is lost if we consider localized coupling so that there is a change in M(x(t)) only during the tipping of x(t) (i.e. scenario (d) in figure 9). In particular, we consider parameters as in equation (4.10) except for a₃ ∼ U[0, 4]. In this case, the early warning predictor cannot differentiate between forcing that leads to tipping or not except during the tipping of the upstream system. Although the mechanism is still a fold bifurcation, the skill is no better than a completely random prediction.
+
+---
+
+## 5. Discussion
+
+In the past, several authors (notably Ben-Yami et al. [39]) have highlighted the range of factors that need to be considered for an early warning predictor of tipping points to be skilful. In this paper, we focused on the problem of extrapolation. Fixing the time horizon for early warnings makes the test more amenable to quantitative analysis, especially if there is a way to guarantee extrapolation over a short time horizon. It seems to be an important open problem to find ways to estimate the time of reliable extrapolation, for example, by bounded higher derivatives of any trend.
+
+The methods we used for estimating stability in §2b can certainly be improved, for example, using the maximum likelihood methods of [21] for linear passage through a normal form rather than the linearized version, or semiparametric methods such as those proposed in [40]. Ideally, one can aim to estimate the normal form together with a model for the temporal variation of the forcing that will imply a fitting to a trend. However, the problem of extrapolating the trend will remain no matter how precisely the estimation and fitting problem are done.
+
+Some takeaway messages of this study are the following:
+
+- Early warnings are particularly susceptible to errors in extrapolation.
+- Lack of extrapolation may come from a variety of sources:
+  - (i) Parameter variation being nonlinear in time (see §3b).
+  - (ii) Being outside the region of validity of a normal form (see §3c).
+  - (iii) Presence of other eigenvalues (see §3d).
+  - (iv) Multiple time scale behaviour of coupling from an upstream system undergoing tipping (see §4).
+- Specifying a time horizon makes the skill more easily quantifiable.
+
+In particular, a distribution of extrapolated times of tipping will only translate into a distribution of possible times of tipping if reliable extrapolation of the stability of the attracting state is possible.
+
+We emphasize that, thus far, we have worked within a limited setting to highlight important factors that may spoil extrapolation. That is, we considered only nonlinear and non-autonomous dynamical systems that are well represented by weak noise and slow drift through a fold bifurcation. It will be of great relevance to identify if there are additional factors for skilful warning of approach to other bifurcations, such as Hopf or transcritical. Also, non-smooth systems can be expected to have unreliable extrapolation, causing problems with early warnings [41]. We considered cases where tipping propagates from a slow upstream system to a faster downstream system under the assumption of time scale separation; it will be important to generalize this to cases where there is bidirectional coupling and/or more than two systems involved. Note, however, that one cannot easily distinguish between two coupled systems and a single system of higher dimension, unless there are modelling reasons to do so.
+
+The insights in this paper are relevant for various systems and indicate that early warning prediction might be unfeasible or possible only very late for these systems. First, climate forcing happens on multiple time scales [42] and forcing is often only monotonic over some limited time scale. Second, many systems seem to have multiple tipping points instead of tipping fully in one tipping event. Spatially heterogeneous systems in particular easily can have multiple tipping points via fragmented tipping [43]. For example, the melting of the Pine Island Glacier might be organized via three tipping points [44]. Third, climate (sub)systems respond to forcing on many different time scales [42]. Hence, a stable state has many eigenvalues associated with it. It can happen that tipping is organized through the crossing of one eigenvalue that is typically not dominant. This happens easily in fast–slow systems, such as dryland ecosystems [45] or in energy balance models [22]. Finally, various examples have been explored in the climate literature where a slow system can tip and influence a faster system with potential to tip (for an overview of tipping element interactions and their time scales, see, e.g. [25]). For example, melting of Greenland ice mass can cause tipping of the Atlantic Meridional Overturning Circulation through freshwater coupling (as explored using a conceptual model in [30]). This example has similar localized coupling as explored in this paper in the sense that when a tipping of the land ice is underway, this is when the freshwater flux into the North Atlantic is at a maximum. All of these, and other, systems have properties that we have identified in this paper that can lead to the breakdown of early warning predictions due to lack of extrapolation—and hence care should be taken when trying to predict their future.
+
+There has been work on tipping cascades in other contexts; for example, [23] considers noise-induced tipping for coupled multistable systems with weak noise and shows that there are various regimes of transmission of tipping. Such effects will also become important in cases where noise is large relative to changes in parameters. Moreover, for noise-induced tipping, precursors need to be associated with extreme behaviour of the noise rather than a slowly changing forcing crossing a threshold.
+
+For a prediction of future tipping to be useful, it is often necessary for it to be neither too early nor too late. If there is a hope of adaptation to an impending tipping event, then some time is needed to prepare, and this will indicate when the warning is too late. If the warning is too early, then the cost of early adaptation may outweigh the benefits. However, as demonstrated in this study, the time window in which skilful early warning prediction can be made depends on the specifics of the system and forcing. In fact, we have described some settings in which early warning prediction seem unfeasible, such as the setting of tipping within tipping where a downstream tips during the tipping of an upstream system.
+
+---
+
+## Data accessibility
+The code to generate the data for the figures presented is available at [46].
+
+## Declaration of AI use
+We have used AI-assisted technologies in creating this article. Grammar checker.
+
+## Authors' contributions
+P.A.: conceptualization, data curation, formal analysis, funding acquisition, investigation, methodology, software, supervision, validation, visualization, writing—original draft and writing—review and editing; R.B.: conceptualization, formal analysis, investigation, methodology and writing—review and editing; A.S.vdH.: conceptualization, investigation, validation and writing—review and editing; P.D.L.R.: conceptualization, formal analysis, investigation, methodology, software, validation, visualization, writing—original draft and writing—review and editing.
+
+All authors gave final approval for publication and agreed to be held accountable for the work performed therein.
+
+## Conflict of interest declaration
+We declare we have no competing interests.
+
+## Funding
+We acknowledge support from the European Union's Horizon Europe Research and Innovation Programme under grant agreement no. 101137601 (ClimTip): funded by the European Union. We acknowledge support by the UK Advanced Research and Invention Agency (ARIA) via the project 'AdvanTip'. A.S.vdH acknowledges funding by the Dutch Research Council (NWO) through the NWO-Vici project 'Interacting climate tipping elements: when does tipping cause tipping?' (project no. VI.C.202.081). Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Climate, Infrastructure and Environment Executive Agency (CINEA) or other funders. Neither the European Union nor the granting authority can be held responsible for them. For the purpose of open access, the authors have applied a Creative Commons Attribution (CC BY) licence to any Author Accepted Manuscript version arising from this submission.
+
+## Acknowledgements
+We thank Sebastian Bathiany and Susanne Ditlevsen for their helpful comments.
+
+---
+
+## References
+
+1. Ashwin P, Wieczorek S, Vitolo R, Cox P. 2012 Tipping points in open systems: bifurcation, noise-induced and rate-dependent examples in the climate system. Phil. Trans. R. Soc. A 370, 1166–1184. (doi:10.1098/rsta.2011.0306)
+
+2. Lenton TM, Livina VN, Dakos V, van Nes EH, Scheffer M. 2012 Early warning of climate tipping points from critical slowing down: comparing methods to improve robustness. Phil. Trans. R. Soc. A 370, 1185–1204. (doi:10.1098/rsta.2011.0304)
+
+3. Scheffer M et al. 2009 Early-warning signals for critical transitions. Nature 461, 53–59. (doi:10.1038/nature08227)
+
+4. Armstrong McKay DI et al. 2022 Exceeding 1.5°C global warming could trigger multiple climate tipping points. Science 377, eabn7950. (doi:10.1126/science.abn7950)
+
+5. Lenton T, Held H, Kriegler E, Hall JW, Lucht W, Rahmstorf S, Schellnhuber HJ. 2008 Tipping elements in the Earth's climate system. Proc. Natl Acad. Sci. USA 105, 1786–1793. (doi:10.1073/pnas.0705414105)
+
+6. Dakos V. 2018 Identifying best-indicator species for abrupt transitions in multispecies communities. Ecol. Indic. 94, 494–502. (doi:10.1016/j.ecolind.2017.10.024)
+
+7. George SV, Kachhara S, Ambika G. 2023 Early warning signals for critical transitions in complex systems. Phys. Scr. 98, 072002. (doi:10.1088/1402-4896/acde20)
+
+8. Dakos V, Scheffer M, van Nes EH, Brovkin V, Petoukhov V, Held H. 2008 Slowing down as an early warning signal for abrupt climate change. Proc. Natl Acad. Sci. USA 105, 14 308–14 312. (doi:10.1073/pnas.0802430105)
+
+9. Ben-Yami M, Morr A, Bathiany S, Boers N. 2024 Uncertainties too large to predict tipping times of major earth system components from historical data. Sci. Adv. 10, eadl4841. (doi:10.1126/sciadv.adl4841)
+
+10. Boers N, Rypdal M. 2021 Critical slowing down suggests that the western Greenland Ice Sheet is close to a tipping point. Proc. Natl Acad. Sci. USA 118, e2024192118. (doi:10.1073/pnas.2024192118)
+
+11. Bury TM, Dylewsky D, Bauch CT, Anand M, Glass L, Shrier A, Bub G. 2023 Predicting discrete-time bifurcations with deep learning. Nat. Commun. 14, 6331. (doi:10.1038/s41467-023-42020-z)
+
+12. Bury TM, Sujith RI, Pavithran I, Scheffer M, Lenton TM, Anand M, Bauch CT. 2021 Deep learning for early warning signals of tipping points. Proc. Natl Acad. Sci. USA 118, e2106140118. (doi:10.1073/pnas.2106140118)
+
+13. Dakos V, van Nes EH, D'Odorico P, Scheffer M. 2012 Robustness of variance and autocorrelation as indicators of critical slowing down. Ecology 93, 264–271. (doi:10.1890/11-0889.1)
+
+14. Donovan GM, Brand C. 2022 Spatial early warning signals for tipping points using dynamic mode decomposition. Physica A 596, 127152. (doi:10.1016/j.physa.2022.127152)
+
+15. Kuehn C 2013 A mathematical framework for critical transitions: normal forms, variance and applications. J. Nonlinear Sci. 23, 457–510. (doi:10.1007/s00332-012-9158-x)
+
+16. Morr A, Boers N, Ashwin P. 2024 Internal noise interference in anticipation of tipping points of generic multi-dimensional dynamical systems. SIAM J Applied Dynamical Systems 23, 2793–2806. (doi:10.1137/24M1669104)
+
+17. Rietkerk M, Skiba V, Weinans E, Hébert R, Laepple T. 2025 Ambiguity of early warning signals for climate tipping points. Nat. Clim. Change 15, 1–10. (doi:10.1038/s41558-025-02328-8)
+
+18. Zhang X, Kuehn C, Hallerberg S. 2015 Predictability of critical transitions. Phys. Rev. E 92, 052905. (doi:10.1103/PhysRevE.92.052905)
+
+19. Ditlevsen PD, Johnsen SJ. 2010 Tipping points: early warning and wishful thinking. Geophys. Res. Lett. 37, L19703. (doi:10.1029/2010GL044486)
+
+20. Kéfi S, Dakos V, Scheffer M, Van Nes EH, Rietkerk M. 2013 Early warning signals also precede non-catastrophic transitions. Oikos 122, 641–648.
+
+21. Ditlevsen P, Ditlevsen S. 2023 Warning of a forthcoming collapse of the Atlantic meridional overturning circulation. Nat. Commun. 14, 4254. (doi:10.1038/s41467-023-39810-w)
+
+22. Bastiaansen R, Ashwin P, von der Heydt AS. 2023 Climate response and sensitivity: time scales and late tipping points. Proc. R. Soc. A 479, 20220483. (doi:10.1098/rspa.2022.0483)
+
+23. Ashwin P, Creaser J, Tsaneva-Atanasova K. 2017 Fast and slow domino regimes in transient network dynamics. Phys. Rev. E 96, 052309. (doi:10.1103/PhysRevE.96.052309)
+
+24. Dekker MM, von der Heydt AS, Dijkstra HA. 2018 Cascading transitions in the climate system. Earth Syst. Dyn. 9, 1243–1260. (doi:10.5194/esd-9-1243-2018)
+
+25. Wunderling N et al. 2024 Climate tipping point interactions and cascades: a review. Earth Syst. Dyn. 15, 41–74. (doi:10.5194/esd-15-41-2024)
+
+26. Lehnertz K. 2024 Time-series-analysis-based detection of critical transitions in real-world non-autonomous systems. Chaos: Interdiscipl. J. Nonlinear Sci. 34, 072102. (doi:10.1063/5.0214733)
+
+27. Proverbio D, Skupin A, Gonçalves J. 2023 Systematic analysis and optimization of early warning signals for critical transitions using distribution data. iScience 26, 107156. (doi:10.1016/j.isci.2023.107156)
+
+28. Klose AK, Wunderling N, Winkelmann R, Donges JF. 2021 What do we mean, 'tipping cascade'? Environ. Res. Lett. 16, 125011. (doi:10.1088/1748-9326/ac3955)
+
+29. Ritchie PDL, Bastiaansen R, von der Heydt AS, Ashwin P. 2025 (in review). The role of coupling and timescales for interacting tipping elements.
+
+30. Sinet S, Ashwin P, von der Heydt AS, Dijkstra HA. 2024 AMOC stability amid tipping ice sheets: the crucial role of rate and noise. Earth Syst. Dyn. 15, 859–873. (doi:10.5194/esd-15-859-2024)
+
+31. Fawcett T. 2006 An introduction to ROC analysis. Pattern Recognit. Lett. 27, 861–874. (doi:10.1016/j.patrec.2005.10.010)
+
+32. Ashwin P, Perryman C, Wieczorek S. 2017 Parameter shifts for nonautonomous systems in low dimension: bifurcation- and rate-induced tipping. Nonlinearity 30, 2185. (doi:10.1088/1361-6544/aa675b)
+
+33. Wieczorek S, Xie C, Ashwin P. 2023 Rate-induced tipping: thresholds, edge states and connecting orbits. Nonlinearity 36, 3238. (doi:10.1088/1361-6544/accb37)
+
+34. Brett T et al. 2020 Detecting critical slowing down in high-dimensional epidemiological systems. PLoS Comput. Biol. 16, 1–19. (doi:10.1371/journal.pcbi.1007679)
+
+35. Proverbio D, Kemp F, Magni S, Gonçalves J. 2022 Performance of early warning signals for disease re-emergence: a case study on COVID-19 data. PLoS Comput. Biol. 18, e1009958. (doi:10.1371/journal.pcbi.1009958)
+
+36. Wissel C. 1984 A universal law of the characteristic return time near thresholds. Oecologia 65, 101–107. (doi:10.1007/BF00384470)
+
+37. Kuznetsov YA. 2004 Elements of applied bifurcation theory, vol. 112. Applied Mathematical Sciences. New York, NY: Springer.
+
+38. Ritchie P, Karabacak Ö, Sieber J. 2019 Inverse-square law between time and amplitude for crossing tipping thresholds. Proc. R. Soc. A 475, 20180504. (doi:10.1098/rspa.2018.0504)
+
+39. Ben-Yami M, Skiba V, Bathiany S, Boers N. 2023 Uncertainties in critical slowing down indicators of observation-based fingerprints of the Atlantic Overturning Circulation. Nat. Commun. 14, 8344. (doi:10.1038/s41467-023-44046-9)
+
+40. Kwasniok F. 2024 Semiparametric maximum likelihood reconstruction of stochastic differential equations driven by white and correlated noise. Chaos: Interdiscipl. J. Nonlinear Sci. 34, 103139. (doi:10.1063/5.0170130)
+
+41. Budd C, Kuske R. 2024 Dynamic tipping and cyclic folds, in a one-dimensional non-smooth dynamical system linked to climate models. Physica D 457, 133949. (doi:10.1016/j.physd.2023.133949)
+
+42. von der Heydt AS, Ashwin P, Camp CD, Crucifix M, Dijkstra HA, Ditlevsen P, Lenton TM. 2021 Quantification and interpretation of the climate variability record. Global Planet. Change 197, 103399. (doi:10.1016/j.gloplacha.2020.103399)
+
+43. Bastiaansen R, Dijkstra HA, von der Heydt AS. 2022 Fragmented tipping in a spatially heterogeneous world. Environ. Res. Lett. 17, 045006. (doi:10.1088/1748-9326/ac59a8)
+
+44. Rosier SHR, Reese R, Donges JF, Rydt JD, Gudmundsson GH, Winkelmann R. 2021 The tipping points and early warning indicators for Pine Island Glacier, West Antarctica. Cryosphere 15, 1501–1516. (doi:10.5194/tc-15-1501-2021)
+
+45. Bastiaansen R, Doelman A, Eppinga MB, Rietkerk M. 2020 The effect of climate change on the resilience of ecosystems with adaptive spatial pattern formation. Ecol. Lett. 23, 414–429. (doi:10.1111/ele.13449)
+
+46. Ashwin P. 2025 Peterashwin/acceleratingcascades: v1.0.1 (v1.0.1). Zenodo. (doi:10.5281/zenodo.15874955)

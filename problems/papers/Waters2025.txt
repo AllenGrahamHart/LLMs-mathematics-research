@@ -1,0 +1,453 @@
+WEAKLY NONLINEAR ANALYSIS OF MINIMAL MODELS FOR TURING PATTERNS
+
+F.R. Waters, C.A. Yates, J.H.P. Dawes
+Department of Mathematical Sciences, University of Bath, Claverton Down, BA2 7AY, UK
+Centre for Mathematical Biology, University of Bath, Claverton Down, BA2 7AY, UK
+
+Physica D: Nonlinear Phenomena 471 (2025) 134427
+
+================================================================================
+ABSTRACT
+================================================================================
+
+The simplest particle-based mass-action models for Turing instability – i.e. 
+those with only two component species undergoing instantaneous interactions of 
+at most two particles, with the smallest number of distinct interactions – fall 
+into a surprisingly small number of classes of reaction schemes. In previous 
+work we have computed this classification, with different schemes distinguished 
+by the structure of the interactions. Within a given class the reaction 
+stoichiometry and rates remain as parameters that determine the linear and 
+nonlinear evolution of the system.
+
+Adopting the usual weakly nonlinear scalings and analysis reveals that, under 
+suitable choices of reaction stoichiometry, and in nine of the 11 classes of 
+minimal scheme exhibiting a spatially in-phase ("true activator-inhibitor") 
+Turing instability, stable patterns are indeed generated in open regions of 
+parameter space via a generically supercritical bifurcation from the spatially 
+uniform state. In three of these classes the instability is always supercritical 
+while in six there is an open region in which it is subcritical. Intriguingly, 
+however, in the remaining two classes of minimal scheme we require different 
+weakly nonlinear scalings, since the coefficient in the usual cubic normal form 
+unexpectedly vanishes identically. In these cases, a different set of asymptotic 
+scalings is required.
+
+We present a complete analysis through deriving the normal form for these two 
+cases also, which involves quintic terms. This fifth-order normal form also 
+captures the behaviour along the boundaries between the supercritical and 
+subcritical cases of the cubic normal form. The details of these calculations 
+reveal the distinct roles played by reaction rate parameters as compared to 
+stoichiometric parameters.
+
+We quantitatively validate our analysis via numerical simulations and confirm 
+the two different scalings for the amplitude of predicted stable patterned states.
+
+================================================================================
+1. INTRODUCTION
+================================================================================
+
+Since the highly-cited initial exploration by Alan Turing [1], there has been 
+huge interest, across many scientific fields, in understanding mechanisms for 
+the spontaneous emergence, out of homogeneous equilibrium states, of structure 
+and spatial patterns. The emergence of structure from spatial uniformity has 
+been particularly relevant in biological science where it is motivated, as 
+Turing's original work was, by the challenge of understanding the origin of 
+structure in embryology and related areas of development. Classic textbook 
+surveys of pattern formation from various perspectives include [2–5].
+
+On the mathematical side, much of this work has made use of a relatively small 
+number of model equations which have attained a canonical status in the field; 
+for example the Gierer–Meinhardt [6], Brusselator [7], Schnakenberg [8], and 
+Gray-Scott [9] models of reaction–diffusion dynamics. It is noteworthy that the 
+latter three of these models all contain cubic-order reaction terms, which would 
+most parsimoniously be interpreted as describing the simultaneous interaction of 
+three particles, despite this being intrinsically extremely unlikely and 
+non-generic in a physical sense.
+
+Our work focuses on the exploration and analysis of the simplest possible 
+reaction schemes that contain only generic interaction terms, i.e those that 
+contain only zeroth, first and second order reactions that correspond in 
+mean-field PDE models to constant, linear, and quadratic terms, respectively.
+
+In previous work [12] we established that quadratic polynomial reaction terms 
+between two species, labelled U and V, with no separation of time scales and 
+Fickian diffusion, can be sufficient for a homogeneous steady state to exist 
+and to satisfy the conditions required for a linear instability with a preferred 
+wavenumber that is positive, i.e. a 'Turing instability'. Such reaction dynamics 
+are readily interpretable as arising from elementary reactions (i.e. reactions 
+between at most two particles) under the assumption of mass-action kinetics.
+
+In [12], we computed the complete set of two-species mass-action reaction 
+schemes that can exhibit Turing instability and which use the smallest possible 
+number of elementary reactions. This analysis revealed that there was a 
+fundamental difference between reaction schemes which could generate patterns in 
+which the concentrations of the two chemical species fluctuated spatially in 
+phase with each other (type-I) and those in which the two concentrations were 
+spatially in antiphase (type-II). Minimal reaction schemes for type-I patterns 
+contain only three reactions, whereas minimal reaction schemes for type-II 
+patterns necessarily contain four reactions.
+
+In this paper we develop this analysis further by considering the weakly 
+nonlinear development of the linear instabilities previously identified. To be 
+precise, we present here a complete analysis of the weakly nonlinear development 
+of Turing instabilities for the type-I minimal reaction schemes, in one spatial 
+dimension. Each scheme comprises a bi-particulate autocatalytic reaction of one 
+species, 2U → ..., an inter-specific reaction U+V → ... which reduces the count 
+of one or both species, and some third reaction.
+
+Our major conclusion is that we are able to show that all of these type-I 
+reaction schemes, under certain conditions, are able to support stable, spatially 
+periodic patterns that arise from the Turing instability: i.e. that for each 
+type-I reaction scheme there exists an open region in parameter space, in which 
+the instability will result in a stable patterned state that lies close to the 
+species concentrations attained in the spatially uniform equilibrium.
+
+Our results allow a number of interesting conclusions to be drawn. First, we 
+find that two cases, labelled in [12] as c and d, are unexpectedly degenerate 
+in their nonlinear behaviour. Turning to the other nine classes, a general 
+conclusion is that the pattern forming instability is supercritical if the 
+(pseudo-)reaction 2U → n₁U + m₁V produces a sufficiently large number of 
+particles of U compared to the number of particles of V that are produced, i.e. 
+n₁ is sufficiently large compared to m₁. We express it in terms of the ratio of 
+stoichiometric coefficients ω₁ := m₁/(n₁ - 2).
+
+Finally, in cases in which the nature of the instability is not determined as 
+expected at third order, more complicated analyses suggest that the reaction 
+schemes are still able to sustain stable periodic patterns near the onset of the 
+instability.
+
+================================================================================
+1. PROBLEM SPECIFICATION
+================================================================================
+
+Under the usual assumptions of Fickian diffusion and mass-action reaction 
+kinetics, the general PDE system for a reaction–diffusion system is
+
+    (u_t)   =  (D₁  0 ) ∇²(u)  +  (F(u,v))
+    (v_t)      (0  D₂)    (v)     (G(u,v))                             (1)
+
+where u(x,t), v(x,t) are the concentrations of two species, D₁, D₂ > 0 are the 
+species' diffusivities, F and G are, for the reasons outlined above, restricted 
+to be quadratic polynomials, and the subscript t denotes the partial derivative 
+with respect to t. We suppose that Eq. (1) supports a spatially uniform steady 
+state (u*, v*).
+
+By nondimensionalising and rescaling about this state, we obtain the following 
+coupled PDEs for the (scaled) perturbations (U, V) to the homogeneous steady 
+state:
+
+    (U_t)   =  {(1  0 ) ∇²  +  ( 1   -μ )} (U)  +  N̂ ( ½U²  )
+    (V_t)      (0  δ)         ( μ   -ϑ )   (V)      ( UV   )           (2)
+                                                     ( ½V²  )
+
+where δ := D₂/D₁, and from our assumption on the signs of the entries of the 
+Jacobian J*, we see that ϑ is necessarily positive. We observe that the sign of 
+μ corresponds to the type of Turing instability the system may undergo: if μ > 0 
+then concentration maxima of one species coincide with those of the other species 
+(type-I). If μ < 0, then concentration maxima of one species coincide with minima 
+of the other species (type-II). We analyse this governing PDE system (2) for U, V 
+in one spatial dimension.
+
+1.1. Linearised analysis
+
+Neglecting the nonlinear terms in Eq. (2), by the Routh–Hurwitz stability 
+criteria, the uniform steady state U = V = 0 is linearly stable to spatially-
+independent perturbations if and only if
+
+    ϑ > 1  and  μ² > ϑ                                                  (3)
+
+Making the usual Fourier mode ansatz (U, V) ∝ exp(λt+ikx), under the 
+linearisation we obtain the dispersion relation for λ(k²):
+
+    λ² + ((1 + δ)k² - (1 - ϑ))λ + (δk⁴ - (δ - ϑ)k² + μ² - ϑ) = 0    (4)
+
+The linearised temporal growth rate Re(λ(k²)) for a given wave number k is 
+positive if and only if
+
+    δk⁴ - (δ - ϑ)k² + μ² - ϑ < 0                                      (5)
+
+From the constraint (3) that μ² > ϑ, there exist values of k that satisfy 
+inequality (5) if and only if
+
+    δ > ϑ  and  (δ - ϑ)² > 4δ(μ² - ϑ)
+
+which are satisfied simultaneously for some δ if and only if δ > δ₀ where
+
+    δ₀ := (|μ| + √(μ² - ϑ))²
+
+The 'critical' wavenumber k_c – corresponding to the first unstable wavemode as 
+δ increases past δ₀ – is therefore given by
+
+    k²_c = (δ₀ - ϑ)/(2δ₀)                                              (6)
+
+and has linearised growth rate
+
+    λ(k²_c) = (k²_c)/(δ₀ - 1)(δ - δ₀) + O((δ - δ₀)²)                 (7)
+
+If δ > δ₀, then the interval (k₋, k₊) of wavenumbers for which the growth rate 
+λ is positive is defined by
+
+    k± := k_c ± √[(1 - k²_c/(4δ₀))](δ - δ₀)^(1/2) + O(δ - δ₀)       (8)
+
+Thus, as we expect for steady-state pattern formation problems where the 
+dispersion relation has a locally quadratic maximum, if δ - δ₀ = O(ε²) where 
+ε > 0 is small, then the characteristic growth rate of the critical instability 
+mode is O(ε²), while the width of the band of unstable wavenumbers is O(ε).
+
+================================================================================
+2. WEAKLY NONLINEAR ANALYSIS
+================================================================================
+
+To explore the weakly nonlinear behaviour of the system close to the Turing 
+instability threshold, we let δ = δ₀ + δ₂ε² for some small parameter ε > 0. In 
+line with the scalings noted at the end of the previous section, we anticipate 
+that the generic weakly nonlinear dynamics will evolve on the slow time scale 
+T = ε²t, and long length scale X = εx. We consider T and X to be formally 
+independent of t and x, and look for solutions U(x, X, T), V(x, X, T) to the 
+governing Eq. (2) that are independent of the fast time scale t.
+
+We now propose an asymptotic expansion
+
+    (U)  =  ε(U₁)  +  ε²(U₂)  +  ε³(U₃)  + ...
+    (V)     (V₁)      (V₂)      (V₃)
+
+and solve Eq. (9) for the amplitudes (U_j, V_j) order-by-order.
+
+2.1. Solution at order ε
+
+At leading order, we recover the linear problem:
+
+    0 = L(U₁)
+         (V₁)
+
+and for a non-zero leading order solution, we deduce that (U₁, V₁) must have 
+short length scale dependence exp(±ik_cx), such that it lies in the kernel of L. 
+Thus we have an eigenvector problem
+
+    L₁(U₁)  =  0  ⟹  (U₁)  =  (a + ā)η
+      (V₁)            (V₁)
+
+where η is the right-eigenvector of L₁ with eigenvalue 0:
+
+    η := (     -μ      )
+         (-(1 - k²_c)  )
+
+and a(x, X, T) = exp(ik_cx)A(X, T) where A(X, T) is a complex-valued amplitude. 
+We use overbars to denote complex conjugate. We also define ξ to be the left-
+eigenvector of L₁ with eigenvalue 0:
+
+    ξ := (      μ      )
+         (-(1 - k²_c)  )
+
+and we note, intriguingly that ξ^T and η satisfy conditions involving, 
+separately, the diffusion and reaction terms:
+
+    ξ^T(1   0 )η  =  ξ^T( 1   -μ)η  =  0                            (11)
+       (0  δ₀)           ( μ   -ϑ)
+
+2.2. Solution at order ε²
+
+Retaining only the next-to-leading order terms from Eq. (9), and substituting in 
+the leading-order solution (10), we find
+
+    L(U₂)  =  -2ik_c(a_X - ā_X)(1   0 )η - (|a|² + ½(a² + ā²))Mη    (12)
+     (V₂)                      (0  δ₀)
+
+where the 2 × 2 matrix M is most compactly written as the product of the 2 × 3 
+matrix N of coefficients of the nonlinear terms and a 3 × 2 matrix:
+
+    M := N(    -μ          0       )
+          (-(1 - k²_c)    -μ       )                                 (13)
+          (     0      -(1 - k²_c) )
+
+The solution components w⁽⁰⁾, w⁽²⁾ are determined uniquely since L₀ and L₂ are 
+invertible. The solution is:
+
+    (U₂)  =  -2ik_c(a_X - ā_X)ζ - |a|²L⁻¹₀Mη - ½(a² + ā²)L⁻¹₂Mη      (14)
+    (V₂)
+
+where ζ is defined such that L₁ζ = (1   0 )η
+                                    (0  δ₀)
+
+2.3. Solution at order ε³
+
+At the next order, we obtain terms with a long time derivative ∂_T, and we may 
+obtain an evolution equation for the amplitude A(X, T). The solvability condition 
+yields:
+
+    (δ₀ - 1)/k²_c A_T = 4δ₀/(1 - k²_c) A_XX + δ₂A - K/(k²_c(1 - k²_c)²) A|A|²  (15)
+
+where the coefficient K is defined to be
+
+    K := -ξ^TM(L⁻¹₀ + ½L⁻¹₂)Mη
+
+Scaling our variables appropriately, we obtain the real Ginzburg–Landau equation
+
+    A_T = A_XX + δ₂A - KA|A|²                                        (16)
+
+If A is independent of the long-lengthscale X, this reduces to the Stuart–Landau 
+equation
+
+    A_T = δ₂A - KA|A|²
+
+If K > 0, then stable stripe pattern solutions with |A| = (δ₂/K)^(1/2) are 
+expected to bifurcate from the linearly unstable zero amplitude solution for 
+δ₂ > 0 (the Turing instability regime), while if K < 0 then linearly unstable 
+stripe patterns bifurcate away from the linearly stable zero solution and exist 
+in the region δ₂ < 0. In the latter, 'subcritical', case, it is possible that 
+the branches of patterned solutions will turn around in parameter space, through 
+saddle–node bifurcations, resulting in stable patterned states that exist on 
+both sides of the bifurcation point.
+
+================================================================================
+3. THE SIGN OF K
+================================================================================
+
+After some algebraic rearrangement, presented in detail in Appendix A, we can 
+write K as
+
+    K = -(5/6) (ξ^TMη)/(δ₀k²_c) (19/15 (ξ^TMη)/(k²_c(1-k²_c)) + δ₀M₁₁ + M₂₂) (17)
+
+where M_ij denotes the (i,j)th entry of the matrix M. Thus K is positive if (and 
+only if) either
+
+    δ₀M₁₁ + M₂₂ > -(19/15) (ξ^TMη)/(k²_c(1-k²_c)) > 0                (18a)
+
+or
+
+    δ₀M₁₁ + M₂₂ < -(19/15) (ξ^TMη)/(k²_c(1-k²_c)) < 0                (18b)
+
+and we note that K can vanish if (and only if) either
+
+    ξ^TMη = 0
+
+or
+
+    ξ^TMη = -(15/19) k²_c(1 - k²_c)(δ₀M₁₁ + M₂₂)
+
+In our previous work [12], we derived a complete classification of minimal mass-
+action reaction schemes that can exhibit Turing instability. Now, having 
+presented the weakly nonlinear analysis in Section 2, we can explore directly 
+the weakly nonlinear development of the Turing instability.
+
+For our minimal type-I schemes, it turns out that sign(K) is independent of the 
+values of the reaction rate parameters. We focus our attention here on these 
+classes of minimal scheme and present details of all 11 minimal type-I classes.
+
+For each class we can show that inequality (18b) is the relevant condition 
+determining the sign of K, i.e. δ₀M₁₁ + M₂₂ < 0 < ξ^TMη for all choices of 
+stoichiometry which permit Turing instability, and thus K is positive if and 
+only if inequality (18b) holds.
+
+Intriguingly we find that for classes c and d it is the case that ξ^TMη = 0 for 
+any choice of reaction stoichiometry and rate parameters such that Turing 
+instability occurs, and so K ≡ 0. This is due to a particular degeneracy of the 
+nonlinear terms and is explored in detail in Section 3.2.
+
+In all cases this can be simplified to an inequality involving only ratios of 
+the stoichiometric effects of each reaction on each species. To this end, we 
+will express the results in terms of the variables ω_i = |m_i - q_i|/|n_i - p_i| 
+and ϖ_i = |n_i - p_i|/|m_i - q_i| as appropriate.
+
+We summarise the results in Figs. 1 and 2. In classes e, i and k we find that K 
+is sign definite. In other classes sign(K) is a particularly simple function of 
+ω_i, in others we defer to numerical evaluation.
+
+[The paper continues with detailed analysis of each class a through k, followed 
+by sections on special cases where K=0, numerical simulations, and conclusions. 
+The full mathematical details and appendices follow.]
+
+================================================================================
+7. CONCLUSIONS
+================================================================================
+
+In this paper we have built directly on our previous work [12] and explored the 
+weakly nonlinear development of the pattern-forming instability that these eleven 
+classes of PDE all, by construction, exhibit. Curiously, almost every model 
+reaction–diffusion system commonly used in the literature is implicitly much more 
+complicated than the 11 classes explored here which all correspond to minimal 
+(i.e. comprising only three individual chemical reactions and two species) 
+schemes, within which each chemical reaction is either zeroth, first or second 
+order.
+
+We have shown here that these reaction–diffusion systems with quadratic reaction 
+dynamics can be sufficient, at least as far as formal weakly nonlinear analysis 
+demonstrates, to exhibit stable Turing patterns. The weakly nonlinear analysis 
+enables us to predict quantitatively the steady state amplitude of patterns, at 
+least sufficiently close to the Turing instability threshold, and we provide 
+verification of this for periodic patterns that have the critical wavenumber k_c.
+
+Our main conclusions are as follows:
+
+1. Each of the 11 classes of type-I reaction scheme is able to produce small 
+amplitude stable patterns, as long as suitable stoichiometric coefficients are 
+chosen. Of particular interest is that the pattern forming instability is 
+supercritical when the ratio of stoichiometric coefficients ω₁ := m₁/(n₁ - 2) 
+in the reaction 2U → n₁U + m₁V is sufficiently small. Hence a higher level of 
+autocatalytic activity within this reaction serves to produce more supercritical 
+pattern forming behaviour.
+
+2. We draw attention to the highly degenerate nature of classes c and d, in 
+which all nonlinear terms contain factors of U. The degenerate nature of the 
+weakly nonlinear analysis in these cases appears not to have been noted before, 
+and appears to be quite subtle.
+
+3. Analysis of the boundary cases (within classes a, b, f, g, h, and j) in which 
+the pattern forming instability switches from being supercritical to being 
+subcritical shows that the higher-order terms that appear here have a 
+stabilising effect on the instability, so that even in regions of parameter 
+space where the instability is subcritical (i.e. K < 0) we might expect that 
+stable patterns at larger amplitudes exist.
+
+One important application of these results will be in the study of stochastic 
+reaction–diffusion systems. For an individual-based model of a scheme of 
+reactions, each of which involves at most two particles, the mean-field 
+approximation to the dynamics yields a PDE system (1). Our work here opens the 
+way for a systematic analysis of so-called 'stochastic Turing patterns' in these 
+systems in comparison to deterministic Turing patterns predictable in the mean 
+field.
+
+================================================================================
+REFERENCES
+================================================================================
+
+[1] A.M. Turing, The chemical basis of morphogenesis, Phil. Trans. R. Soc. Lond. 
+    B 237 (1952) 37–72.
+
+[2] J.D. Murray, Mathematical Biology II: Spatial Models and Biomedical 
+    Applications, third ed., Springer, New York, N.Y., 2003.
+
+[3] R. Hoyle, Pattern Formation: An Introduction to Methods, Cambridge 
+    University Press, Cambridge, 2006.
+
+[4] M.C. Cross, H. Greenside, Pattern Formation and Dynamics in Nonequilibrium 
+    Systems, Cambridge University Press, Cambridge, UK, 2009.
+
+[5] L.M. Pismen, Patterns and Interfaces in Dissipative Dynamics, second ed., 
+    Springer, Cham, Switzerland, 2023.
+
+[6] A. Gierer, H. Meinhardt, A theory of biological pattern formation, 
+    Kybernetik 12 (1) (1972) 30–39.
+
+[7] I. Prigogine, R. Lefever, Symmetry breaking instabilities in dissipative 
+    systems. II, J. Chem. Phys. 48 (4) (1968) 1695–1700.
+
+[8] J. Schnakenberg, Simple chemical reaction systems with limit cycle behaviour, 
+    J. Theoret. Biol. 81 (3) (1979) 389–400.
+
+[9] P. Gray, S.K. Scott, Sustained oscillations and other exotic patterns of 
+    behavior in isothermal reactions, J. Phys. Chem. 89 (1) (1985) 22–32.
+
+[10] S.A. Levin, L.A. Segel, Hypothesis for origin of planktonic patchiness, 
+     Nature 259 (5545) (1976) 659.
+
+[11] T.E. Woolley, A.L. Krause, E.A. Gaffney, Bespoke turing systems, Bull. Math. 
+     Biol. 83 (5) (2021) 41.
+
+[12] F.R. Waters, C.A. Yates, J.H.P. Dawes, Minimal reaction schemes for pattern 
+     formation, J. R. Soc. Interface 21 (211) (2024) 20230490.
+
+[Additional references 13-25 continue in similar format...]
+
+================================================================================
+END OF DOCUMENT
+================================================================================
