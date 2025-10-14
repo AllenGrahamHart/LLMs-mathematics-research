@@ -54,6 +54,7 @@ analysis_of_data.ipynb
 .coverage
 htmlcov/
 .tox/
+test_arxiv*
 
 # OS
 .DS_Store

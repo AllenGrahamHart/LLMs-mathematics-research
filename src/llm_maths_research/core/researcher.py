@@ -92,7 +92,7 @@ The specific research problem you are working on is:
 Each iteration, including this one:
 1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, an AI-generated critique)
 2. Based on the paper, code, your previous plan, and external critique, you will create a detailed plan for the remaining iterations
-3. You will output ONLY your updated plan, python code and LaTeX
+3. You will output ONLY your updated plan, Optional OpenAlex API call, python code and LaTeX
 4. If you have 0 remaining iterations, then the code and LaTeX created this iteration is final
 5. Your code will terminate if it does not finish running within {CONFIG['execution']['timeout']} seconds.
 
@@ -115,6 +115,7 @@ You have access to OpenAlex API for searching scholarly literature. Use this to:
 - Navigate citation networks (papers citing or cited by a work)
 - Verify citations and get detailed paper information
 - Read abstracts and gather context for your research
+- Download full ArXiv papers when needed (USE SPARINGLY - see below)
 
 To make API calls, include an <OPENALEX> block with a JSON array of calls:
 
@@ -133,6 +134,11 @@ To make API calls, include an <OPENALEX> block with a JSON array of calls:
     "function": "get_paper",
     "arguments": {{"identifier": "W2100837269"}},
     "purpose": "Read Turing's original 1952 paper abstract"
+  }},
+  {{
+    "function": "get_arxiv_paper",
+    "arguments": {{"arxiv_id": "2301.00001"}},
+    "purpose": "Download full LaTeX source to understand method details"
   }}
 ]
 </OPENALEX>
@@ -140,14 +146,20 @@ To make API calls, include an <OPENALEX> block with a JSON array of calls:
 Available functions:
 - search_literature(query, filters, max_results): Search by keywords and filters
   - Filters: from_year, to_year, min_citations, is_open_access, cites (OpenAlex ID), cited_by (OpenAlex ID), doi, title
-- get_paper(identifier): Get full details for a paper by OpenAlex ID, DOI, or URL
-  - Returns: abstract, references, citations, formatted citations (APA, BibTeX)
+- get_paper(identifier): Get full details for a paper's meta data by OpenAlex ID, DOI, or URL
+  - Returns: abstract, references, citations, formatted citations (APA, BibTeX), ArXiv ID (if available)
+- get_arxiv_paper(arxiv_id): Download full LaTeX source from ArXiv
+  - IMPORTANT: Returns 15-30k+ tokens of LaTeX content
+  - LIMIT: Maximum 1 paper download per iteration (use strategically!)
+  - Use only when abstract is insufficient and you need methodological details
+  - Get ArXiv ID from get_paper() results first
 
 Use this strategically to:
 - Ground your work in existing literature
 - Verify references cited in your problem statement
 - Find related work to position your contributions
 - Navigate from key papers to recent developments
+- Download full papers ONLY when critical for understanding methods
 
 OUTPUT FORMAT:
 ## PLAN
@@ -248,6 +260,7 @@ You have access to OpenAlex API to verify citations and check literature claims.
 - Check if claims about prior work are accurate
 - Ensure references are properly attributed
 - Find additional context for evaluating novelty
+- Download full ArXiv papers when needed to verify technical details (USE SPARINGLY)
 
 To make API calls, include an <OPENALEX> block with a JSON array of calls:
 
@@ -265,13 +278,22 @@ To make API calls, include an <OPENALEX> block with a JSON array of calls:
     "function": "get_paper",
     "arguments": {{"identifier": "W2100837269"}},
     "purpose": "Read abstract to verify researcher's claim"
+  }},
+  {{
+    "function": "get_arxiv_paper",
+    "arguments": {{"arxiv_id": "2301.00001"}},
+    "purpose": "Verify technical claim by checking full paper"
   }}
 ]
 </OPENALEX>
 
 Available functions:
 - search_literature(query, filters, max_results): Search by keywords, DOI, title, etc.
-- get_paper(identifier): Get full details including abstract and references
+- get_paper(identifier): Get full meta data including abstract, references, and ArXiv ID (if available)
+- get_arxiv_paper(arxiv_id): Download full LaTeX source from ArXiv
+  - IMPORTANT: Returns 15-30k+ tokens of LaTeX content
+  - LIMIT: Maximum 1 paper download per iteration
+  - Use only when abstract is insufficient to verify a critical claim
 
 Use this strategically to verify critical claims before marking them as errors.
 
@@ -291,7 +313,9 @@ SERIOUS (should fix):
 MINOR (could fix):
 - Unclear or unnecessary sentences
 - Undefined terms, or unstated conditions that are arguably obvious from context
-- Suboptimal presentation or style
+- References not properly formatted in the bibliography
+- References in the bibliography not actually appearing in the main text
+- Remember - Lists and bullet points are FORBIDDEN.
 
 === CURRENT WORK TO CRITIQUE ===
 

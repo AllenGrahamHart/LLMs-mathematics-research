@@ -8,6 +8,7 @@ using the OpenAlex API.
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 from .openalex_client import OpenAlexClient
+from .arxiv_client import get_arxiv_paper as _get_arxiv_paper
 
 
 # Global client instance (initialized when first tool is called)
@@ -289,6 +290,17 @@ def get_paper(
         if not oa_url and primary_loc.get('pdf_url'):
             oa_url = primary_loc.get('pdf_url')
 
+        # Extract ArXiv ID from locations
+        arxiv_id = None
+        for location in work.get('locations', []):
+            landing_url = location.get('landing_page_url', '')
+            if 'arxiv.org' in landing_url.lower():
+                # Extract ID from URL like https://arxiv.org/abs/2301.00001
+                match = re.search(r'arxiv\.org/(?:abs|pdf)/(\d+\.\d+)', landing_url, re.IGNORECASE)
+                if match:
+                    arxiv_id = match.group(1)
+                    break
+
         # Generate formatted citations
         author_string = ', '.join(a['name'] for a in authors[:3])
         if len(authors) > 3:
@@ -319,6 +331,7 @@ def get_paper(
             'id': work.get('id', '').split('/')[-1],
             'doi': doi,
             'openalex_url': work.get('id', ''),
+            'arxiv_id': arxiv_id,  # ArXiv ID if available
             'title': title,
             'authors': authors,
             'author_string': author_string,
@@ -350,6 +363,42 @@ def get_paper(
             'message': str(e),
             'identifier': identifier
         }
+
+
+def get_arxiv_paper(
+    arxiv_id: str,
+    session_dir: Optional[Path] = None
+) -> Dict[str, Any]:
+    """
+    Download and extract full LaTeX content from an ArXiv paper.
+
+    Downloads the LaTeX source, strips comments, and extracts the document body
+    (content between \\begin{document} and \\end{document}).
+
+    **IMPORTANT**: This returns the FULL paper content which can be 15-30k+ tokens.
+    Use sparingly - recommended maximum 1 paper per iteration.
+
+    Args:
+        arxiv_id: ArXiv ID (e.g., "2301.00001")
+        session_dir: Session directory for caching downloads (optional)
+
+    Returns:
+        Dictionary with:
+            - success: bool
+            - arxiv_id: str
+            - content: str (LaTeX document body, or empty if failed)
+            - char_count: int (if successful)
+            - approx_tokens: int (if successful)
+            - error: str (if success=False)
+
+    Example:
+        paper = get_arxiv_paper("2301.00001")
+        if paper['success']:
+            print(f"Downloaded {paper['approx_tokens']} tokens")
+            print(paper['content'][:500])  # First 500 chars
+    """
+    cache_dir = session_dir / "arxiv_cache" if session_dir else None
+    return _get_arxiv_paper(arxiv_id, cache_dir=cache_dir)
 
 
 def cleanup():

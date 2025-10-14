@@ -78,7 +78,7 @@ def execute_openalex_calls(
     email: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
-    Execute a list of OpenAlex API calls and return formatted results.
+    Execute a list of OpenAlex/ArXiv API calls and return formatted results.
 
     Args:
         calls: List of API call dictionaries with 'function', 'arguments', 'purpose'
@@ -88,7 +88,7 @@ def execute_openalex_calls(
     Returns:
         List of result dictionaries with 'call', 'success', 'result'/'error'
     """
-    from ..literature import search_literature, get_paper
+    from ..literature import search_literature, get_paper, get_arxiv_paper
 
     results = []
 
@@ -132,6 +132,19 @@ def execute_openalex_calls(
                 # Check for API error
                 if api_result.get('error'):
                     result_entry['error'] = api_result.get('message', 'Unknown error')
+                else:
+                    result_entry['success'] = True
+                    result_entry['result'] = api_result
+
+            elif function_name == 'get_arxiv_paper':
+                # Add session_dir to arguments
+                arguments['session_dir'] = session_dir
+
+                api_result = get_arxiv_paper(**arguments)
+
+                # Check for error
+                if not api_result.get('success'):
+                    result_entry['error'] = api_result.get('error', 'Unknown error')
                 else:
                     result_entry['success'] = True
                     result_entry['result'] = api_result
@@ -213,6 +226,9 @@ def format_openalex_results(results: List[Dict[str, Any]], max_results_per_call:
             if api_result.get('doi'):
                 section += f"DOI: {api_result['doi']}\n"
 
+            if api_result.get('arxiv_id'):
+                section += f"ArXiv ID: {api_result['arxiv_id']}\n"
+
             if api_result.get('abstract'):
                 # Include full abstract (no truncation)
                 abstract = api_result['abstract']
@@ -234,6 +250,25 @@ def format_openalex_results(results: List[Dict[str, Any]], max_results_per_call:
             citations = api_result.get('formatted_citations', {})
             if citations.get('apa'):
                 section += f"\nAPA Citation:\n{citations['apa']}\n"
+
+        elif function == 'get_arxiv_paper':
+            section += f"ArXiv ID: {api_result.get('arxiv_id', 'N/A')}\n"
+            section += f"Character count: {api_result.get('char_count', 0):,}\n"
+            section += f"Approximate tokens: {api_result.get('approx_tokens', 0):,}\n"
+            section += f"Source file: {api_result.get('source_file', 'N/A')}\n\n"
+
+            content = api_result.get('content', '')
+            if content:
+                # Show first 800 characters as preview
+                preview = content[:800]
+                if len(content) > 800:
+                    preview += "\n\n[... content continues for ~{:,} more tokens ...]".format(
+                        api_result.get('approx_tokens', 0) - 200  # Rough estimate of preview tokens
+                    )
+                section += f"LaTeX Content Preview:\n{preview}\n\n"
+                section += "NOTE: Full LaTeX content is available in the result and can be analyzed.\n"
+            else:
+                section += "No content extracted.\n"
 
         sections.append(section)
 
@@ -265,6 +300,10 @@ def log_openalex_calls(results: List[Dict[str, Any]]) -> str:
             elif function == 'get_paper':
                 title = result_entry['result'].get('title', 'Unknown')[:50]
                 log_lines.append(f"  {success} get_paper: {title}")
+            elif function == 'get_arxiv_paper':
+                arxiv_id = result_entry['result'].get('arxiv_id', 'Unknown')
+                approx_tokens = result_entry['result'].get('approx_tokens', 0)
+                log_lines.append(f"  {success} get_arxiv_paper: {arxiv_id} (~{approx_tokens:,} tokens)")
         else:
             error = result_entry.get('error', 'Unknown error')[:50]
             log_lines.append(f"  {success} {function}: {error}")
