@@ -9,7 +9,7 @@ Tests the full flow of:
 """
 
 from pathlib import Path
-from src.llm_maths_research.utils.openalex_blocks import (
+from llm_maths_research.utils.openalex_blocks import (
     extract_openalex_blocks,
     execute_openalex_calls,
     format_openalex_results,
