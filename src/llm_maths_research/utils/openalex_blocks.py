@@ -209,6 +209,8 @@ def format_openalex_results(results: List[Dict[str, Any]], max_results_per_call:
                 section += f"      Citations: {paper['cited_by_count']} | ID: {paper['id']}\n"
                 if paper.get('doi'):
                     section += f"      DOI: {paper['doi']}\n"
+                if paper.get('arxiv_id'):
+                    section += f"      ArXiv ID: {paper['arxiv_id']}\n"
                 if paper.get('abstract_snippet'):
                     section += f"      Abstract: {paper['abstract_snippet']}\n"
                 section += "\n"

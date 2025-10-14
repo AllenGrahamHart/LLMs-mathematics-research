@@ -5,6 +5,7 @@ Provides simple, high-level functions for searching and retrieving scholarly lit
 using the OpenAlex API.
 """
 
+import re
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 from .openalex_client import OpenAlexClient
@@ -137,6 +138,17 @@ def search_literature(
             # Get topics
             topics = [topic.get('display_name', '') for topic in work.get('topics', [])[:3]]
 
+            # Extract ArXiv ID from locations
+            arxiv_id = None
+            for location in work.get('locations', []):
+                landing_url = location.get('landing_page_url', '')
+                if 'arxiv.org' in landing_url.lower():
+                    # Extract ID from URL like https://arxiv.org/abs/2301.00001
+                    match = re.search(r'arxiv\.org/(?:abs|pdf)/(\d+\.\d+)', landing_url, re.IGNORECASE)
+                    if match:
+                        arxiv_id = match.group(1)
+                        break
+
             # Format result
             result = {
                 'id': work.get('id', '').split('/')[-1],  # Extract W123 from URL
@@ -151,7 +163,8 @@ def search_literature(
                 'is_open_access': work.get('open_access', {}).get('is_oa', False),
                 'abstract_snippet': abstract_snippet,
                 'primary_topics': topics,
-                'relevance_score': work.get('relevance_score')
+                'relevance_score': work.get('relevance_score'),
+                'arxiv_id': arxiv_id  # ArXiv ID if available
             }
             results.append(result)
 
