@@ -141,6 +141,8 @@ def search_literature(
             # Extract ArXiv ID from locations
             arxiv_id = None
             for location in work.get('locations', []):
+                if location is None:  # Skip None entries
+                    continue
                 landing_url = location.get('landing_page_url', '')
                 if 'arxiv.org' in landing_url.lower():
                     # Extract ID from URL like https://arxiv.org/abs/2301.00001
@@ -306,6 +308,8 @@ def get_paper(
         # Extract ArXiv ID from locations
         arxiv_id = None
         for location in work.get('locations', []):
+            if location is None:  # Skip None entries
+                continue
             landing_url = location.get('landing_page_url', '')
             if 'arxiv.org' in landing_url.lower():
                 # Extract ID from URL like https://arxiv.org/abs/2301.00001
