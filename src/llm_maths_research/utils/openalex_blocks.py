@@ -214,10 +214,8 @@ def format_openalex_results(results: List[Dict[str, Any]], max_results_per_call:
                 section += f"DOI: {api_result['doi']}\n"
 
             if api_result.get('abstract'):
-                # Truncate abstract if too long
+                # Include full abstract (no truncation)
                 abstract = api_result['abstract']
-                if len(abstract) > 500:
-                    abstract = abstract[:497] + "..."
                 section += f"\nAbstract:\n{abstract}\n"
 
             # Include reference count
