@@ -82,11 +82,13 @@ class ScaffoldedResearcher:
                 shutil.copy(data_path, dest_path)
 
                 # Try to load optional description file
+                # Skip if data file is already .txt (rare edge case - would read itself as description)
                 description = None
-                desc_path = os.path.splitext(data_path)[0] + ".txt"
-                if os.path.exists(desc_path):
-                    with open(desc_path, 'r') as f:
-                        description = f.read()
+                if not data_path.endswith('.txt'):
+                    desc_path = os.path.splitext(data_path)[0] + ".txt"
+                    if os.path.exists(desc_path):
+                        with open(desc_path, 'r') as f:
+                            description = f.read()
 
                 self.data_files[filename] = {
                     'original_id': data_id,
