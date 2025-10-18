@@ -1,0 +1,43 @@
+# Temperature-Humidity Correlation Analysis
+**A Simple Study on Weather Patterns**
+
+## Abstract
+
+We investigate the relationship between daily temperature and relative humidity using statistical analysis. Our data consists of 10 consecutive days of measurements in January 2023. We hypothesize that temperature and humidity exhibit a negative correlation, where higher temperatures correspond to lower humidity levels.
+
+## Introduction
+
+Understanding the relationship between temperature and humidity is fundamental in meteorology and climate science. Previous studies have shown that warmer air can hold more moisture, yet relative humidity often decreases as temperature increases during daytime heating.
+
+## Data Description
+
+Our dataset contains:
+- Daily temperature measurements (°C)
+- Daily relative humidity measurements (%)
+- 10 consecutive days from January 2023
+
+## Methodology
+
+We propose the following analysis:
+
+1. **Descriptive Statistics**: Calculate mean, standard deviation, and range for both variables
+2. **Correlation Analysis**: Compute Pearson correlation coefficient between temperature and humidity
+3. **Visualization**: Create scatter plot with linear regression line
+4. **Statistical Testing**: Perform hypothesis test to determine if correlation is statistically significant
+
+## Expected Results
+
+We expect to find:
+- Negative correlation (r < 0) between temperature and humidity
+- Statistical significance at α = 0.05 level
+- Linear relationship visible in scatter plot
+
+## Research Questions
+
+1. What is the strength and direction of the correlation between temperature and humidity?
+2. Can we predict humidity from temperature using a simple linear model?
+3. What is the coefficient of determination (R²) for this relationship?
+
+## Notes
+
+This is a simplified analysis suitable for demonstrating data analysis capabilities. The small sample size (n=10) limits generalizability, but provides a clear test case for statistical methods.

@@ -1,0 +1,17 @@
+You are conducting a statistical analysis of temperature and humidity data.
+
+Your task is to:
+
+1. Load the temperature-humidity dataset provided
+2. Perform the analyses described in the reference paper
+3. Create appropriate visualizations
+4. Write up your findings in a LaTeX paper with proper mathematical notation
+5. Include all statistical test results with appropriate significance levels
+
+Focus on:
+- Clear statistical methodology
+- Proper hypothesis testing
+- Professional data visualization
+- Concise mathematical presentation
+
+This is a teaching example, so prioritize clarity and correctness over complexity.

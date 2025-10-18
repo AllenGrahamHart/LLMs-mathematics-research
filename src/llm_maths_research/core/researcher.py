@@ -1,7 +1,9 @@
 """Scaffolded researcher with generator-critic loop."""
 
 import os
+import shutil
 from typing import Dict
+from pathlib import Path
 from .session import ResearchSession, SEPARATOR_WIDTH
 from ..config import CONFIG
 
@@ -20,7 +22,7 @@ class ScaffoldedResearcher:
     similar to how scaffolding supports construction work.
     """
 
-    def __init__(self, session_name: str, max_iterations: int = 20, paper_ids: list = None, start_iteration: int = 1, resume_at_critic: int = None):
+    def __init__(self, session_name: str, max_iterations: int = 20, paper_ids: list = None, data_ids: list = None, start_iteration: int = 1, resume_at_critic: int = None):
         """
         Initialize scaffolded researcher.
 
@@ -28,6 +30,7 @@ class ScaffoldedResearcher:
             session_name: Unique name for this research session
             max_iterations: Maximum number of iterations to run
             paper_ids: List of paper file names (without .txt) from problems/papers/ directory
+            data_ids: List of data file names from data/datasets/ directory
             start_iteration: Starting iteration number (for resuming sessions, default: 1)
             resume_at_critic: If set, resume at critic phase of this iteration (generator already completed)
         """
@@ -35,6 +38,7 @@ class ScaffoldedResearcher:
         self.max_iterations = max_iterations
         self.problem_statement = ""
         self.paper_ids = paper_ids or []
+        self.data_ids = data_ids or []
         self.resume_at_critic = resume_at_critic
 
         # Validate that only one resume mode is set
@@ -51,18 +55,48 @@ class ScaffoldedResearcher:
         else:
             self.current_iteration = 0  # Will be incremented to 1 at start of loop
 
+        # Find project root
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
         # Load papers content from problems/papers/
         self.papers_content = {}
         for paper_id in self.paper_ids:
-            # Find git root or project root
-            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-            paper_path = os.path.join(current_dir, "problems", "papers", f"{paper_id}.txt")
+            paper_path = os.path.join(project_root, "problems", "papers", f"{paper_id}.txt")
 
             if os.path.exists(paper_path):
                 with open(paper_path, 'r') as f:
                     self.papers_content[paper_id] = f.read()
             else:
                 print(f"Warning: Paper file not found: {paper_path}")
+
+        # Load and copy data files from data/datasets/
+        self.data_files = {}
+        for data_id in self.data_ids:
+            # Check if data_id is a path or just a filename
+            data_path = os.path.join(project_root, "data", "datasets", data_id)
+
+            if os.path.exists(data_path):
+                # Copy file to session data directory
+                filename = os.path.basename(data_path)
+                dest_path = os.path.join(self.session.data_dir, filename)
+                shutil.copy(data_path, dest_path)
+
+                # Try to load optional description file
+                description = None
+                desc_path = os.path.splitext(data_path)[0] + ".txt"
+                if os.path.exists(desc_path):
+                    with open(desc_path, 'r') as f:
+                        description = f.read()
+
+                self.data_files[filename] = {
+                    'original_id': data_id,
+                    'filename': filename,
+                    'description': description
+                }
+
+                print(f"✓ Loaded data file: {data_id} → {filename}")
+            else:
+                print(f"Warning: Data file not found: {data_path}")
 
     def build_generator_prompt(self, iteration: int, state: Dict[str, str]) -> str:
         """
@@ -82,13 +116,27 @@ class ScaffoldedResearcher:
             for paper_id, content in self.papers_content.items():
                 papers_section += f"--- Paper {paper_id} ---\n{content}\n\n"
 
+        # Build data files section
+        data_section = ""
+        if self.data_files:
+            data_section = "\n\n=== AVAILABLE DATA FILES ===\n\n"
+            data_section += "The following data files have been loaded for your analysis.\n"
+            data_section += "IMPORTANT: Files are in the data/ subdirectory. Use the EXACT paths shown below.\n\n"
+            for filename, info in self.data_files.items():
+                data_section += f"--- {filename} ---\n"
+                if info['description']:
+                    data_section += f"{info['description']}\n"
+                else:
+                    data_section += f"Data file: {filename}\n"
+                data_section += f"EXACT PATH: os.path.join(output_dir, 'data', '{filename}')\n\n"
+
         experimental_design = f"""You are part way through the process of autonomously writing a research paper.
 
 This prompt, your reply, and comments from an AI critic, together form 1 iteration in a multi-iteration research loop.
 The specific research problem you are working on is:
 
 {self.problem_statement}
-{papers_section}
+{papers_section}{data_section}
 Each iteration, including this one:
 1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, an AI-generated critique)
 2. Based on the paper, code, your previous plan, and external critique, you will create a detailed plan for the remaining iterations
@@ -104,10 +152,20 @@ When writing code, note the Pip-installed packages are:
 - networkx
 - scikit-learn
 
-When saving figures, ALWAYS use either `savefig("name.png", dpi={CONFIG['output']['figure_dpi']})`
-   or `plt.savefig(os.path.join(output_dir, "name.png"), dpi={CONFIG['output']['figure_dpi']})`.
-   The variable `output_dir` is available and points to the current working directory.
-   Do NOT hard-code session paths. Figures must end up in the same directory as `paper.tex`.
+When saving figures, use: `plt.savefig("figure_name.png", dpi={CONFIG['output']['figure_dpi']})`
+   Figures will automatically be saved to the correct output directory.
+
+READING DATA FILES:
+   IMPORTANT: The variable `output_dir` is pre-defined for you. DO NOT redefine or modify it.
+   All data files are located in the data/ subdirectory (not data/datasets/).
+   ALWAYS use the EXACT path construction: os.path.join(output_dir, "data", "filename")
+   DO NOT search for files in multiple locations. DO NOT use relative paths like "data/datasets/".
+   The files are already copied to the correct location for you.
+
+   Example: `df = pd.read_csv(os.path.join(output_dir, "data", "mydata.csv"))`
+   Example: `with open(os.path.join(output_dir, "data", "data.json")) as f: data = json.load(f)`
+
+   Each data file's exact path is listed in the AVAILABLE DATA FILES section above.
 
 LITERATURE SEARCH:
 You have access to OpenAlex API for searching scholarly literature. Use this to:
@@ -151,15 +209,12 @@ Available functions:
 - get_arxiv_paper(arxiv_id): Download full LaTeX source from ArXiv
   - IMPORTANT: Returns 15-30k+ tokens of LaTeX content
   - LIMIT: Maximum 1 paper download per iteration (use strategically!)
-  - Use only when abstract is insufficient and you need methodological details
-  - Get ArXiv ID from get_paper() results first
 
 Use this strategically to:
 - Ground your work in existing literature
 - Verify references cited in your problem statement
 - Find related work to position your contributions
 - Navigate from key papers to recent developments
-- Download full papers ONLY when critical for understanding methods
 
 OUTPUT FORMAT:
 ## PLAN
@@ -239,11 +294,23 @@ Iterations remaining after this one: {self.max_iterations - iteration}
             for paper_id, content in self.papers_content.items():
                 papers_section += f"--- Paper {paper_id} ---\n{content}\n\n"
 
+        # Build data files section
+        data_section = ""
+        if self.data_files:
+            data_section = "\n\n=== AVAILABLE DATA FILES ===\n\n"
+            data_section += "The researcher has access to these data files:\n\n"
+            for filename, info in self.data_files.items():
+                data_section += f"--- {filename} ---\n"
+                if info['description']:
+                    data_section += f"{info['description']}\n\n"
+                else:
+                    data_section += f"Data file: {filename}\n\n"
+
         critic_prompt = f"""You are a research critic evaluating work in progress by an AI. Your role is to provide constructive, severity-graded feedback that helps improve the research.
 
 The AI researcher is working on:
 {self.problem_statement}
-{papers_section}
+{papers_section}{data_section}
 Your critique is part of an AI researcher-critic agentic loop with a fixed iteration budget.
 Current iteration: {iteration} / {self.max_iterations}
 Iterations remaining: {self.max_iterations - iteration}
@@ -314,7 +381,7 @@ MINOR (could fix):
 - Unclear or unnecessary sentences
 - Undefined terms, or unstated conditions that are arguably obvious from context
 - References not properly formatted in the bibliography
-- References in the bibliography not actually appearing in the main text
+- References in the bibliography not appearing in the main text
 - Remember - Lists and bullet points are FORBIDDEN.
 
 === CURRENT WORK TO CRITIQUE ===

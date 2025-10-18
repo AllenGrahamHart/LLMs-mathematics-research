@@ -1,0 +1,14 @@
+Example Time Series Dataset
+
+This is a demonstration dataset containing daily temperature and humidity measurements.
+
+Format: CSV file with three columns
+- date: Date in YYYY-MM-DD format
+- temperature: Temperature in degrees Celsius (float)
+- humidity: Relative humidity as percentage (integer)
+
+Time period: January 1-10, 2023
+Measurement frequency: Daily
+Number of records: 10
+
+This is sample data for testing the data file loading feature.

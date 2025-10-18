@@ -41,6 +41,9 @@ class ResearchSession:
         self.output_dir = f"outputs/{session_name}"
         os.makedirs(self.output_dir, exist_ok=True)
 
+        self.data_dir = os.path.join(self.output_dir, "data")
+        os.makedirs(self.data_dir, exist_ok=True)
+
         self.latex_file = os.path.join(self.output_dir, "paper.tex")
         self.python_file = os.path.join(self.output_dir, "code.py")
         self.log_file = os.path.join(self.output_dir, "session_log.txt")
