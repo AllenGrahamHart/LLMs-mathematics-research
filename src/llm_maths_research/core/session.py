@@ -127,23 +127,11 @@ class ResearchSession:
 
     def _initialize_files(self) -> None:
         """Create initial LaTeX and Python files if they don't exist."""
-        initial_latex = r"""\documentclass{article}
-\usepackage{amsmath}
-\usepackage{amsthm}
-\usepackage{graphicx}
-\usepackage{hyperref}
+        # Load LaTeX template from file
+        template_path = os.path.join(os.path.dirname(__file__), "..", "templates", "initial_paper.tex")
+        with open(template_path, 'r') as f:
+            initial_latex = f.read()
 
-\title{Research Paper}
-\author{Claude}
-\date{\today}
-
-\begin{document}
-\maketitle
-
-% Content will be added here
-
-\end{document}
-"""
         if not os.path.exists(self.latex_file):
             with open(self.latex_file, 'w') as f:
                 f.write(initial_latex)
