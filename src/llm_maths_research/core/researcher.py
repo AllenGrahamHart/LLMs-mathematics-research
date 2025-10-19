@@ -3,7 +3,6 @@
 import os
 import shutil
 from typing import Dict
-from pathlib import Path
 from .session import ResearchSession, SEPARATOR_WIDTH
 from ..config import CONFIG
 

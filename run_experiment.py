@@ -24,6 +24,19 @@ if __name__ == "__main__":
     with open(problem_path, 'r') as f:
         problem = f.read()
 
+    # Validate paper files exist
+    missing_papers = []
+    for paper_id in args.papers:
+        paper_path = Path(f"problems/papers/{paper_id}.txt")
+        if not paper_path.exists():
+            missing_papers.append(paper_id)
+
+    if missing_papers:
+        print(f"Error: Paper file(s) not found in problems/papers/:")
+        for paper_id in missing_papers:
+            print(f"  - {paper_id}.txt")
+        sys.exit(1)
+
     # Generate session name with paper ID prefix for clarity
     if args.session_name:
         session_name = args.session_name
