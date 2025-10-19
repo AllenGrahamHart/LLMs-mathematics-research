@@ -14,12 +14,18 @@ The system manages the full research workflow including code execution, LaTeX co
 ## Features
 
 - **Scaffolded Research Loop**: Generator-critic architecture with configurable iteration budgets
-- **Reference Papers**: Load ArXiv papers as context from `problems/papers/` directory
+- **Literature Integration**:
+  - OpenAlex API for searching academic papers
+  - ArXiv paper downloads with full-text extraction
+  - Automatic inclusion of reference papers in prompts
+- **Reference Papers**: Load papers as context from `problems/papers/` directory
 - **Data File Integration**: Load datasets from `data/datasets/` directory for analysis
 - **LaTeX Integration**: Automatic paper generation and PDF compilation
 - **Code Execution**: Safe Python code execution with timeout protection
+- **Template System**: Customizable prompts and LaTeX templates
 - **Comprehensive Logging**: Tracks all iterations, critiques, plans, and metrics
 - **Cost Tracking**: Monitors API usage and costs
+- **Unit Tests**: 28+ unit tests covering core functionality
 - **Configurable**: YAML-based configuration for timeouts, models, and limits
 
 ## Installation
@@ -59,9 +65,9 @@ ANTHROPIC_API_KEY=your-api-key-here
 
 ## Usage
 
-### Single Experiment
+### Running Experiments
 
-Use `run_experiment.py` to run a single experiment with reference papers:
+Use `run_experiment.py` to run experiments with reference papers and data files:
 
 ```bash
 # Basic usage - provide paper IDs
@@ -88,74 +94,6 @@ python run_experiment.py --papers Turrini2024 --start-iteration 5
 # Resume at critic phase (generator already completed)
 python run_experiment.py --papers Turrini2024 --resume-at-critic 3
 ```
-
-### Batch Experiments (Sequential)
-
-Use `run_batch_experiments.py` to run multiple papers sequentially (one paper per experiment):
-
-```bash
-# Run specific papers
-python run_batch_experiments.py --papers Ashwin2025 Booth2025 Fernley2025 --max-iterations 10
-
-# Run all papers in problems/papers/
-python run_batch_experiments.py --max-iterations 10
-
-# Skip already completed papers
-python run_batch_experiments.py --skip-completed --max-iterations 10
-
-# Start from a specific paper (useful for resuming)
-python run_batch_experiments.py --start-from Waters2025 --max-iterations 10
-
-# Dry run (test without executing)
-python run_batch_experiments.py --papers Ashwin2025 --dry-run
-
-# Custom progress tracking file
-python run_batch_experiments.py --progress-file my_batch.json --max-iterations 10
-```
-
-Progress is automatically saved to `batch_progress/single.json` and the script can be resumed if interrupted.
-
-### Batch Experiments (Grouped)
-
-Use `run_batch_experiments_grouped.py` to run experiments where each can have multiple papers as context. Requires a JSON configuration file:
-
-**Example config** (`batch_configs/my_experiments.json`):
-```json
-{
-  "experiments": [
-    {
-      "name": "Pattern Formation Studies",
-      "papers": ["Turing2024", "Swift2025", "Cross2024"],
-      "max_iterations": 15
-    },
-    {
-      "name": "Chaos Theory Analysis",
-      "papers": ["Lorenz2024", "Feigenbaum2025"],
-      "max_iterations": 10
-    }
-  ]
-}
-```
-
-**Running grouped experiments:**
-```bash
-# Run experiments from config
-python run_batch_experiments_grouped.py --config my_experiments.json
-
-# Config file can be in batch_configs/ directory or full path
-python run_batch_experiments_grouped.py --config batch_configs/my_experiments.json
-
-# Skip completed experiments
-python run_batch_experiments_grouped.py --config my_experiments.json --skip-completed
-
-# Start from a specific experiment
-python run_batch_experiments_grouped.py --config my_experiments.json --start-from "Chaos Theory Analysis"
-
-# Dry run
-python run_batch_experiments_grouped.py --config my_experiments.json --dry-run
-```
-
-Progress is automatically saved to `batch_progress/<config_name>_progress.json`.
 
 ### Python API
 
@@ -193,6 +131,44 @@ researcher = ScaffoldedResearcher(
 
 researcher.run(problem)
 ```
+
+## Literature Search
+
+The system includes integrated literature search capabilities using OpenAlex and ArXiv APIs.
+
+### Python API
+
+```python
+from llm_maths_research.literature.tools import (
+    search_literature,
+    get_paper,
+    get_paper_citations,
+    get_citing_papers
+)
+
+# Search for papers
+results = search_literature("pattern formation Turing instability", limit=5)
+for paper in results:
+    print(f"{paper['title']} - {paper['arxiv_id']}")
+
+# Get full paper content (downloads from ArXiv if available)
+paper_content = get_paper("2501.00123")
+
+# Get papers cited by this paper
+citations = get_paper_citations("https://openalex.org/W12345")
+
+# Get papers that cite this paper
+citing_papers = get_citing_papers("https://openalex.org/W12345", limit=10)
+```
+
+### Available Functions
+
+- `search_literature(query, limit=10)` - Search for papers by keyword
+- `get_paper(arxiv_id)` - Download and extract full paper text from ArXiv
+- `get_paper_citations(openalex_id, limit=10)` - Get papers cited by a given paper
+- `get_citing_papers(openalex_id, limit=10)` - Get papers that cite a given paper
+
+See `OPENALEX_API_RESEARCH.md` for detailed documentation on the literature search features.
 
 ## Data Files
 
@@ -259,6 +235,14 @@ llm-maths-research/
 │   ├── core/                       # Core research logic
 │   │   ├── session.py              # Research session management
 │   │   └── researcher.py           # Generator-critic loop
+│   ├── literature/                 # Literature search integration
+│   │   ├── openalex_client.py      # OpenAlex API client
+│   │   ├── arxiv_client.py         # ArXiv paper downloads
+│   │   └── tools.py                # Literature search tools
+│   ├── templates/                  # Prompt and LaTeX templates
+│   │   ├── generator_prompt.txt    # Generator AI prompt template
+│   │   ├── critic_prompt.txt       # Critic AI prompt template
+│   │   └── initial_paper.tex       # Initial LaTeX document template
 │   ├── utils/                      # Utilities
 │   │   ├── latex.py                # LaTeX compilation
 │   │   └── code_execution.py       # Safe code execution
@@ -268,14 +252,10 @@ llm-maths-research/
 │   └── open_research.txt           # Default problem for run_experiment.py
 ├── data/                           # Data files for experiments
 │   └── datasets/                   # Dataset files (CSV, JSON, etc.)
-├── batch_configs/                  # JSON configs for grouped batch experiments
-├── batch_progress/                 # Progress tracking for batch runs
 ├── outputs/                        # Generated outputs (papers, code, logs)
 ├── tests/                          # Test suite
 ├── config.yaml                     # Configuration file
-├── run_experiment.py               # Run single experiment with reference papers
-├── run_batch_experiments.py        # Run multiple papers sequentially
-├── run_batch_experiments_grouped.py # Run grouped experiments from config
+├── run_experiment.py               # Run experiments with reference papers and data
 ├── pyproject.toml                  # Package metadata
 └── README.md                       # This file
 ```
@@ -335,7 +315,17 @@ pip install -e ".[dev]"
 ### Running Tests
 
 ```bash
+# Run all tests
 pytest
+
+# Run only unit tests
+pytest tests/unit/
+
+# Run with verbose output
+pytest -v
+
+# Run with coverage
+pytest --cov=src/llm_maths_research
 ```
 
 ### Code Formatting
