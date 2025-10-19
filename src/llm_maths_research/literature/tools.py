@@ -418,7 +418,7 @@ def get_arxiv_paper(
     return _get_arxiv_paper(arxiv_id, cache_dir=cache_dir)
 
 
-def cleanup():
+def cleanup() -> None:
     """Clean up OpenAlex client resources."""
     global _client
     if _client is not None:

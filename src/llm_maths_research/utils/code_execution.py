@@ -36,7 +36,7 @@ def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
     _abs_out = os.path.abspath(output_dir)
     _orig_savefig = plt.savefig
 
-    def _safe_savefig(path, *args, **kwargs):
+    def _safe_savefig(path: Any, *args: Any, **kwargs: Any) -> None:
         base = str(path)
         # Always save to output_dir, just use basename of the provided path
         final = os.path.join(_abs_out, os.path.basename(base))
@@ -62,7 +62,7 @@ def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
 
     result = {'success': False, 'output': '', 'timeout': False}
 
-    def run_code():
+    def run_code() -> None:
         try:
             with contextlib.redirect_stdout(stdout_capture), \
                  contextlib.redirect_stderr(stderr_capture):

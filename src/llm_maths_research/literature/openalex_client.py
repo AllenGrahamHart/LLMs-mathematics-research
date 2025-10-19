@@ -43,7 +43,7 @@ class OpenAlexClient:
             self.cache_file = cache_dir / "openalex_cache.json"
             self._load_cache()
 
-    def _load_cache(self):
+    def _load_cache(self) -> None:
         """Load cache from disk if it exists."""
         if self.cache_file and self.cache_file.exists():
             try:
@@ -52,7 +52,7 @@ class OpenAlexClient:
             except (json.JSONDecodeError, IOError):
                 self._cache = {}
 
-    def _save_cache(self):
+    def _save_cache(self) -> None:
         """Save cache to disk."""
         if self.cache_file:
             try:
@@ -61,7 +61,7 @@ class OpenAlexClient:
             except IOError:
                 pass  # Fail silently on cache write errors
 
-    def _rate_limit(self):
+    def _rate_limit(self) -> None:
         """Implement rate limiting to be polite to OpenAlex API."""
         current_time = time.time()
         time_since_last = current_time - self.last_request_time
@@ -255,7 +255,7 @@ class OpenAlexClient:
 
         return abstract
 
-    def close(self):
+    def close(self) -> None:
         """Clean up resources."""
         self.session.close()
         self._save_cache()

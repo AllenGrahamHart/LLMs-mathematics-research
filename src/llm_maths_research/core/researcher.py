@@ -2,7 +2,7 @@
 
 import os
 import shutil
-from typing import Dict
+from typing import Dict, List, Optional
 from .session import ResearchSession, SEPARATOR_WIDTH
 from ..config import CONFIG
 
@@ -21,7 +21,15 @@ class ScaffoldedResearcher:
     similar to how scaffolding supports construction work.
     """
 
-    def __init__(self, session_name: str, max_iterations: int = 20, paper_ids: list = None, data_ids: list = None, start_iteration: int = 1, resume_at_critic: int = None):
+    def __init__(
+        self,
+        session_name: str,
+        max_iterations: int = 20,
+        paper_ids: Optional[List[str]] = None,
+        data_ids: Optional[List[str]] = None,
+        start_iteration: int = 1,
+        resume_at_critic: Optional[int] = None
+    ):
         """
         Initialize scaffolded researcher.
 
