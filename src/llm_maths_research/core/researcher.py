@@ -107,6 +107,55 @@ class ScaffoldedResearcher:
             else:
                 print(f"Warning: Data file not found: {data_path}")
 
+    def _build_papers_section(self) -> str:
+        """
+        Build the papers section for prompts.
+
+        Returns:
+            Formatted papers section string
+        """
+        papers_section = ""
+        if self.papers_content:
+            papers_section = "\n\n=== REFERENCE PAPERS ===\n\n"
+            for paper_id, content in self.papers_content.items():
+                papers_section += f"--- Paper {paper_id} ---\n{content}\n\n"
+        return papers_section
+
+    def _build_data_section(self, include_paths: bool = True) -> str:
+        """
+        Build the data files section for prompts.
+
+        Args:
+            include_paths: If True, include path instructions (for generator).
+                          If False, use simpler format (for critic).
+
+        Returns:
+            Formatted data section string
+        """
+        data_section = ""
+        if self.data_files:
+            data_section = "\n\n=== AVAILABLE DATA FILES ===\n\n"
+
+            if include_paths:
+                data_section += "The following data files have been loaded for your analysis.\n"
+                data_section += "IMPORTANT: Files are in the data/ subdirectory. Use the EXACT paths shown below.\n\n"
+            else:
+                data_section += "The researcher has access to these data files:\n\n"
+
+            for filename, info in self.data_files.items():
+                data_section += f"--- {filename} ---\n"
+                if info['description']:
+                    data_section += f"{info['description']}\n"
+                else:
+                    data_section += f"Data file: {filename}\n"
+
+                if include_paths:
+                    data_section += f"EXACT PATH: os.path.join(output_dir, 'data', '{filename}')\n\n"
+                else:
+                    data_section += "\n"
+
+        return data_section
+
     def build_generator_prompt(self, iteration: int, state: Dict[str, str]) -> str:
         """
         Build the prompt for the generator phase.
@@ -123,26 +172,9 @@ class ScaffoldedResearcher:
         with open(template_path, 'r') as f:
             template = f.read()
 
-        # Build papers section
-        papers_section = ""
-        if self.papers_content:
-            papers_section = "\n\n=== REFERENCE PAPERS ===\n\n"
-            for paper_id, content in self.papers_content.items():
-                papers_section += f"--- Paper {paper_id} ---\n{content}\n\n"
-
-        # Build data files section
-        data_section = ""
-        if self.data_files:
-            data_section = "\n\n=== AVAILABLE DATA FILES ===\n\n"
-            data_section += "The following data files have been loaded for your analysis.\n"
-            data_section += "IMPORTANT: Files are in the data/ subdirectory. Use the EXACT paths shown below.\n\n"
-            for filename, info in self.data_files.items():
-                data_section += f"--- {filename} ---\n"
-                if info['description']:
-                    data_section += f"{info['description']}\n"
-                else:
-                    data_section += f"Data file: {filename}\n"
-                data_section += f"EXACT PATH: os.path.join(output_dir, 'data', '{filename}')\n\n"
+        # Build sections using helper methods
+        papers_section = self._build_papers_section()
+        data_section = self._build_data_section(include_paths=True)
 
         # Fill in template
         return template.format(
@@ -195,24 +227,9 @@ In addition to your critique - please complete this survey:
 {survey_content}
 """
 
-        # Build papers section
-        papers_section = ""
-        if self.papers_content:
-            papers_section = "\n\n=== REFERENCE PAPERS ===\n\n"
-            for paper_id, content in self.papers_content.items():
-                papers_section += f"--- Paper {paper_id} ---\n{content}\n\n"
-
-        # Build data files section
-        data_section = ""
-        if self.data_files:
-            data_section = "\n\n=== AVAILABLE DATA FILES ===\n\n"
-            data_section += "The researcher has access to these data files:\n\n"
-            for filename, info in self.data_files.items():
-                data_section += f"--- {filename} ---\n"
-                if info['description']:
-                    data_section += f"{info['description']}\n\n"
-                else:
-                    data_section += f"Data file: {filename}\n\n"
+        # Build sections using helper methods
+        papers_section = self._build_papers_section()
+        data_section = self._build_data_section(include_paths=False)
 
         # Fill in template
         return template.format(
