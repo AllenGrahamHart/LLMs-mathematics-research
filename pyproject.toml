@@ -46,9 +46,6 @@ dev = [
     "ruff>=0.1.0",
 ]
 
-[project.scripts]
-llm-research = "llm_maths_research.cli:main"
-
 [project.urls]
 Homepage = "https://github.com/yourusername/llm-maths-research"
 Repository = "https://github.com/yourusername/llm-maths-research"
