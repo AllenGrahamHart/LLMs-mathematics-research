@@ -37,6 +37,18 @@ def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
     _orig_savefig = plt.savefig
 
     def _safe_savefig(path: Any, *args: Any, **kwargs: Any) -> None:
+        """
+        Safely save matplotlib figure to session output directory.
+
+        Monkey-patched replacement for plt.savefig that ensures all figures
+        are saved to the session output directory regardless of the path provided.
+        This prevents LLM-generated code from saving files to arbitrary locations.
+
+        Args:
+            path: Desired figure filename (directory path is ignored, only basename used)
+            *args: Positional arguments passed to matplotlib's original savefig
+            **kwargs: Keyword arguments passed to matplotlib's original savefig
+        """
         base = str(path)
         # Always save to output_dir, just use basename of the provided path
         final = os.path.join(_abs_out, os.path.basename(base))
@@ -63,6 +75,13 @@ def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
     result = {'success': False, 'output': '', 'timeout': False}
 
     def run_code() -> None:
+        """
+        Execute user code in isolated namespace with output capture.
+
+        Runs the code with stdout/stderr redirection, closes matplotlib figures,
+        and updates the result dictionary with success status and captured output.
+        This function is executed in a separate daemon thread for timeout handling.
+        """
         try:
             with contextlib.redirect_stdout(stdout_capture), \
                  contextlib.redirect_stderr(stderr_capture):
