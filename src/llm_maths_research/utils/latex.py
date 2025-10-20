@@ -30,26 +30,3 @@ def compile_latex(output_dir: str) -> Dict[str, Any]:
             return {'success': False, 'error': result.stdout}
     except Exception as e:
         return {'success': False, 'error': str(e)}
-
-
-def extract_latex_content(text: str) -> str | None:
-    """
-    Extract LaTeX content from response text.
-
-    Args:
-        text: Response text that may contain LaTeX code blocks
-
-    Returns:
-        LaTeX content if found, None otherwise
-    """
-    if r'\documentclass' in text:
-        if '```latex' in text or '```tex' in text:
-            parts = text.split('```')
-            for i in range(1, len(parts), 2):
-                block = parts[i]
-                if block.startswith('latex\n'):
-                    return block[6:]  # Remove 'latex\n'
-                elif block.startswith('tex\n'):
-                    return block[4:]  # Remove 'tex\n'
-        return text
-    return None

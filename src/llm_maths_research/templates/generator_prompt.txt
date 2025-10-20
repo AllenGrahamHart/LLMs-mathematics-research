@@ -57,6 +57,15 @@ To make API calls, include an <OPENALEX> block with a JSON array of calls:
     "purpose": "Find recent highly-cited work on Turing patterns"
   }}}},
   {{{{
+    "function": "search_literature",
+    "arguments": {{{{
+      "query": "reaction diffusion",
+      "filters": {{{{"cites": "W2100837269"}}}},
+      "max_results": 10
+    }}}},
+    "purpose": "Find papers citing Turing's 1952 work on reaction-diffusion"
+  }}}},
+  {{{{
     "function": "get_paper",
     "arguments": {{{{"identifier": "W2100837269"}}}},
     "purpose": "Read Turing's original 1952 paper abstract"
@@ -71,6 +80,7 @@ To make API calls, include an <OPENALEX> block with a JSON array of calls:
 
 Available functions:
 - search_literature(query, filters, max_results): Search by keywords and filters
+  - IMPORTANT: Always include a query parameter, even when using citation filters
   - Filters: from_year, to_year, min_citations, is_open_access, cites (OpenAlex ID), cited_by (OpenAlex ID), doi, title
 - get_paper(identifier): Get full details for a paper's meta data by OpenAlex ID, DOI, or URL
   - Returns: abstract, references, citations, formatted citations (APA, BibTeX), ArXiv ID (if available)
@@ -85,23 +95,27 @@ Use this strategically to:
 - Navigate from key papers to recent developments
 
 OUTPUT FORMAT:
-## PLAN
+<PLAN>
 [detailed plan over the remaining iterations]
+</PLAN>
 
-## OPENALEX (optional)
 <OPENALEX>
-[JSON array of API calls]
+[JSON array of API calls - OPTIONAL, only include if you need to search literature]
 </OPENALEX>
 
-## PYTHON CODE
-```python
-...
-```
+<PYTHON>
+[Python code without markdown code fences - just the raw code]
+</PYTHON>
 
-## LATEX
-```latex
-... (must be complete document with \documentclass)
-```
+<LATEX>
+[LaTeX document - must be complete with \documentclass - without markdown code fences]
+</LATEX>
+
+IMPORTANT:
+- Use XML-style tags exactly as shown above
+- Do NOT use markdown headers (## PLAN) or code fences (```python)
+- Put raw code/LaTeX directly between the tags
+- OPENALEX block is optional - only include if doing literature search this iteration
 
 === YOUR CURRENT STATE ===
 

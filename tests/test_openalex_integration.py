@@ -156,6 +156,123 @@ def test_logging():
 
     return True
 
+
+def test_arxiv_integration():
+    """Test ArXiv paper download through the full <OPENALEX> workflow."""
+    print("\n" + "="*60)
+    print("TEST 5: ArXiv Download Integration")
+    print("="*60)
+
+    # Simulate agent response with ArXiv download request
+    arxiv_response = """
+<OPENALEX>
+[
+  {
+    "function": "get_arxiv_paper",
+    "arguments": {
+      "arxiv_id": "1706.03762"
+    },
+    "purpose": "Download Transformer paper for detailed analysis"
+  }
+]
+</OPENALEX>
+"""
+
+    # Step 1: Extract blocks
+    calls = extract_openalex_blocks(arxiv_response)
+
+    if not calls or len(calls) != 1:
+        print(f"✗ FAILED: Expected 1 call, got {len(calls) if calls else 0}")
+        return False
+
+    if calls[0]['function'] != 'get_arxiv_paper':
+        print(f"✗ FAILED: Expected get_arxiv_paper, got {calls[0]['function']}")
+        return False
+
+    print("✓ Extracted ArXiv download request")
+
+    # Step 2: Execute the ArXiv download
+    results = execute_openalex_calls(
+        calls,
+        session_dir=Path("./test_cache"),
+        email=None
+    )
+
+    if not results or len(results) != 1:
+        print(f"✗ FAILED: Expected 1 result, got {len(results) if results else 0}")
+        return False
+
+    result = results[0]
+
+    if not result.get('success'):
+        error = result.get('error', 'Unknown error')
+        print(f"✗ FAILED: ArXiv download failed: {error}")
+        return False
+
+    # Verify result structure
+    arxiv_result = result['result']
+    if arxiv_result.get('arxiv_id') != "1706.03762":
+        print(f"✗ FAILED: ArXiv ID mismatch")
+        return False
+
+    if arxiv_result.get('char_count', 0) < 1000:
+        print(f"✗ FAILED: Content too short ({arxiv_result.get('char_count', 0)} chars)")
+        return False
+
+    print(f"✓ Downloaded ArXiv paper {arxiv_result['arxiv_id']}")
+    print(f"  Character count: {arxiv_result['char_count']:,}")
+    print(f"  Approximate tokens: {arxiv_result['approx_tokens']:,}")
+
+    # Step 3: Format results for prompt
+    formatted = format_openalex_results(results)
+
+    if not formatted:
+        print("✗ FAILED: No formatted output")
+        return False
+
+    # Verify formatting includes key information
+    required_strings = [
+        "ArXiv Paper: 1706.03762",
+        "Character count:",
+        "Approximate tokens:",
+    ]
+
+    for required in required_strings:
+        if required not in formatted:
+            print(f"✗ FAILED: Formatted output missing '{required}'")
+            return False
+
+    # Verify paper content is included
+    if 'attention' not in formatted.lower():
+        print("✗ FAILED: Paper content not included in formatted output")
+        return False
+
+    print("✓ Formatted ArXiv results for prompt inclusion:")
+    print("-" * 60)
+    print(formatted[:400])
+    if len(formatted) > 400:
+        print(f"... ({len(formatted) - 400} more characters)")
+    print("-" * 60)
+
+    # Step 4: Verify log generation
+    log_summary = log_openalex_calls(results)
+
+    if 'get_arxiv_paper' not in log_summary:
+        print("✗ FAILED: Log summary missing get_arxiv_paper")
+        return False
+
+    if '1706.03762' not in log_summary:
+        print("✗ FAILED: Log summary missing ArXiv ID")
+        return False
+
+    print("✓ Log summary generated:")
+    print(log_summary)
+
+    print("\n✓ ArXiv integration test passed!")
+    print("  The agent can successfully download ArXiv papers through <OPENALEX> blocks")
+
+    return True
+
 if __name__ == "__main__":
     print("\n" + "="*60)
     print("OPENALEX INTEGRATION TEST SUITE")
@@ -166,6 +283,7 @@ if __name__ == "__main__":
         ("API Execution", test_execution),
         ("Result Formatting", test_formatting),
         ("Log Generation", test_logging),
+        ("ArXiv Integration", test_arxiv_integration),
     ]
 
     results = []

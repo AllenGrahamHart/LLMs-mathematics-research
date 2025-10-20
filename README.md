@@ -23,9 +23,10 @@ The system manages the full research workflow including code execution, LaTeX co
 - **LaTeX Integration**: Automatic paper generation and PDF compilation
 - **Code Execution**: Safe Python code execution with timeout protection
 - **Template System**: Customizable prompts and LaTeX templates
+- **Structured Response Format**: XML-based parsing for robust extraction of code, LaTeX, and plans
 - **Comprehensive Logging**: Tracks all iterations, critiques, plans, and metrics
 - **Cost Tracking**: Monitors API usage and costs
-- **Unit Tests**: 28+ unit tests covering core functionality
+- **Unit Tests**: 67 tests covering core functionality, XML extraction, and literature integration
 - **Configurable**: YAML-based configuration for timeouts, models, and limits
 
 ## Installation
@@ -136,39 +137,74 @@ researcher.run(problem)
 
 The system includes integrated literature search capabilities using OpenAlex and ArXiv APIs.
 
+### Agent Integration
+
+Agents can use literature search through `<OPENALEX>` blocks in their responses:
+
+```xml
+<OPENALEX>
+[
+  {
+    "function": "search_literature",
+    "arguments": {
+      "query": "pattern formation Turing",
+      "filters": {"from_year": 2020, "min_citations": 10},
+      "max_results": 15
+    },
+    "purpose": "Find recent highly-cited work on Turing patterns"
+  },
+  {
+    "function": "get_paper",
+    "arguments": {"identifier": "W2100837269"},
+    "purpose": "Get full metadata for Turing's 1952 paper"
+  },
+  {
+    "function": "get_arxiv_paper",
+    "arguments": {"arxiv_id": "2211.02556"},
+    "purpose": "Download full paper for detailed analysis"
+  }
+]
+</OPENALEX>
+```
+
 ### Python API
 
 ```python
 from llm_maths_research.literature.tools import (
     search_literature,
     get_paper,
-    get_paper_citations,
-    get_citing_papers
+    get_arxiv_paper
 )
 
-# Search for papers
-results = search_literature("pattern formation Turing instability", limit=5)
-for paper in results:
-    print(f"{paper['title']} - {paper['arxiv_id']}")
+# Search for papers with filters
+results = search_literature(
+    query="pattern formation Turing",
+    filters={"from_year": 2020, "min_citations": 10},
+    max_results=15
+)
 
-# Get full paper content (downloads from ArXiv if available)
-paper_content = get_paper("2501.00123")
+for paper in results['results']:
+    print(f"{paper['title']} ({paper['publication_year']})")
+    print(f"Citations: {paper['cited_by_count']}")
 
-# Get papers cited by this paper
-citations = get_paper_citations("https://openalex.org/W12345")
+# Get paper metadata by OpenAlex ID or DOI
+paper = get_paper("W2100837269")
+print(paper['title'])
+print(paper['abstract'])
 
-# Get papers that cite this paper
-citing_papers = get_citing_papers("https://openalex.org/W12345", limit=10)
+# Download full ArXiv paper (LaTeX source)
+arxiv_paper = get_arxiv_paper("2211.02556")
+print(f"Downloaded {arxiv_paper['char_count']} characters")
 ```
 
 ### Available Functions
 
-- `search_literature(query, limit=10)` - Search for papers by keyword
-- `get_paper(arxiv_id)` - Download and extract full paper text from ArXiv
-- `get_paper_citations(openalex_id, limit=10)` - Get papers cited by a given paper
-- `get_citing_papers(openalex_id, limit=10)` - Get papers that cite a given paper
-
-See `OPENALEX_API_RESEARCH.md` for detailed documentation on the literature search features.
+- `search_literature(query, filters, max_results)` - Search OpenAlex by keywords and filters
+  - Filters: `from_year`, `to_year`, `min_citations`, `doi`, `cites`, `cited_by`, `is_open_access`, etc.
+- `get_paper(identifier)` - Get full metadata for a paper (by OpenAlex ID or DOI)
+  - Returns: title, authors, abstract, citations, references, formatted citations
+- `get_arxiv_paper(arxiv_id)` - Download full LaTeX source from ArXiv
+  - Returns: full text content (~15-30k+ tokens per paper)
 
 ## Data Files
 
@@ -244,6 +280,7 @@ llm-maths-research/
 │   │   ├── critic_prompt.txt       # Critic AI prompt template
 │   │   └── initial_paper.tex       # Initial LaTeX document template
 │   ├── utils/                      # Utilities
+│   │   ├── xml_extraction.py       # XML-based response parsing
 │   │   ├── latex.py                # LaTeX compilation
 │   │   └── code_execution.py       # Safe code execution
 │   └── config.py                   # Configuration management
@@ -269,11 +306,16 @@ Each research session creates a directory in `outputs/` containing:
 - `code.py` - Python research code
 - `data/` - Copies of data files used in the experiment
 - `session_log.txt` - Complete execution log
-- `critiques.txt` - All critic feedback
-- `plans.txt` - Research plans per iteration
+- `current_plan.txt` - Latest plan (for easy resumption)
+- `current_critique.txt` - Latest critique (for easy resumption)
+- `current_researcher_openalex.txt` - Latest researcher literature searches
+- `current_critic_openalex.txt` - Latest critic literature searches
+- `plans.txt` - All research plans (append-only history)
+- `critiques.txt` - All critic feedback (append-only history)
 - `generator_responses.txt` - All generator outputs per iteration
 - `metrics.json` - API usage and cost metrics
 - Generated figures (PNG/PDF)
+- `arxiv_cache/` - Downloaded ArXiv papers (if used)
 
 ## Configuration
 

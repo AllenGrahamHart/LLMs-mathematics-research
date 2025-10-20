@@ -5,6 +5,7 @@ import shutil
 from typing import Dict, List, Optional
 from .session import ResearchSession, SEPARATOR_WIDTH
 from ..config import CONFIG
+from ..utils.xml_extraction import extract_critique
 
 
 class ScaffoldedResearcher:
@@ -324,14 +325,17 @@ In addition to your critique - please complete this survey:
             # Process OpenAlex calls from critic
             self.session.process_openalex(critic_response, role='critic')
 
+            # Extract critique content from XML tags
+            critique_content = extract_critique(critic_response)
+
             # Store critique for next iteration
-            self.session.current_critique = critic_response
-            self.session.write_critique(self.current_iteration, critic_response)
+            self.session.current_critique = critique_content
+            self.session.write_critique(self.current_iteration, critique_content)
 
             # Print critique summary
             print("\n--- Critique Summary ---")
-            if "FATAL ERRORS:" in critic_response:
-                parts = critic_response.split("FATAL ERRORS:")
+            if "FATAL ERRORS:" in critique_content:
+                parts = critique_content.split("FATAL ERRORS:")
                 if len(parts) > 1:
                     fatal_parts = parts[1].split("SERIOUS ISSUES:")
                     fatal_section = fatal_parts[0].strip()
@@ -339,8 +343,8 @@ In addition to your critique - please complete this survey:
                         print(f"⚠️  FATAL ERRORS FOUND")
                         print(fatal_section[:200] + "..." if len(fatal_section) > 200 else fatal_section)
 
-            if "RECOMMENDATION:" in critic_response:
-                parts = critic_response.split("RECOMMENDATION:")
+            if "RECOMMENDATION:" in critique_content:
+                parts = critique_content.split("RECOMMENDATION:")
                 if len(parts) > 1:
                     rec_lines = parts[1].strip().split("\n")
                     rec = rec_lines[0].strip() if rec_lines else ""
@@ -357,7 +361,6 @@ In addition to your critique - please complete this survey:
         from ..utils.latex import compile_latex
         compile_result = compile_latex(self.session.output_dir)
         if compile_result['success']:
-            compile_result = compile_latex(self.session.output_dir)
             print(f"✓ PDF generated: {os.path.join(self.session.output_dir, 'paper.pdf')}")
         else:
             print(f"✗ PDF compilation failed")

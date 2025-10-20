@@ -31,12 +31,16 @@ def test_import_utils():
         compile_latex,
         extract_latex_content,
         execute_code,
-        extract_code_blocks
+        extract_plan,
+        extract_python_code,
+        extract_critique
     )
     assert compile_latex is not None
     assert extract_latex_content is not None
     assert execute_code is not None
-    assert extract_code_blocks is not None
+    assert extract_plan is not None
+    assert extract_python_code is not None
+    assert extract_critique is not None
 
 
 def test_config_structure():

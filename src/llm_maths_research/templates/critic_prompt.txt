@@ -28,6 +28,7 @@ To make API calls, include an <OPENALEX> block with a JSON array of calls:
   {{{{
     "function": "search_literature",
     "arguments": {{{{
+      "query": "Turing 1952",
       "filters": {{{{"doi": "10.1098/rstb.1952.0012"}}}},
       "max_results": 1
     }}}},
@@ -48,6 +49,7 @@ To make API calls, include an <OPENALEX> block with a JSON array of calls:
 
 Available functions:
 - search_literature(query, filters, max_results): Search by keywords, DOI, title, etc.
+  - IMPORTANT: Always include a query parameter, even when using filters like DOI or citation filters
 - get_paper(identifier): Get full meta data including abstract, references, and ArXiv ID (if available)
 - get_arxiv_paper(arxiv_id): Download full LaTeX source from ArXiv
   - IMPORTANT: Returns 15-30k+ tokens of LaTeX content
@@ -104,8 +106,13 @@ MINOR (could fix):
 
 === YOUR CRITIQUE ===
 
-Provide your critique in this format (include <OPENALEX> block if you need to verify citations):
+Provide your critique using XML tags:
 
+<OPENALEX>
+[JSON array of API calls - OPTIONAL, only include if you need to verify citations or check literature]
+</OPENALEX>
+
+<CRITIQUE>
 FATAL ERRORS:
 [List any fatal errors with clear explanations. If none, write "None identified."]
 
@@ -117,4 +124,10 @@ MINOR CONCERNS:
 
 RECOMMENDATION:
 [Recommend revisions to the researcher's plan consistent with the remaining iteration budget.]
+</CRITIQUE>
+
+IMPORTANT:
+- Use XML-style tags exactly as shown above
+- OPENALEX block is optional - only include if doing literature verification
+- Put your entire critique content between <CRITIQUE></CRITIQUE> tags
 {survey_section}

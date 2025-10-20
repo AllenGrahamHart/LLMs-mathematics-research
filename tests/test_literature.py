@@ -44,7 +44,9 @@ class TestSearchLiterature:
     def test_citation_network_search(self):
         """Test finding papers that cite a specific work."""
         # Turing's 1952 paper: W2100837269
+        # Note: OpenAlex requires a query parameter even when using citation filters
         results = search_literature(
+            query="reaction diffusion",
             filters={"cites": "W2100837269"},
             max_results=10
         )
@@ -136,33 +138,6 @@ class TestGetPaper:
 
         assert 'error' in paper
         assert paper['error'] is True
-
-
-class TestCaching:
-    """Tests for caching functionality."""
-
-    def test_cache_reuse(self, tmp_path):
-        """Test that repeated searches use cache."""
-        # First search
-        results1 = search_literature(
-            query="test query cache",
-            max_results=3,
-            session_dir=tmp_path
-        )
-
-        # Second search (should use cache)
-        results2 = search_literature(
-            query="test query cache",
-            max_results=3,
-            session_dir=tmp_path
-        )
-
-        # Results should be identical
-        assert results1 == results2
-
-        # Check cache file exists
-        cache_file = tmp_path / "literature_cache" / "openalex_cache.json"
-        assert cache_file.exists()
 
 
 def test_cleanup():

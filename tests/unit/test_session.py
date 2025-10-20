@@ -64,6 +64,12 @@ class TestSessionInitialization:
         assert session.log_file == "outputs/my_session/session_log.txt"
         assert session.data_dir == "outputs/my_session/data"
 
+        # Test new current state file paths
+        assert session.current_plan_file == "outputs/my_session/current_plan.txt"
+        assert session.current_critique_file == "outputs/my_session/current_critique.txt"
+        assert session.current_researcher_openalex_file == "outputs/my_session/current_researcher_openalex.txt"
+        assert session.current_critic_openalex_file == "outputs/my_session/current_critic_openalex.txt"
+
 
 class TestSessionState:
     """Test session state management."""
@@ -116,11 +122,19 @@ class TestLogging:
         session = ResearchSession("test_session")
         session.write_plan(1, "This is my plan for iteration 1")
 
+        # Test history file (append-only)
         plan_path = Path(session.plans_file)
         assert plan_path.exists()
         content = plan_path.read_text()
         assert "ITERATION 1 PLAN" in content
         assert "This is my plan" in content
+
+        # Test current file (overwritten each time)
+        current_plan_path = Path(session.current_plan_file)
+        assert current_plan_path.exists()
+        current_content = current_plan_path.read_text()
+        assert "This is my plan for iteration 1" in current_content
+        assert "ITERATION" not in current_content  # No header in current file
 
     def test_write_critique(self, temp_outputs_dir, monkeypatch):
         """Test writing critiques to file."""
@@ -129,11 +143,19 @@ class TestLogging:
         session = ResearchSession("test_session")
         session.write_critique(1, "This is my critique")
 
+        # Test history file (append-only)
         critique_path = Path(session.critique_file)
         assert critique_path.exists()
         content = critique_path.read_text()
         assert "ITERATION 1 CRITIQUE" in content
         assert "This is my critique" in content
+
+        # Test current file (overwritten each time)
+        current_critique_path = Path(session.current_critique_file)
+        assert current_critique_path.exists()
+        current_content = current_critique_path.read_text()
+        assert "This is my critique" in current_content
+        assert "ITERATION" not in current_content  # No header in current file
 
     def test_write_generator_response(self, temp_outputs_dir, monkeypatch):
         """Test writing generator responses to file."""
@@ -147,52 +169,6 @@ class TestLogging:
         content = response_path.read_text()
         assert "ITERATION 1 GENERATOR RESPONSE" in content
         assert "Generator output here" in content
-
-
-class TestPlanExtraction:
-    """Test plan extraction from responses."""
-
-    def test_extract_plan_from_markdown(self, temp_outputs_dir, monkeypatch):
-        """Test extracting plan from markdown format."""
-        monkeypatch.chdir(temp_outputs_dir.parent)
-
-        session = ResearchSession("test_session")
-        response = """
-## PLAN
-
-This is my research plan.
-I will do X, Y, and Z.
-
-## PYTHON CODE
-
-```python
-print("code")
-```
-        """
-
-        plan = session.extract_full_plan(response)
-        assert "This is my research plan" in plan
-        assert "I will do X, Y, and Z" in plan
-        assert "## PYTHON CODE" not in plan
-        assert "print" not in plan
-
-    def test_extract_plan_stops_at_code_block(self, temp_outputs_dir, monkeypatch):
-        """Test that plan extraction stops at code blocks."""
-        monkeypatch.chdir(temp_outputs_dir.parent)
-
-        session = ResearchSession("test_session")
-        response = """
-My plan for this iteration.
-
-```python
-code here
-```
-        """
-
-        plan = session.extract_full_plan(response)
-        assert "My plan" in plan
-        assert "```" not in plan
-        assert "code here" not in plan
 
 
 class TestMetrics:

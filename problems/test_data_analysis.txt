@@ -7,6 +7,8 @@ Your task is to:
 3. Create appropriate visualizations
 4. Write up your findings in a LaTeX paper with proper mathematical notation
 5. Include all statistical test results with appropriate significance levels
+6. Include at least 5 citation. Use the search tools to ensure the citations are correct
+7. Use the ArXiv search tool to download at least one full paper. Discuss your findings within the context of this paper.
 
 Focus on:
 - Clear statistical methodology

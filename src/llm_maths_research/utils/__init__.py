@@ -1,7 +1,13 @@
 """Utility modules."""
 
-from .latex import compile_latex, extract_latex_content
-from .code_execution import execute_code, extract_code_blocks
+from .latex import compile_latex
+from .code_execution import execute_code
+from .xml_extraction import (
+    extract_plan,
+    extract_python_code,
+    extract_latex_content,
+    extract_critique,
+)
 from .openalex_blocks import (
     extract_openalex_blocks,
     execute_openalex_calls,
@@ -11,9 +17,11 @@ from .openalex_blocks import (
 
 __all__ = [
     "compile_latex",
-    "extract_latex_content",
     "execute_code",
-    "extract_code_blocks",
+    "extract_plan",
+    "extract_python_code",
+    "extract_latex_content",
+    "extract_critique",
     "extract_openalex_blocks",
     "execute_openalex_calls",
     "format_openalex_results",

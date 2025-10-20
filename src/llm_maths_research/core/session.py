@@ -12,8 +12,9 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from ..config import CONFIG
-from ..utils.latex import compile_latex, extract_latex_content
-from ..utils.code_execution import execute_code, extract_code_blocks
+from ..utils.latex import compile_latex
+from ..utils.code_execution import execute_code
+from ..utils.xml_extraction import extract_plan, extract_python_code, extract_latex_content
 from ..utils.openalex_blocks import (
     extract_openalex_blocks,
     execute_openalex_calls,
@@ -48,6 +49,14 @@ class ResearchSession:
         self.python_file = os.path.join(self.output_dir, "code.py")
         self.log_file = os.path.join(self.output_dir, "session_log.txt")
         self.metrics_file = os.path.join(self.output_dir, "metrics.json")
+
+        # Current state files (overwritten each iteration for easy loading)
+        self.current_plan_file = os.path.join(self.output_dir, "current_plan.txt")
+        self.current_critique_file = os.path.join(self.output_dir, "current_critique.txt")
+        self.current_researcher_openalex_file = os.path.join(self.output_dir, "current_researcher_openalex.txt")
+        self.current_critic_openalex_file = os.path.join(self.output_dir, "current_critic_openalex.txt")
+
+        # Historical append-only logs (for review/debugging)
         self.critique_file = os.path.join(self.output_dir, "critiques.txt")
         self.plans_file = os.path.join(self.output_dir, "plans.txt")
         self.generator_responses_file = os.path.join(self.output_dir, "generator_responses.txt")
@@ -64,40 +73,40 @@ class ResearchSession:
         self.client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
     def load_last_state(self) -> None:
-        """Load the last plan and critique from files for resuming a session."""
-        # Load last plan
-        if os.path.exists(self.plans_file):
+        """Load the last plan, critique, and OpenAlex results from current state files."""
+        # Load current plan
+        if os.path.exists(self.current_plan_file):
             try:
-                with open(self.plans_file, 'r') as f:
-                    content = f.read()
-                    # Extract the last plan (after the last separator)
-                    parts = content.split("=" * SEPARATOR_WIDTH)
-                    if len(parts) > 1:
-                        # Get the last non-empty part
-                        for part in reversed(parts):
-                            if part.strip():
-                                self.current_plan = part.strip()
-                                break
+                with open(self.current_plan_file, 'r', encoding='utf-8') as f:
+                    self.current_plan = f.read().strip()
             except (IOError, OSError) as e:
-                print(f"Warning: Could not load plan from {self.plans_file}: {e}")
+                print(f"Warning: Could not load plan from {self.current_plan_file}: {e}")
                 print("  Using default plan: 'No prior plan - beginning research'")
 
-        # Load last critique
-        if os.path.exists(self.critique_file):
+        # Load current critique
+        if os.path.exists(self.current_critique_file):
             try:
-                with open(self.critique_file, 'r') as f:
-                    content = f.read()
-                    # Extract the last critique (after the last separator)
-                    parts = content.split("=" * SEPARATOR_WIDTH)
-                    if len(parts) > 1:
-                        # Get the last non-empty part
-                        for part in reversed(parts):
-                            if part.strip():
-                                self.current_critique = part.strip()
-                                break
+                with open(self.current_critique_file, 'r', encoding='utf-8') as f:
+                    self.current_critique = f.read().strip()
             except (IOError, OSError) as e:
-                print(f"Warning: Could not load critique from {self.critique_file}: {e}")
+                print(f"Warning: Could not load critique from {self.current_critique_file}: {e}")
                 print("  Using default critique: 'No prior critique - good luck!'")
+
+        # Load current researcher OpenAlex results
+        if os.path.exists(self.current_researcher_openalex_file):
+            try:
+                with open(self.current_researcher_openalex_file, 'r', encoding='utf-8') as f:
+                    self.current_researcher_openalex = f.read().strip()
+            except (IOError, OSError) as e:
+                print(f"Warning: Could not load researcher OpenAlex from {self.current_researcher_openalex_file}: {e}")
+
+        # Load current critic OpenAlex results
+        if os.path.exists(self.current_critic_openalex_file):
+            try:
+                with open(self.current_critic_openalex_file, 'r', encoding='utf-8') as f:
+                    self.current_critic_openalex = f.read().strip()
+            except (IOError, OSError) as e:
+                print(f"Warning: Could not load critic OpenAlex from {self.current_critic_openalex_file}: {e}")
 
     def load_last_generator_response(self) -> Optional[str]:
         """
@@ -174,65 +183,6 @@ class ResearchSession:
             'researcher_openalex': self.current_researcher_openalex,
             'critic_openalex': self.current_critic_openalex
         }
-
-    def _extract_plan_fallback(self, text: str) -> str:
-        """
-        Fallback plan extraction using pattern matching (used when structure is unclear).
-
-        Args:
-            text: Response text containing plan
-
-        Returns:
-            Extracted plan text
-        """
-        # Look for common patterns (multiline)
-        patterns = [
-            r'##?\s*PLAN\s*(.+?)(?=\n#|\n```|\Z)',  # Markdown header # PLAN or ## PLAN
-            r'PLAN:\s*(.+?)(?:\n\n|\Z)',
-            r'Next iteration:\s*(.+?)(?:\n\n|\Z)',
-            r'Next:\s*(.+?)(?:\n\n|\Z)',
-        ]
-
-        for pattern in patterns:
-            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
-            if match:
-                return match.group(1).strip()
-
-        # Default: extract last non-empty line
-        lines = [l.strip() for l in text.split('\n') if l.strip()]
-        if lines:
-            return lines[-1]
-
-        return "Continue research"
-
-    def extract_full_plan(self, text: str) -> str:
-        """
-        Extract the full PLAN section from response (everything before code/latex).
-
-        Args:
-            text: Response text containing plan
-
-        Returns:
-            Full plan section text
-        """
-        # Extract everything before ## PYTHON CODE section
-        # This captures the entire plan regardless of internal structure (### headings, etc.)
-
-        # Look for ## PYTHON CODE header
-        python_match = re.search(r'\n##\s+PYTHON\s+CODE', text, re.IGNORECASE)
-        if python_match:
-            # Extract everything before the Python section
-            plan_text = text[:python_match.start()].strip()
-            return plan_text
-
-        # If no ## PYTHON CODE found, look for first code block
-        code_match = re.search(r'\n```', text)
-        if code_match:
-            plan_text = text[:code_match.start()].strip()
-            return plan_text
-
-        # Fallback to pattern-based extraction
-        return self._extract_plan_fallback(text)
 
     def can_make_api_call(self) -> bool:
         """
@@ -344,12 +294,12 @@ class ResearchSession:
             response: Generator response text
         """
         # Extract full plan for in-memory state
-        self.current_plan = self.extract_full_plan(response)
+        self.current_plan = extract_plan(response)
 
         # Re-execute code to get execution output
-        code_blocks = extract_code_blocks(response)
-        if code_blocks:
-            exec_result = execute_code("\n\n".join(code_blocks), self.output_dir)
+        python_code = extract_python_code(response)
+        if python_code:
+            exec_result = execute_code(python_code, self.output_dir)
             output_limit = CONFIG['execution']['output_limit']
             self.last_execution_output = exec_result['output'][:output_limit]
         else:
@@ -367,16 +317,14 @@ class ResearchSession:
         self.write_log(f"Response:\n{response}\n")
 
         # Extract and execute code
-        code_blocks = extract_code_blocks(response)
-        if code_blocks:
-            self.write_log(f"Found {len(code_blocks)} code block(s)")
+        python_code = extract_python_code(response)
+        if python_code:
+            self.write_log("Found Python code block")
 
-            full_code = "\n\n".join(code_blocks)
+            with open(self.python_file, 'w', encoding='utf-8') as f:
+                f.write(python_code)
 
-            with open(self.python_file, 'w') as f:
-                f.write(full_code)
-
-            exec_result = execute_code(full_code, self.output_dir)
+            exec_result = execute_code(python_code, self.output_dir)
             output_limit = CONFIG['execution']['output_limit']
             if exec_result['success']:
                 self.write_log("✓ Code executed successfully")
@@ -392,12 +340,12 @@ class ResearchSession:
         # Extract and save LaTeX
         latex_content = extract_latex_content(response)
         if latex_content:
-            with open(self.latex_file, 'w') as f:
+            with open(self.latex_file, 'w', encoding='utf-8') as f:
                 f.write(latex_content)
             self.write_log("✓ LaTeX file updated")
 
-        # Extract full plan for next iteration
-        self.current_plan = self.extract_full_plan(response)
+        # Extract plan for next iteration
+        self.current_plan = extract_plan(response)
         self.write_log(f"Next plan: {self.current_plan}")
 
         # Write full plan section to plans file
@@ -430,8 +378,14 @@ class ResearchSession:
             # Update appropriate state
             if role == 'researcher':
                 self.current_researcher_openalex = formatted_results
+                # Save to current file
+                with open(self.current_researcher_openalex_file, 'w', encoding='utf-8') as f:
+                    f.write(formatted_results)
             else:  # critic
                 self.current_critic_openalex = formatted_results
+                # Save to current file
+                with open(self.current_critic_openalex_file, 'w', encoding='utf-8') as f:
+                    f.write(formatted_results)
 
             # Log summary
             log_summary = log_openalex_calls(results)
@@ -439,10 +393,15 @@ class ResearchSession:
 
         else:
             # No calls made
+            no_search_msg = f"No literature searches performed by {role} this iteration"
             if role == 'researcher':
-                self.current_researcher_openalex = f"No literature searches performed by {role} this iteration"
+                self.current_researcher_openalex = no_search_msg
+                with open(self.current_researcher_openalex_file, 'w', encoding='utf-8') as f:
+                    f.write(no_search_msg)
             else:
-                self.current_critic_openalex = f"No literature searches performed by {role} this iteration"
+                self.current_critic_openalex = no_search_msg
+                with open(self.current_critic_openalex_file, 'w', encoding='utf-8') as f:
+                    f.write(no_search_msg)
 
     def write_log(self, entry: str) -> None:
         """
@@ -457,25 +416,35 @@ class ResearchSession:
 
     def write_critique(self, iteration: int, critique: str) -> None:
         """
-        Append critique to critique log.
+        Save critique to current file and append to history log.
 
         Args:
             iteration: Current iteration number
             critique: Critique text
         """
-        with open(self.critique_file, 'a') as f:
+        # Save to current file (overwrite)
+        with open(self.current_critique_file, 'w', encoding='utf-8') as f:
+            f.write(critique)
+
+        # Append to history log
+        with open(self.critique_file, 'a', encoding='utf-8') as f:
             f.write(f"\n{'='*SEPARATOR_WIDTH}\nITERATION {iteration} CRITIQUE\n{'='*SEPARATOR_WIDTH}\n")
             f.write(critique + "\n")
 
     def write_plan(self, iteration: int, plan: str) -> None:
         """
-        Append plan to plans log.
+        Save plan to current file and append to history log.
 
         Args:
             iteration: Current iteration number
             plan: Plan text
         """
-        with open(self.plans_file, 'a') as f:
+        # Save to current file (overwrite)
+        with open(self.current_plan_file, 'w', encoding='utf-8') as f:
+            f.write(plan)
+
+        # Append to history log
+        with open(self.plans_file, 'a', encoding='utf-8') as f:
             f.write(f"\n{'='*SEPARATOR_WIDTH}\nITERATION {iteration} PLAN\n{'='*SEPARATOR_WIDTH}\n")
             f.write(plan + "\n")
 

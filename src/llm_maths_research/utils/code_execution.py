@@ -126,24 +126,3 @@ def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
         }
 
     return result
-
-
-def extract_code_blocks(text: str) -> list[str]:
-    """
-    Extract Python code blocks from text.
-
-    Args:
-        text: Text containing code blocks with ```python``` markers
-
-    Returns:
-        List of extracted code blocks
-    """
-    blocks = []
-    parts = text.split('```')
-    for i in range(1, len(parts), 2):
-        block = parts[i]
-        if block.startswith('python\n'):
-            blocks.append(block[7:])
-        elif block.startswith('python '):
-            blocks.append(block[7:])
-    return blocks

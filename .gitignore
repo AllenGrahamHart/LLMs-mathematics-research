@@ -56,6 +56,7 @@ htmlcov/
 .tox/
 /test_arxiv*
 /test_arxiv_cache/
+/test_cache/
 
 # OS
 .DS_Store
