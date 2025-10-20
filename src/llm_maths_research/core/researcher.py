@@ -26,8 +26,12 @@ class ScaffoldedResearcher:
         self,
         session_name: str,
         max_iterations: int = 20,
+        api_key: Optional[str] = None,
         paper_ids: Optional[List[str]] = None,
+        paper_paths: Optional[List[str]] = None,
+        papers: Optional[Dict[str, str]] = None,
         data_ids: Optional[List[str]] = None,
+        data_paths: Optional[List[str]] = None,
         start_iteration: int = 1,
         resume_at_critic: Optional[int] = None
     ):
@@ -37,12 +41,18 @@ class ScaffoldedResearcher:
         Args:
             session_name: Unique name for this research session
             max_iterations: Maximum number of iterations to run
+            api_key: Anthropic API key (if not provided, reads from ANTHROPIC_API_KEY env var)
             paper_ids: List of paper file names (without .txt) from problems/papers/ directory
+                      (for use when running from repo - legacy/backward compatible)
+            paper_paths: List of full paths to paper .txt files (for pip users)
+            papers: Dict mapping paper names to content strings (for programmatic use)
             data_ids: List of data file names from data/datasets/ directory
+                     (for use when running from repo - legacy/backward compatible)
+            data_paths: List of full paths to data files (for pip users)
             start_iteration: Starting iteration number (for resuming sessions, default: 1)
             resume_at_critic: If set, resume at critic phase of this iteration (generator already completed)
         """
-        self.session = ResearchSession(session_name)
+        self.session = ResearchSession(session_name, api_key=api_key)
         self.max_iterations = max_iterations
         self.problem_statement = ""
         self.paper_ids = paper_ids or []
@@ -63,26 +73,45 @@ class ScaffoldedResearcher:
         else:
             self.current_iteration = 0  # Will be incremented to 1 at start of loop
 
-        # Find project root
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
-        # Load papers content from problems/papers/
+        # Load papers content with priority: papers dict > paper_paths > paper_ids
         self.papers_content = {}
-        for paper_id in self.paper_ids:
-            paper_path = os.path.join(project_root, "problems", "papers", f"{paper_id}.txt")
+        if papers:
+            # Direct content provided (highest priority)
+            self.papers_content = papers
+        elif paper_paths:
+            # Full paths provided (for pip users)
+            for paper_path in paper_paths:
+                if os.path.exists(paper_path):
+                    paper_name = os.path.splitext(os.path.basename(paper_path))[0]
+                    with open(paper_path, 'r') as f:
+                        self.papers_content[paper_name] = f.read()
+                else:
+                    print(f"Warning: Paper file not found: {paper_path}")
+        elif paper_ids:
+            # Paper IDs provided (backward compatible - looks in problems/papers/)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            for paper_id in paper_ids:
+                paper_path = os.path.join(project_root, "problems", "papers", f"{paper_id}.txt")
+                if os.path.exists(paper_path):
+                    with open(paper_path, 'r') as f:
+                        self.papers_content[paper_id] = f.read()
+                else:
+                    print(f"Warning: Paper file not found: {paper_path}")
 
-            if os.path.exists(paper_path):
-                with open(paper_path, 'r') as f:
-                    self.papers_content[paper_id] = f.read()
-            else:
-                print(f"Warning: Paper file not found: {paper_path}")
-
-        # Load and copy data files from data/datasets/
+        # Load and copy data files with priority: data_paths > data_ids
         self.data_files = {}
-        for data_id in self.data_ids:
-            # Check if data_id is a path or just a filename
-            data_path = os.path.join(project_root, "data", "datasets", data_id)
 
+        data_sources = []
+        if data_paths:
+            # Full paths provided (for pip users)
+            data_sources = [(path, os.path.basename(path)) for path in data_paths]
+        elif data_ids:
+            # Data IDs provided (backward compatible - looks in data/datasets/)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            data_sources = [(os.path.join(project_root, "data", "datasets", data_id), data_id)
+                           for data_id in data_ids]
+
+        for data_path, original_id in data_sources:
             if os.path.exists(data_path):
                 # Copy file to session data directory
                 filename = os.path.basename(data_path)
@@ -99,12 +128,12 @@ class ScaffoldedResearcher:
                             description = f.read()
 
                 self.data_files[filename] = {
-                    'original_id': data_id,
+                    'original_id': original_id,
                     'filename': filename,
                     'description': description
                 }
 
-                print(f"✓ Loaded data file: {data_id} → {filename}")
+                print(f"✓ Loaded data file: {original_id} → {filename}")
             else:
                 print(f"Warning: Data file not found: {data_path}")
 

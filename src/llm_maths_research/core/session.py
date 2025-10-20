@@ -31,12 +31,13 @@ SEPARATOR_WIDTH = 60
 class ResearchSession:
     """Manages a single research session including files, state, and API calls."""
 
-    def __init__(self, session_name: str):
+    def __init__(self, session_name: str, api_key: Optional[str] = None):
         """
         Initialize a new research session.
 
         Args:
             session_name: Unique name for this session
+            api_key: Anthropic API key (if not provided, reads from ANTHROPIC_API_KEY env var)
         """
         self.session_name = session_name
         self.output_dir = f"outputs/{session_name}"
@@ -70,7 +71,9 @@ class ResearchSession:
         self.current_critique = "No prior critique - good luck!"
         self.current_researcher_openalex = "No literature searches performed yet"
         self.current_critic_openalex = "No literature searches performed yet"
-        self.client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
+        # Initialize Anthropic client with provided key or fallback to environment
+        self.client = Anthropic(api_key=api_key or os.getenv('ANTHROPIC_API_KEY'))
 
     def load_last_state(self) -> None:
         """Load the last plan, critique, and OpenAlex results from current state files."""
