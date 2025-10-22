@@ -16,6 +16,9 @@ api:
   costs:
     input_per_million: 3.0  # USD per million input tokens
     output_per_million: 15.0  # USD per million output tokens
+    # 1-hour prompt caching multipliers (applied to input_per_million)
+    cache_write_multiplier: 2.0  # Cache creation costs 2x base input price
+    cache_read_multiplier: 0.1   # Cache reads cost 0.1x base input price
 
 output:
   figure_dpi: 300  # DPI for saved figures

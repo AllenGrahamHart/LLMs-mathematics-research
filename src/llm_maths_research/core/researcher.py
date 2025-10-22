@@ -33,7 +33,8 @@ class ScaffoldedResearcher:
         data_ids: Optional[List[str]] = None,
         data_paths: Optional[List[str]] = None,
         start_iteration: int = 1,
-        resume_at_critic: Optional[int] = None
+        resume_at_critic: Optional[int] = None,
+        use_cache: bool = True
     ):
         """
         Initialize scaffolded researcher.
@@ -51,6 +52,7 @@ class ScaffoldedResearcher:
             data_paths: List of full paths to data files (for pip users)
             start_iteration: Starting iteration number (for resuming sessions, default: 1)
             resume_at_critic: If set, resume at critic phase of this iteration (generator already completed)
+            use_cache: Enable 1-hour prompt caching for static content (default: True)
         """
         self.session = ResearchSession(session_name, api_key=api_key)
         self.max_iterations = max_iterations
@@ -58,6 +60,7 @@ class ScaffoldedResearcher:
         self.paper_ids = paper_ids or []
         self.data_ids = data_ids or []
         self.resume_at_critic = resume_at_critic
+        self.use_cache = use_cache
 
         # Validate that only one resume mode is set
         if start_iteration > 1 and resume_at_critic:
@@ -186,33 +189,64 @@ class ScaffoldedResearcher:
 
         return data_section
 
-    def build_generator_prompt(self, iteration: int, state: Dict[str, str]) -> str:
+    def build_generator_prompt(self, iteration: int, state: Dict[str, str]) -> tuple:
         """
-        Build the prompt for the generator phase.
+        Build the prompt for the generator phase, split into static (cacheable) and dynamic parts.
 
         Args:
             iteration: Current iteration number
             state: Current session state
 
         Returns:
-            Generator prompt string
+            Tuple of (static_content, dynamic_content) where static_content is cacheable
         """
         # Load template from file
         template_path = os.path.join(os.path.dirname(__file__), "..", "templates", "generator_prompt.txt")
         with open(template_path, 'r') as f:
             template = f.read()
 
-        # Build sections using helper methods
-        papers_section = self._build_papers_section()
-        data_section = self._build_data_section(include_paths=True)
+        # Split template at the "=== YOUR CURRENT STATE ===" marker
+        # Everything before this is static (instructions, papers, data)
+        # Everything from this point on is dynamic (current state)
+        split_marker = "=== YOUR CURRENT STATE ==="
+        parts = template.split(split_marker)
 
-        # Fill in template
-        return template.format(
+        if len(parts) != 2:
+            # Fallback: if template structure changed, return entire prompt as dynamic
+            filled = template.format(
+                problem_statement=self.problem_statement,
+                papers_section=self._build_papers_section(),
+                data_section=self._build_data_section(include_paths=True),
+                timeout=CONFIG['execution']['timeout'],
+                figure_dpi=CONFIG['output']['figure_dpi'],
+                iteration=iteration,
+                max_iterations=self.max_iterations,
+                iterations_remaining=self.max_iterations - iteration,
+                latex=state['latex'],
+                compilation=state['compilation'],
+                python=state['python'],
+                execution_output=state['execution_output'],
+                plan=state['plan'],
+                critique=state['critique'],
+                researcher_openalex=state['researcher_openalex'],
+                critic_openalex=state['critic_openalex']
+            )
+            return ("", filled)
+
+        static_template = parts[0]
+        dynamic_template = split_marker + parts[1]
+
+        # Fill in static content (same across all generator calls)
+        static_content = static_template.format(
             problem_statement=self.problem_statement,
-            papers_section=papers_section,
-            data_section=data_section,
+            papers_section=self._build_papers_section(),
+            data_section=self._build_data_section(include_paths=True),
             timeout=CONFIG['execution']['timeout'],
-            figure_dpi=CONFIG['output']['figure_dpi'],
+            figure_dpi=CONFIG['output']['figure_dpi']
+        )
+
+        # Fill in dynamic content (changes each iteration)
+        dynamic_content = dynamic_template.format(
             iteration=iteration,
             max_iterations=self.max_iterations,
             iterations_remaining=self.max_iterations - iteration,
@@ -226,9 +260,11 @@ class ScaffoldedResearcher:
             critic_openalex=state['critic_openalex']
         )
 
-    def build_critic_prompt(self, iteration: int, state: Dict[str, str], generator_response: str) -> str:
+        return (static_content, dynamic_content)
+
+    def build_critic_prompt(self, iteration: int, state: Dict[str, str], generator_response: str) -> tuple:
         """
-        Build the prompt for the critic phase.
+        Build the prompt for the critic phase, split into static (cacheable) and dynamic parts.
 
         Args:
             iteration: Current iteration number
@@ -236,7 +272,7 @@ class ScaffoldedResearcher:
             generator_response: Response from generator phase
 
         Returns:
-            Critic prompt string
+            Tuple of (static_content, dynamic_content) where static_content is cacheable
         """
         # Load template from file
         template_path = os.path.join(os.path.dirname(__file__), "..", "templates", "critic_prompt.txt")
@@ -257,15 +293,46 @@ In addition to your critique - please complete this survey:
 {survey_content}
 """
 
-        # Build sections using helper methods
-        papers_section = self._build_papers_section()
-        data_section = self._build_data_section(include_paths=False)
+        # Split template right after papers/data section, before iteration info
+        # The iteration numbers change each iteration and should NOT be cached
+        split_marker = "Your critique is part of an AI researcher-critic agentic loop"
+        parts = template.split(split_marker)
 
-        # Fill in template
-        return template.format(
+        if len(parts) != 2:
+            # Fallback: if template structure changed, return entire prompt as dynamic
+            filled = template.format(
+                problem_statement=self.problem_statement,
+                papers_section=self._build_papers_section(),
+                data_section=self._build_data_section(include_paths=False),
+                iteration=iteration,
+                max_iterations=self.max_iterations,
+                iterations_remaining=self.max_iterations - iteration,
+                latex=state['latex'],
+                compilation=state['compilation'],
+                python=state['python'],
+                execution_output=state['execution_output'],
+                plan=state['plan'],
+                generator_response=generator_response,
+                researcher_openalex=state['researcher_openalex'],
+                critic_openalex=state['critic_openalex'],
+                survey_section=survey_section
+            )
+            return ("", filled)
+
+        static_template = parts[0]
+        dynamic_template = split_marker + parts[1]
+
+        # Fill in static content (same across all critic calls)
+        # Only includes: role description, problem statement, papers, and data
+        static_content = static_template.format(
             problem_statement=self.problem_statement,
-            papers_section=papers_section,
-            data_section=data_section,
+            papers_section=self._build_papers_section(),
+            data_section=self._build_data_section(include_paths=False)
+        )
+
+        # Fill in dynamic content (changes each iteration)
+        # Includes: iteration info, current work, and survey (if final iteration)
+        dynamic_content = dynamic_template.format(
             iteration=iteration,
             max_iterations=self.max_iterations,
             iterations_remaining=self.max_iterations - iteration,
@@ -279,6 +346,8 @@ In addition to your critique - please complete this survey:
             critic_openalex=state['critic_openalex'],
             survey_section=survey_section
         )
+
+        return (static_content, dynamic_content)
 
     def run(self, problem: str) -> None:
         """
@@ -315,8 +384,18 @@ In addition to your critique - please complete this survey:
                     print("ERROR: Could not load generator response. Falling back to normal execution.")
                     # Fall through to normal generator execution
                     print("\n[GENERATOR]")
-                    generator_prompt = self.build_generator_prompt(self.current_iteration, state)
-                    generator_response = self.session.call_claude(generator_prompt)
+                    static_content, dynamic_content = self.build_generator_prompt(self.current_iteration, state)
+
+                    if self.use_cache:
+                        generator_response = self.session.call_claude(
+                            prompt=dynamic_content,
+                            cache_static_content=True,
+                            static_content=static_content
+                        )
+                    else:
+                        # No caching - combine prompts
+                        generator_response = self.session.call_claude(static_content + dynamic_content)
+
                     self.session.process_response(generator_response, self.current_iteration)
                     self.session.write_generator_response(self.current_iteration, generator_response)
                 else:
@@ -332,8 +411,17 @@ In addition to your critique - please complete this survey:
             else:
                 # GENERATOR PHASE
                 print("\n[GENERATOR]")
-                generator_prompt = self.build_generator_prompt(self.current_iteration, state)
-                generator_response = self.session.call_claude(generator_prompt)
+                static_content, dynamic_content = self.build_generator_prompt(self.current_iteration, state)
+
+                if self.use_cache:
+                    generator_response = self.session.call_claude(
+                        prompt=dynamic_content,
+                        cache_static_content=True,
+                        static_content=static_content
+                    )
+                else:
+                    # No caching - combine prompts
+                    generator_response = self.session.call_claude(static_content + dynamic_content)
 
                 # Process generator response
                 self.session.process_response(generator_response, self.current_iteration)
@@ -348,8 +436,17 @@ In addition to your critique - please complete this survey:
             print("\n[CRITIC]")
             # Get updated state after generator's changes
             state = self.session.get_state()
-            critic_prompt = self.build_critic_prompt(self.current_iteration, state, generator_response)
-            critic_response = self.session.call_claude(critic_prompt)
+            static_content, dynamic_content = self.build_critic_prompt(self.current_iteration, state, generator_response)
+
+            if self.use_cache:
+                critic_response = self.session.call_claude(
+                    prompt=dynamic_content,
+                    cache_static_content=True,
+                    static_content=static_content
+                )
+            else:
+                # No caching - combine prompts
+                critic_response = self.session.call_claude(static_content + dynamic_content)
 
             # Process OpenAlex calls from critic
             self.session.process_openalex(critic_response, role='critic')

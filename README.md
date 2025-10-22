@@ -28,6 +28,76 @@ The system manages the full research workflow including code execution, LaTeX co
 - **Cost Tracking**: Monitors API usage and costs
 - **Unit Tests**: 67 tests covering core functionality, XML extraction, and literature integration
 - **Configurable**: YAML-based configuration for timeouts, models, and limits
+- **Prompt Caching**: Intelligent 1-hour caching reduces API costs by ~40%
+
+## Prompt Caching
+
+The system implements Anthropic's 1-hour prompt caching to significantly reduce API costs during multi-iteration research sessions. By caching static prompt content (problem statements, reference papers, data descriptions), the system achieves approximately 40% cost savings on typical research runs.
+
+### How It Works
+
+Each API call (both generator and critic) is split into two parts:
+
+1. **Static Content (Cached)**:
+   - Problem statement
+   - Reference papers
+   - Data file descriptions
+   - System instructions and templates
+   - This content is cached for 1 hour and refreshed on each use
+
+2. **Dynamic Content (Not Cached)**:
+   - Current iteration number
+   - Latest code and LaTeX
+   - Previous execution results
+   - Recent critique feedback
+
+### Cost Structure
+
+- **Cache Write**: 2× base input cost (first call or after 1-hour expiry)
+- **Cache Read**: 0.1× base input cost (subsequent calls within 1 hour)
+- **Break-even**: After ~2-3 API calls (typical research sessions use 10-40 calls)
+
+With a multi-iteration research session:
+- Iteration 1: Cache write (2× cost on cached portion)
+- Iteration 2+: Cache read (0.1× cost on cached portion, ~90% savings)
+- Cache automatically refreshes on each use (resets 1-hour timer)
+
+### Configuration
+
+Caching is enabled by default but can be controlled:
+
+```python
+# Python API - disable caching
+researcher = ScaffoldedResearcher(
+    session_name="my_session",
+    use_cache=False  # Disable caching
+)
+
+# Configuration (config.yaml)
+api:
+  costs:
+    cache_write_multiplier: 2.0   # Cache creation cost (2× base)
+    cache_read_multiplier: 0.1    # Cache read cost (0.1× base)
+```
+
+### Requirements
+
+Caching requires static content ≥1,024 tokens. The system automatically:
+- Splits prompts at optimal boundaries
+- Only caches content above the threshold
+- Tracks cache metrics in `metrics.json`
+
+### Metrics
+
+Cache performance is tracked in `outputs/{session}/metrics.json`:
+
+```json
+{
+  "cache_creation_tokens": 2653,  // Tokens written to cache
+  "cache_read_tokens": 1340,      // Tokens read from cache
+  "cost": 0.1631                   // Cost including cache multipliers
+}
+```
 
 ## Installation
 

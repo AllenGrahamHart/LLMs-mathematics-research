@@ -204,12 +204,14 @@ class ResearchSession:
         except anthropic.RateLimitError:
             return False
 
-    def call_claude(self, prompt: str) -> str:
+    def call_claude(self, prompt: str, cache_static_content: bool = False, static_content: str = None) -> str:
         """
-        Call Claude API with streaming, rate limit handling, and retry logic.
+        Call Claude API with streaming, rate limit handling, retry logic, and optional prompt caching.
 
         Args:
-            prompt: Prompt to send to Claude
+            prompt: Full prompt OR dynamic content (if cache_static_content=True)
+            cache_static_content: If True, use static_content as cached portion with 1-hour TTL
+            static_content: Static prompt content to cache (papers, instructions, etc.)
 
         Returns:
             Response text from Claude
@@ -219,6 +221,26 @@ class ResearchSession:
         wait_time = CONFIG['api']['rate_limit_wait']
         max_retries = 5
 
+        # Build messages with caching if requested
+        if cache_static_content and static_content:
+            messages = [{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": static_content,
+                        "cache_control": {"type": "ephemeral", "ttl": "1h"}
+                    },
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            }]
+        else:
+            # Original behavior - simple string prompt
+            messages = [{"role": "user", "content": prompt}]
+
         params = {
             "model": CONFIG['api']['model'],
             "max_tokens": CONFIG['api']['max_tokens'],
@@ -226,8 +248,13 @@ class ResearchSession:
                 "type": "enabled",
                 "budget_tokens": CONFIG['api']['thinking_budget']
             },
-            "messages": [{"role": "user", "content": prompt}]
+            "messages": messages
         }
+
+        # Add beta header for 1-hour cache
+        extra_headers = {}
+        if cache_static_content:
+            extra_headers["anthropic-beta"] = "prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11"
 
         # Retry loop with rate limit and timeout handling
         for retry_attempt in range(max_retries):
@@ -238,8 +265,10 @@ class ResearchSession:
                 response_text = ""
                 input_tokens = 0
                 output_tokens = 0
+                cache_creation_tokens = 0
+                cache_read_tokens = 0
 
-                with self.client.messages.stream(**params) as stream:
+                with self.client.messages.stream(**params, extra_headers=extra_headers if cache_static_content else None) as stream:
                     for text in stream.text_stream:
                         response_text += text
 
@@ -247,6 +276,12 @@ class ResearchSession:
                     final_message = stream.get_final_message()
                     input_tokens = final_message.usage.input_tokens
                     output_tokens = final_message.usage.output_tokens
+
+                    # Track cache metrics if available
+                    if hasattr(final_message.usage, 'cache_creation_input_tokens'):
+                        cache_creation_tokens = final_message.usage.cache_creation_input_tokens
+                    if hasattr(final_message.usage, 'cache_read_input_tokens'):
+                        cache_read_tokens = final_message.usage.cache_read_input_tokens
 
                 end_time = time.time()
                 break
@@ -271,7 +306,22 @@ class ResearchSession:
         self._last_call_time = end_time
         response_time = end_time - start_time
 
-        input_cost = (input_tokens / 1_000_000) * CONFIG['api']['costs']['input_per_million']
+        # Calculate costs with cache multipliers
+        base_input_cost_per_million = CONFIG['api']['costs']['input_per_million']
+        cache_write_multiplier = CONFIG['api']['costs'].get('cache_write_multiplier', 2.0)
+        cache_read_multiplier = CONFIG['api']['costs'].get('cache_read_multiplier', 0.1)
+
+        # Regular input tokens (not cached)
+        regular_input_tokens = input_tokens - cache_creation_tokens - cache_read_tokens
+        regular_input_cost = (regular_input_tokens / 1_000_000) * base_input_cost_per_million
+
+        # Cache creation tokens cost cache_write_multiplier × base price
+        cache_creation_cost = (cache_creation_tokens / 1_000_000) * (base_input_cost_per_million * cache_write_multiplier)
+
+        # Cache read tokens cost cache_read_multiplier × base price
+        cache_read_cost = (cache_read_tokens / 1_000_000) * (base_input_cost_per_million * cache_read_multiplier)
+
+        input_cost = regular_input_cost + cache_creation_cost + cache_read_cost
         output_cost = (output_tokens / 1_000_000) * CONFIG['api']['costs']['output_per_million']
         total_cost = input_cost + output_cost
 
@@ -279,12 +329,20 @@ class ResearchSession:
             'timestamp': datetime.now().isoformat(),
             'input_tokens': input_tokens,
             'output_tokens': output_tokens,
+            'cache_creation_tokens': cache_creation_tokens,
+            'cache_read_tokens': cache_read_tokens,
             'response_time': response_time,
             'cost': total_cost
         }
         self.api_metrics.append(metrics_entry)
 
-        print(f"  Input: {input_tokens:,} tokens | Output: {output_tokens:,} tokens | Cost: ${total_cost:.4f}")
+        # Print token usage with cache info
+        cache_info = ""
+        if cache_creation_tokens > 0:
+            cache_info += f" | Cache write: {cache_creation_tokens:,}"
+        if cache_read_tokens > 0:
+            cache_info += f" | Cache read: {cache_read_tokens:,}"
+        print(f"  Input: {input_tokens:,} tokens | Output: {output_tokens:,} tokens{cache_info} | Cost: ${total_cost:.4f}")
 
         return response_text
 
