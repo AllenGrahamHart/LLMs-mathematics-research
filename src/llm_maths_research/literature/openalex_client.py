@@ -104,6 +104,10 @@ class OpenAlexClient:
             response.raise_for_status()
             data = response.json()
 
+            # Handle null responses
+            if data is None:
+                raise Exception(f"OpenAlex returned null response for {url}")
+
             # Cache result
             if use_cache:
                 self._cache[cache_key] = data
@@ -119,7 +123,10 @@ class OpenAlexClient:
                 time.sleep(2)
                 response = self.session.get(url, params=params, timeout=30)
                 response.raise_for_status()
-                return response.json()
+                data = response.json()
+                if data is None:
+                    raise Exception(f"OpenAlex returned null response for {url}")
+                return data
             else:
                 raise Exception(f"HTTP error from OpenAlex: {e.response.status_code} - {e.response.text}")
         except requests.exceptions.RequestException as e:

@@ -463,6 +463,7 @@ The code execution environment includes:
 - scipy
 - pandas
 - matplotlib
+- seaborn
 - networkx
 - scikit-learn
 

@@ -115,13 +115,14 @@ def search_literature(
         for work in response.get('results', []):
             # Extract author names
             authors = [
-                auth.get('author', {}).get('display_name', 'Unknown')
+                (auth.get('author', {}) or {}).get('display_name', 'Unknown')
                 for auth in work.get('authorships', [])[:10]  # Limit to first 10
             ]
 
             # Get primary location (publication venue)
-            primary_loc = work.get('primary_location', {})
-            venue = primary_loc.get('source', {}).get('display_name', 'Unknown')
+            primary_loc = work.get('primary_location', {}) or {}
+            source = primary_loc.get('source', {}) or {}
+            venue = source.get('display_name', 'Unknown')
 
             # Get abstract snippet (from inverted index)
             abstract_inv = work.get('abstract_inverted_index', {})
@@ -162,7 +163,7 @@ def search_literature(
                 'publication_date': work.get('publication_date'),
                 'venue': venue,
                 'cited_by_count': work.get('cited_by_count', 0),
-                'is_open_access': work.get('open_access', {}).get('is_oa', False),
+                'is_open_access': (work.get('open_access', {}) or {}).get('is_oa', False),
                 'abstract_snippet': abstract_snippet,
                 'primary_topics': topics,
                 'relevance_score': work.get('relevance_score'),
@@ -174,7 +175,7 @@ def search_literature(
         query_info = {
             'search_query': query,
             'filters_applied': filters or {},
-            'total_results': response.get('meta', {}).get('count', 0),
+            'total_results': (response.get('meta', {}) or {}).get('count', 0),
             'returned_results': len(results)
         }
 
@@ -287,7 +288,7 @@ def get_paper(
                 references.append({
                     'id': ref_id.split('/')[-1],
                     'title': ref_work.get('title', 'Unknown'),
-                    'authors': ', '.join(auth.get('author', {}).get('display_name', '')
+                    'authors': ', '.join((auth.get('author', {}) or {}).get('display_name', '')
                                        for auth in ref_work.get('authorships', [])[:3]),
                     'year': ref_work.get('publication_year'),
                     'doi': ref_work.get('doi', '').replace('https://doi.org/', '') if ref_work.get('doi') else None
@@ -359,7 +360,7 @@ def get_paper(
             'topics': topics,
             'keywords': keywords,
             'cited_by_count': work.get('cited_by_count', 0),
-            'citation_percentile': work.get('cited_by_percentile_year', {}).get('max'),
+            'citation_percentile': (work.get('cited_by_percentile_year', {}) or {}).get('max'),
             'citations_by_year': citations_by_year,
             'references': references,
             'references_count': len(work.get('referenced_works', [])),

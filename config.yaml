@@ -1,7 +1,7 @@
 # Configuration for LLM Mathematics Research
 
 execution:
-  timeout: 3600  # seconds (60 minutes)
+  timeout: 1800  # seconds (30 minutes)
   output_limit: 100000  # characters to keep from execution output (effectively unlimited)
 
 compilation:
