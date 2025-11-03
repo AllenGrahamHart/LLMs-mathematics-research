@@ -466,6 +466,7 @@ The code execution environment includes:
 - seaborn
 - networkx
 - scikit-learn
+- torch (PyTorch)
 
 ## License
 
