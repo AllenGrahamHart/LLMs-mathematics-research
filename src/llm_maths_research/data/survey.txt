@@ -1,61 +1,33 @@
-=== Q1: Is the paper fundamentally sound? ===
+Q1 - Which of these best describes the quality of the research programme devised by the AI?
 
-YES - Theorems, proofs, definitions, and numerical experiments may contain minor errors but these could be fixed with small changes. The core ideas and approach are sound.
+0 - A logically incoherent or nonsensical research programme
+1 - A logically coherent research programme that is nevertheless derivative, uninspired, boring, or lacking in purpose.
+2 - An interesting and purposeful research programme 
 
-NO - There are serious, fatal problems: theorems have counterexamples to their core claims (theorems cannot be saved by adding an extra condition for example); proof strategies are fundamentally unworkable; definitions are nonsensical or circular; numerical experiments are irrelevant or meaningless.
+Q2 - Which of these best describes the complexity of the techniques used in the paper?
 
-If you answered NO, please skip Q2.
+0 - Logically incoherent or nonsensical techniques used throughout 
+1 - Correctly applied* techniques typically taught in 1st or 2nd year of an undergraduate degree
+2 - Correctly applied* techniques typically taught in 3rd or 4th year of an undergraduate degree or masters degree
+3 - Correctly applied* techniques typically encountered in graduate programmes, PhD courses, or advanced textbooks
+4 - Novel and creative techniques.
 
----
+* Small errors or gaps are OK as long as they can be fixed without dramatic changes to the manuscript.
 
-=== Q2: How impressive is the paper in terms of novelty and complexity? ===
+Q3 - Does the paper present any issues of academic integrity?
 
-The novelty and complexity is graded on a 5 point scale, where the points corresponds to:
+0 - Outright fraud - such as falsifying the results of numerical experiments.
+1 - Minor problems of attribution or incorrect references that can be easily fixed.
+2 - No issues
 
-[1] An undergraduate (1st/2nd year) summer project report
+Q4 - Which of these best describes the paper?
 
-[2] An undergraduate/masters final year project report
+0 - Would fail any sort of assessment
+1 - Suitable as a summer project report for a 1st or 2nd year undergraduate
+2 - Suitable as a final year undergraduate or masters project report 
+3 - Suitable for publication in a decent journal
+4 - Suitable for publication in a prestigious/top journal
 
-[3] A paper publishable in a decent outlet
+If you are interested, please leave a detailed review below
 
-[4] A strong paper publishable at a highly prestigious outlet
 
-[5] A seminal paper that significantly advances the field
-
----
-
- === Q3: Does the paper contain significant academic fraud? ===
-
-NO - the paper may contain honest seeming errors like incorrect references, insufficient attribution to others work, as long as the errors are minor.
-
-YES - The paper contains significant fraud or deception - for example falsifying the results of numerical experiments. Anything that would trigger professional consequences or disciplinary action.
-
-=== Q4: Fatal issues ===
-
-If the paper has fatal irreparable flaws, what are they?
-
-[Free text box]
-
----
-
-=== Q5: Strengths ===
-
-What did the agent do well?
-
-[Free text box]
-
----
-
-=== Q6: Weaknesses ===
-
-What were the main weaknesses and areas for improvement?
-
-[Free text box]
-
----
-
-=== Q7: Do you have any additional comments? ===
-
-[Free text box]
-
----

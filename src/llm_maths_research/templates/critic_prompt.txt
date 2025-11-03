@@ -76,7 +76,7 @@ MINOR (could fix):
 - Unclear or unnecessary sentences
 - Undefined terms, or unstated conditions that are arguably obvious from context
 - References not properly formatted in the bibliography
-- References in the bibliography not appearing in the main text
+- References in the bibliography not appearing in the main text. 
 - Allusions in the text to being an AI working within an agentic scaffold. The presentation should be in the style of a human researcher.
 - Remember - Lists and bullet points are FORBIDDEN.
 

@@ -1,19 +1,65 @@
-You are conducting a statistical analysis of temperature and humidity data.
+You are conducting a statistical analysis of temperature and humidity data to investigate the relationship between these two meteorological variables.
 
-Your task is to:
+BACKGROUND:
+Temperature and humidity are fundamental atmospheric variables that exhibit complex interdependencies. Understanding their relationship is crucial for climate science, weather prediction, and environmental monitoring. Previous studies have shown that relative humidity typically decreases as temperature increases during daytime heating, but this relationship can vary based on geographic location, season, and local weather patterns. Your analysis should explore both linear and potential non-linear relationships between these variables.
 
-1. Load the temperature-humidity dataset provided
-2. Perform the analyses described in the reference paper
-3. Create appropriate visualizations
-4. Write up your findings in a LaTeX paper with proper mathematical notation
-5. Include all statistical test results with appropriate significance levels
-6. Include at least 5 citation. Use the search tools to ensure the citations are correct
-7. Use the ArXiv search tool to download at least one full paper. Discuss your findings within the context of this paper.
+RESEARCH OBJECTIVES:
+1. Quantify the correlation between temperature and relative humidity
+2. Test for statistical significance of any observed relationships
+3. Investigate potential non-linear patterns or temporal trends
+4. Compare findings with existing meteorological literature
+5. Assess the strength and direction of the temperature-humidity relationship
 
-Focus on:
-- Clear statistical methodology
-- Proper hypothesis testing
-- Professional data visualization
-- Concise mathematical presentation
+SPECIFIC TASKS:
 
-This is a teaching example, so prioritize clarity and correctness over complexity.
+1. DATA LOADING AND EXPLORATION
+   - Load the temperature-humidity dataset provided
+   - Compute descriptive statistics (mean, standard deviation, range, quartiles)
+   - Check for missing values or outliers
+   - Visualize the raw time series data
+
+2. STATISTICAL ANALYSIS
+   - Perform the analyses described in the reference paper
+   - Calculate Pearson and Spearman correlation coefficients
+   - Conduct hypothesis tests for correlation significance (use α = 0.05)
+   - Perform linear regression analysis with appropriate diagnostics
+   - Check regression assumptions (normality of residuals, homoscedasticity)
+   - Consider polynomial or non-linear fitting if warranted
+
+3. VISUALIZATION REQUIREMENTS
+   - Create appropriate visualizations including:
+     * Time series plots for both variables
+     * Scatter plot with fitted regression line
+     * Residual plots for regression diagnostics
+     * Distribution histograms or density plots
+   - All plots should have clear labels, legends, and captions
+
+4. MANUSCRIPT PREPARATION
+   - Write up your findings in a LaTeX paper with proper mathematical notation
+   - Include sections: Abstract, Introduction, Methods, Results, Discussion, Conclusion
+   - Use proper statistical notation (e.g., r for correlation, β for regression coefficients)
+   - Report all test statistics with degrees of freedom and p-values
+   - Include confidence intervals where appropriate
+
+5. LITERATURE INTEGRATION
+   - Include at least 5 citations from meteorological or statistical literature
+   - Use the search tools to ensure the citations are correct and relevant
+   - Use the ArXiv search tool to download at least one full paper
+   - Discuss your findings within the context of this downloaded paper
+   - Compare your results to published studies on temperature-humidity relationships
+
+METHODOLOGICAL FOCUS:
+- Clear statistical methodology with justification for chosen methods
+- Proper hypothesis testing with stated null and alternative hypotheses
+- Professional data visualization following publication standards
+- Concise mathematical presentation using standard notation
+- Appropriate discussion of limitations and assumptions
+
+STATISTICAL RIGOR:
+- Report exact p-values (not just p < 0.05)
+- Include effect sizes along with significance tests
+- Discuss practical versus statistical significance
+- Address multiple testing concerns if applicable
+- Clearly state all assumptions made in the analysis
+
+This is a teaching example demonstrating proper statistical analysis workflow, so prioritize clarity, reproducibility, and correctness over complexity. Your analysis should serve as a model for conducting and reporting meteorological data analysis.
