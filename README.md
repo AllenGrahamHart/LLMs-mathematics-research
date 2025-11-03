@@ -467,6 +467,14 @@ The code execution environment includes:
 - networkx
 - scikit-learn
 - torch (PyTorch)
+- torchvision
+
+## Available Datasets
+
+Pre-downloaded datasets in `data/datasets/`:
+- **MNIST**: Handwritten digits (60k train, 10k test, 28×28 grayscale images)
+  - Use with `--data mnist` to include in experiments
+  - See `data/datasets/mnist.txt` for loading instructions
 
 ## License
 

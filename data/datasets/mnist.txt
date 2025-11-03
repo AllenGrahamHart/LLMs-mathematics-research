@@ -1,0 +1,55 @@
+MNIST Handwritten Digits Dataset
+
+The MNIST database is a large dataset of handwritten digits commonly used for training and testing in machine learning.
+
+Dataset Details:
+- Training set: 60,000 grayscale images
+- Test set: 10,000 grayscale images
+- Image size: 28×28 pixels
+- Classes: 10 (digits 0-9)
+- Format: IDX file format (native MNIST format)
+
+Loading the Dataset:
+
+To load MNIST in your code, use the following pattern:
+
+```python
+import os
+from torchvision import datasets, transforms
+
+# The MNIST data is located at:
+# os.path.join(output_dir, "data", "mnist")
+
+# Load with torchvision
+transform = transforms.ToTensor()
+
+train_dataset = datasets.MNIST(
+    root=os.path.join(output_dir, "data", "mnist"),
+    train=True,
+    download=False,  # Already downloaded
+    transform=transform
+)
+
+test_dataset = datasets.MNIST(
+    root=os.path.join(output_dir, "data", "mnist"),
+    train=False,
+    download=False,  # Already downloaded
+    transform=transform
+)
+
+# Access individual samples
+image, label = train_dataset[0]  # Returns (tensor, int)
+# image shape: (1, 28, 28) - single channel, 28x28 pixels
+# label: integer 0-9
+```
+
+Common Use Cases:
+- Image classification
+- Neural network training
+- Convolutional neural network (CNN) experiments
+- Generative models (VAE, GAN)
+- Few-shot learning
+- Transfer learning baselines
+
+Citation:
+LeCun, Y., Cortes, C., & Burges, C. J. (1998). MNIST handwritten digit database.

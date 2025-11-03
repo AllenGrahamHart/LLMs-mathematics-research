@@ -21,6 +21,7 @@ When writing code, note the Pip-installed packages are:
 - networkx
 - scikit-learn
 - torch
+- torchvision
 
 When saving figures, use: `plt.savefig("figure_name.png", dpi={figure_dpi})`
    Figures will automatically be saved to the correct output directory.
