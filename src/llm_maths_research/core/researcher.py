@@ -116,10 +116,16 @@ class ScaffoldedResearcher:
 
         for data_path, original_id in data_sources:
             if os.path.exists(data_path):
-                # Copy file to session data directory
+                # Copy file or directory to session data directory
                 filename = os.path.basename(data_path)
                 dest_path = os.path.join(self.session.data_dir, filename)
-                shutil.copy(data_path, dest_path)
+
+                if os.path.isdir(data_path):
+                    # Copy entire directory
+                    shutil.copytree(data_path, dest_path)
+                else:
+                    # Copy single file
+                    shutil.copy(data_path, dest_path)
 
                 # Try to load optional description file
                 # Skip if data file is already .txt (rare edge case - would read itself as description)
@@ -136,7 +142,7 @@ class ScaffoldedResearcher:
                     'description': description
                 }
 
-                print(f"✓ Loaded data file: {original_id} → {filename}")
+                print(f"✓ Loaded data {'directory' if os.path.isdir(data_path) else 'file'}: {original_id} → {filename}")
             else:
                 print(f"Warning: Data file not found: {data_path}")
 
