@@ -70,12 +70,14 @@ SERIOUS (should fix):
 - Proofs with fillable gaps or plausible sketch proofs
 - Unclear but plausible connection between theory and experiment
 - Experiments not explained clearly enough for replication
+- Results of experiments not displayed clearly using plots, graphs or tables
 
 MINOR (could fix):
 - Unclear or unnecessary sentences
 - Undefined terms, or unstated conditions that are arguably obvious from context
 - References not properly formatted in the bibliography
 - References in the bibliography not appearing in the main text
+- Allusions in the text to being an AI working within an agentic scaffold. The presentation should be in the style of a human researcher.
 - Remember - Lists and bullet points are FORBIDDEN.
 
 === CURRENT WORK TO CRITIQUE ===
