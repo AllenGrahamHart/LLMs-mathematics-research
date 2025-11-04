@@ -1,15 +1,15 @@
-# LLM Mathematics Research
+# LLM Mathematics & Machine Learning Research
 
-Automated mathematics research using Large Language Models with a scaffolded generator-critic loop.
+Automated research using Large Language Models with a scaffolded generator-critic loop for both mathematics and machine learning experiments.
 
 ## Overview
 
 This project implements an automated research system where an LLM iteratively:
-1. Generates mathematical research (LaTeX papers + Python experiments)
+1. Generates research papers (LaTeX) with supporting experiments (Python code)
 2. Receives critique from a critic AI
 3. Refines its work based on feedback
 
-The system manages the full research workflow including code execution, LaTeX compilation, and comprehensive logging.
+The system manages the full research workflow including code execution, LaTeX compilation, GPU computation via Modal, and comprehensive logging.
 
 ## Features
 
@@ -18,15 +18,17 @@ The system manages the full research workflow including code execution, LaTeX co
   - OpenAlex API for searching academic papers
   - ArXiv paper downloads with full-text extraction
   - Automatic inclusion of reference papers in prompts
+- **Code Context Integration**: Load entire codebases (e.g., nanoGPT) as context for ML research
 - **Reference Papers**: Load papers as context from `problems/papers/` directory
 - **Data File Integration**: Load datasets from `data/datasets/` directory for analysis
+- **GPU Computation**: Modal integration for running training experiments on cloud GPUs
 - **LaTeX Integration**: Automatic paper generation and PDF compilation
 - **Code Execution**: Safe Python code execution with timeout protection
 - **Template System**: Customizable prompts and LaTeX templates
 - **Structured Response Format**: XML-based parsing for robust extraction of code, LaTeX, and plans
 - **Comprehensive Logging**: Tracks all iterations, critiques, plans, and metrics
 - **Cost Tracking**: Monitors API usage and costs
-- **Unit Tests**: 67 tests covering core functionality, XML extraction, and literature integration
+- **Unit Tests**: 76 tests covering core functionality, code loading, XML extraction, and literature integration
 - **Configurable**: YAML-based configuration for timeouts, models, and limits
 - **Prompt Caching**: Intelligent 1-hour caching reduces API costs by ~40%
 
@@ -41,6 +43,7 @@ Each API call (both generator and critic) is split into two parts:
 1. **Static Content (Cached)**:
    - Problem statement
    - Reference papers
+   - Code context (entire codebases like nanoGPT)
    - Data file descriptions
    - System instructions and templates
    - This content is cached for 1 hour and refreshed on each use
@@ -156,6 +159,12 @@ python run_experiment.py --papers Turrini2024 --data mydata.csv
 # Multiple data files
 python run_experiment.py --papers Turrini2024 --data dataset1.csv dataset2.json
 
+# With code context (for ML research)
+python run_experiment.py --papers attention_paper --code nanogpt --problem problems/ml_research.txt
+
+# Full ML research setup
+python run_experiment.py --papers attention_paper --code nanogpt --data training_results.csv --max-iterations 10
+
 # Custom session name
 python run_experiment.py --papers Turrini2024 --session-name my_experiment
 
@@ -198,6 +207,17 @@ researcher = ScaffoldedResearcher(
     max_iterations=20,
     paper_ids=["2501.00123"],
     data_ids=["mydata.csv", "timeseries.json"]  # Loads from data/datasets/
+)
+
+researcher.run(problem)
+
+# With code context for ML research (from problems/code/ directory)
+researcher = ScaffoldedResearcher(
+    session_name="ml_research",
+    max_iterations=20,
+    paper_ids=["attention_paper"],
+    code_ids=["nanogpt"],  # Loads from problems/code/nanogpt/
+    data_ids=["training_data.csv"]
 )
 
 researcher.run(problem)
@@ -333,6 +353,103 @@ df = pd.read_csv(os.path.join(output_dir, "data", "mydata.csv"))
 plt.savefig("my_plot.png", dpi=300)
 ```
 
+## Code Context
+
+The system supports loading entire codebases as context for ML research experiments. This allows the LLM to understand, modify, and experiment with existing code (e.g., training frameworks like nanoGPT).
+
+### Structure
+
+Code contexts are stored in `problems/code/` with each codebase in its own subdirectory:
+
+```
+problems/code/
+├── nanogpt/
+│   ├── code.txt          # Consolidated source code
+│   └── description.txt   # README(s) and documentation
+```
+
+### Adding Code Contexts
+
+1. Create a directory: `problems/code/your_codebase/`
+2. Create `code.txt` with consolidated source code:
+   ```
+   # ===== train.py =====
+   [file content]
+
+   # ===== model.py =====
+   [file content]
+   ```
+3. Create `description.txt` with README(s) or overview
+4. Use with `--code your_codebase`
+
+### Usage
+
+```bash
+# ML research with code context
+python run_experiment.py \
+  --papers attention_is_all_you_need \
+  --code nanogpt \
+  --problem problems/ml_research.txt \
+  --max-iterations 10
+
+# With data files
+python run_experiment.py \
+  --papers ml_paper \
+  --code nanogpt \
+  --data training_results.csv \
+  --max-iterations 10
+```
+
+### Available Codebases
+
+**nanoGPT** - Andrej Karpathy's minimal GPT implementation (~15k tokens)
+- Core files: model.py, train.py, sample.py, configurator.py
+- Config files for Shakespeare and GPT-2 training
+- Data preparation scripts
+
+### GPU Computation with Modal
+
+For GPU-intensive tasks (model training, large-scale experiments), the system integrates with [Modal](https://modal.com):
+
+1. **Install Modal**: Already included in dependencies
+2. **Configure**: `modal token new` (set up your Modal account)
+3. **Use in code**: The LLM can use Modal decorators and functions directly
+
+**Example from LLM-generated code:**
+
+```python
+import modal
+
+# Create Modal app for GPU training
+app = modal.App("nanogpt-training")
+
+@app.function(gpu="T4", timeout=3600)
+def train_model(config):
+    # Training code runs on Modal GPU
+    model = GPT(config)
+    train(model, data)
+    return results
+
+# Run on Modal
+with app.run():
+    results = train_model(config)
+```
+
+**Configuration** (in `config.yaml`):
+```yaml
+modal:
+  timeout: 3600  # 1 hour for training
+  gpu: "T4"      # GPU type (T4, A10G, A100)
+```
+
+### Token Efficiency
+
+Code contexts are cached as part of static prompt content:
+- **nanoGPT**: ~15k tokens (description + code)
+- **First iteration**: 2× cost (cache write)
+- **Subsequent iterations**: 0.1× cost (90% savings)
+- Efficient for multi-iteration research sessions
+
 ## Project Structure
 
 ```
@@ -356,7 +473,9 @@ llm-maths-research/
 │   └── config.py                   # Configuration management
 ├── problems/                       # Research problem files
 │   ├── papers/                     # Reference papers as .txt files (e.g., Turrini2024.txt)
-│   └── open_research.txt           # Default problem for run_experiment.py
+│   ├── code/                       # Code contexts for ML research (e.g., nanogpt/)
+│   ├── open_research.txt           # Default problem for mathematics research
+│   └── ml_research.txt             # Default problem for ML research
 ├── data/                           # Data files for experiments
 │   └── datasets/                   # Dataset files (CSV, JSON, etc.)
 ├── outputs/                        # Generated outputs (papers, code, logs)
@@ -468,6 +587,7 @@ The code execution environment includes:
 - scikit-learn
 - torch (PyTorch)
 - torchvision
+- modal (for GPU computation)
 
 ## Available Datasets
 

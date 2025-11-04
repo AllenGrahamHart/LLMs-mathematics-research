@@ -4,7 +4,7 @@ This prompt, your reply, and comments from an AI critic, together form 1 iterati
 The specific research problem you are working on is:
 
 {problem_statement}
-{papers_section}{data_section}
+{papers_section}{data_section}{code_section}
 Each iteration, including this one:
 1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, an AI-generated critique)
 2. Based on the paper, code, your previous plan, and external critique, you will create a detailed plan for the remaining iterations

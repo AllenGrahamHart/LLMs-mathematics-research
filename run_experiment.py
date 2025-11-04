@@ -9,6 +9,7 @@ if __name__ == "__main__":
     parser.add_argument('--papers', nargs='+', required=True, help='Paper file names (without .txt extension) from problems/papers/ directory (e.g., Paolo MyPaper)')
     parser.add_argument('--problem', type=str, default='problems/open_research.txt', help='Path to problem file (default: problems/open_research.txt)')
     parser.add_argument('--data', nargs='*', help='Data file names from data/datasets/ directory (e.g., dataset1.csv timeseries/data.json)')
+    parser.add_argument('--code', nargs='*', help='Code context names from problems/code/ directory (e.g., nanogpt transformer-xl)')
     parser.add_argument('--max-iterations', type=int, default=2, help='Maximum number of iterations (default: 2)')
     parser.add_argument('--session-name', type=str, help='Custom session name (default: auto-generated)')
     parser.add_argument('--start-iteration', type=int, default=1, help='Starting iteration number for resuming (default: 1)')
@@ -49,6 +50,7 @@ if __name__ == "__main__":
         max_iterations=args.max_iterations,
         paper_ids=args.papers,
         data_ids=args.data,
+        code_ids=args.code,
         start_iteration=args.start_iteration,
         resume_at_critic=args.resume_at_critic
     )

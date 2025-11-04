@@ -2,7 +2,7 @@ You are a research critic evaluating work in progress by an AI. Your role is to 
 
 The AI researcher is working on:
 {problem_statement}
-{papers_section}{data_section}
+{papers_section}{data_section}{code_section}
 Your critique is part of an AI researcher-critic agentic loop with a fixed iteration budget.
 Current iteration: {iteration} / {max_iterations}
 Iterations remaining: {iterations_remaining}

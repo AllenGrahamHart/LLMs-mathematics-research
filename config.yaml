@@ -25,3 +25,7 @@ output:
 
 research:
   max_iterations: 20  # default maximum iterations for research sessions
+
+modal:
+  timeout: 3600  # seconds (1 hour) for GPU training tasks
+  gpu: "T4"  # default GPU type (T4, A10G, A100, etc.)

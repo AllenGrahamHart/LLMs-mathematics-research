@@ -32,6 +32,9 @@ class ScaffoldedResearcher:
         papers: Optional[Dict[str, str]] = None,
         data_ids: Optional[List[str]] = None,
         data_paths: Optional[List[str]] = None,
+        code_ids: Optional[List[str]] = None,
+        code_paths: Optional[List[str]] = None,
+        code_contexts: Optional[Dict[str, Dict[str, str]]] = None,
         start_iteration: int = 1,
         resume_at_critic: Optional[int] = None,
         use_cache: bool = True
@@ -50,6 +53,10 @@ class ScaffoldedResearcher:
             data_ids: List of data file names from data/datasets/ directory
                      (for use when running from repo - legacy/backward compatible)
             data_paths: List of full paths to data files (for pip users)
+            code_ids: List of code context names from problems/code/ directory
+                     (for use when running from repo - legacy/backward compatible)
+            code_paths: List of full paths to code context directories (for pip users)
+            code_contexts: Dict mapping code names to dicts with 'description' and 'code' keys (for programmatic use)
             start_iteration: Starting iteration number (for resuming sessions, default: 1)
             resume_at_critic: If set, resume at critic phase of this iteration (generator already completed)
             use_cache: Enable 1-hour prompt caching for static content (default: True)
@@ -59,6 +66,7 @@ class ScaffoldedResearcher:
         self.problem_statement = ""
         self.paper_ids = paper_ids or []
         self.data_ids = data_ids or []
+        self.code_ids = code_ids or []
         self.resume_at_critic = resume_at_critic
         self.use_cache = use_cache
 
@@ -146,6 +154,65 @@ class ScaffoldedResearcher:
             else:
                 print(f"Warning: Data file not found: {data_path}")
 
+        # Load code contexts with priority: code_contexts dict > code_paths > code_ids
+        self.code_content = {}
+        if code_contexts:
+            # Direct content provided (highest priority)
+            self.code_content = code_contexts
+        elif code_paths:
+            # Full paths provided (for pip users)
+            for code_path in code_paths:
+                if os.path.exists(code_path) and os.path.isdir(code_path):
+                    code_name = os.path.basename(code_path)
+                    code_data = {}
+
+                    # Load description.txt
+                    desc_path = os.path.join(code_path, "description.txt")
+                    if os.path.exists(desc_path):
+                        with open(desc_path, 'r') as f:
+                            code_data['description'] = f.read()
+
+                    # Load code.txt
+                    code_file_path = os.path.join(code_path, "code.txt")
+                    if os.path.exists(code_file_path):
+                        with open(code_file_path, 'r') as f:
+                            code_data['code'] = f.read()
+
+                    if code_data:
+                        self.code_content[code_name] = code_data
+                        print(f"✓ Loaded code context: {code_name}")
+                    else:
+                        print(f"Warning: No code files found in {code_path}")
+                else:
+                    print(f"Warning: Code context directory not found: {code_path}")
+        elif code_ids:
+            # Code IDs provided (backward compatible - looks in problems/code/)
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            for code_id in code_ids:
+                code_dir = os.path.join(project_root, "problems", "code", code_id)
+                if os.path.exists(code_dir) and os.path.isdir(code_dir):
+                    code_data = {}
+
+                    # Load description.txt
+                    desc_path = os.path.join(code_dir, "description.txt")
+                    if os.path.exists(desc_path):
+                        with open(desc_path, 'r') as f:
+                            code_data['description'] = f.read()
+
+                    # Load code.txt
+                    code_file_path = os.path.join(code_dir, "code.txt")
+                    if os.path.exists(code_file_path):
+                        with open(code_file_path, 'r') as f:
+                            code_data['code'] = f.read()
+
+                    if code_data:
+                        self.code_content[code_id] = code_data
+                        print(f"✓ Loaded code context: {code_id}")
+                    else:
+                        print(f"Warning: No code files found in {code_dir}")
+                else:
+                    print(f"Warning: Code context directory not found: {code_dir}")
+
     def _build_papers_section(self) -> str:
         """
         Build the papers section for prompts.
@@ -195,6 +262,37 @@ class ScaffoldedResearcher:
 
         return data_section
 
+    def _build_code_section(self) -> str:
+        """
+        Build the code context section for prompts.
+
+        Returns:
+            Formatted code section string
+        """
+        code_section = ""
+        if self.code_content:
+            code_section = "\n\n=== AVAILABLE CODE CONTEXT ===\n\n"
+            code_section += "The following codebase is provided for your research and experimentation.\n"
+            code_section += "You may use, modify, extend, or experiment with this code.\n"
+            code_section += "For GPU-intensive tasks, you can use Modal (already installed and configured).\n\n"
+
+            for code_name, code_data in self.code_content.items():
+                code_section += f"--- {code_name} ---\n\n"
+
+                # Add description if available
+                if 'description' in code_data and code_data['description']:
+                    code_section += "DESCRIPTION:\n"
+                    code_section += code_data['description']
+                    code_section += "\n\n"
+
+                # Add source code if available
+                if 'code' in code_data and code_data['code']:
+                    code_section += "SOURCE CODE:\n"
+                    code_section += code_data['code']
+                    code_section += "\n\n"
+
+        return code_section
+
     def build_generator_prompt(self, iteration: int, state: Dict[str, str]) -> tuple:
         """
         Build the prompt for the generator phase, split into static (cacheable) and dynamic parts.
@@ -223,6 +321,7 @@ class ScaffoldedResearcher:
                 problem_statement=self.problem_statement,
                 papers_section=self._build_papers_section(),
                 data_section=self._build_data_section(include_paths=True),
+                code_section=self._build_code_section(),
                 timeout=CONFIG['execution']['timeout'],
                 figure_dpi=CONFIG['output']['figure_dpi'],
                 iteration=iteration,
@@ -247,6 +346,7 @@ class ScaffoldedResearcher:
             problem_statement=self.problem_statement,
             papers_section=self._build_papers_section(),
             data_section=self._build_data_section(include_paths=True),
+            code_section=self._build_code_section(),
             timeout=CONFIG['execution']['timeout'],
             figure_dpi=CONFIG['output']['figure_dpi']
         )
@@ -310,6 +410,7 @@ In addition to your critique - please complete this survey:
                 problem_statement=self.problem_statement,
                 papers_section=self._build_papers_section(),
                 data_section=self._build_data_section(include_paths=False),
+                code_section=self._build_code_section(),
                 iteration=iteration,
                 max_iterations=self.max_iterations,
                 iterations_remaining=self.max_iterations - iteration,
@@ -329,11 +430,12 @@ In addition to your critique - please complete this survey:
         dynamic_template = split_marker + parts[1]
 
         # Fill in static content (same across all critic calls)
-        # Only includes: role description, problem statement, papers, and data
+        # Only includes: role description, problem statement, papers, data, and code
         static_content = static_template.format(
             problem_statement=self.problem_statement,
             papers_section=self._build_papers_section(),
-            data_section=self._build_data_section(include_paths=False)
+            data_section=self._build_data_section(include_paths=False),
+            code_section=self._build_code_section()
         )
 
         # Fill in dynamic content (changes each iteration)

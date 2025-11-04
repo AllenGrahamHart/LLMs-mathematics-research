@@ -1,0 +1,17 @@
+You are conducting machine learning research using the provided codebase.
+
+To guide your investigation, at least one paper and one codebase are included for context.
+
+Your task:
+1. Identify an interesting research question or hypothesis related to the provided codebase and papers. This could be about model behavior, training dynamics, interpretability, architecture variations, or empirical phenomena.
+2. Design and implement experiments to investigate your research question. You may train models, analyze their behavior, visualize results, or probe their internal representations.
+3. For GPU-intensive tasks like model training, use Modal to execute code on GPU instances. Modal is already installed and configured. You can use Modal decorators and functions directly in your code.
+4. Write a research paper presenting your methodology, experimental results, analysis, and conclusions. Include clear visualizations and empirical evidence to support your claims.
+5. Your experiments should be reproducible and well-documented. Include all hyperparameters, random seeds, and experimental setup details.
+6. The paper should follow standard ML research conventions with sections for introduction, related work, methodology, experiments, results, discussion, and conclusion.
+7. The author list should be anonymous.
+8. You are FORBIDDEN from using bullet points or lists of any kind. You MUST write in complete paragraphs at all times. NO EXCEPTIONS.
+9. Write the paper as though you are a human researcher. Do not include references in the manuscript about being an AI using a scaffold.
+
+See paper(s) and code context below:
+

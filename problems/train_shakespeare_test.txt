@@ -1,0 +1,25 @@
+You are conducting a simple machine learning experiment to test the research infrastructure.
+
+Your task:
+1. Using the provided nanoGPT codebase, set up and run a simple character-level language model training experiment on the Shakespeare dataset.
+2. The goal is NOT to achieve state-of-the-art results, but to verify that the training pipeline works end-to-end.
+3. Use a VERY SMALL model configuration to ensure training completes quickly (e.g., 2-4 layers, small embedding dimension).
+4. Train for only a few iterations (100-500) to verify the setup works.
+5. Generate a few sample text outputs to demonstrate that the model learned something.
+6. Create simple plots showing training loss over time.
+7. Write a brief technical report (1-2 pages) documenting:
+   - The model configuration used
+   - Training setup and hyperparameters
+   - Training loss curves
+   - Sample generated text
+   - Any observations about the training process
+
+IMPORTANT: Keep everything minimal and fast. This is a verification test, not a full research experiment.
+Do NOT attempt to use Modal for GPU training in this test - just run locally with CPU or small GPU requirements.
+
+The author list should be anonymous.
+You are FORBIDDEN from using bullet points or lists of any kind. You MUST write in complete paragraphs at all times. NO EXCEPTIONS.
+Write the paper as though you are a human researcher. Do not include references in the manuscript about being an AI using a scaffold.
+
+See code context below:
+
