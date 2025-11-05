@@ -422,31 +422,89 @@ python run_experiment.py \
 
 ### GPU Computation with Modal
 
-For GPU-intensive tasks (model training, large-scale experiments), the system integrates with [Modal](https://modal.com):
+For GPU-intensive tasks (model training, large-scale inference), the system integrates with [Modal](https://modal.com) for serverless GPU computation.
+
+#### Setup
 
 1. **Install Modal**: Already included in dependencies
-2. **Configure**: `modal token new` (set up your Modal account)
-3. **Use in code**: The LLM can use Modal decorators and functions directly
+2. **Authenticate**: Run `modal token new` to set up your Modal account
+3. **Ready to use**: The AI researcher can generate Modal code directly
 
-**Example from LLM-generated code:**
+#### How It Works
+
+The AI researcher generates Python code that uses Modal to:
+- Run model inference on cloud GPUs (T4, A10G, A100)
+- Execute training jobs with automatic scaling
+- Cache models and images for fast subsequent runs
+
+**Key Pattern** (automatically used by the AI):
 
 ```python
 import modal
+import pandas as pd
+import matplotlib.pyplot as plt
 
-# Create Modal app for GPU training
-app = modal.App("nanogpt-training")
+app = modal.App("experiment-name")
 
-@app.function(gpu="T4", timeout=3600)
-def train_model(config):
-    # Training code runs on Modal GPU
-    model = GPT(config)
-    train(model, data)
-    return results
+# Include ALL packages used in this file (even if only used locally)
+image = modal.Image.debian_slim().pip_install(
+    "torch",
+    "transformers",
+    "numpy",
+    "pandas",      # Required even if only used locally!
+    "matplotlib"   # Required even if only used locally!
+)
 
-# Run on Modal
-with app.run():
-    results = train_model(config)
+@app.function(gpu="T4", timeout=1800, image=image)
+def run_model_inference(problems):
+    """GPU computation - returns data, NOT files"""
+    from transformers import GPT2LMHeadModel, GPT2Tokenizer
+
+    # Load model (Modal caches this after first run)
+    model = GPT2LMHeadModel.from_pretrained("gpt2")
+    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+
+    # Run inference and return data structures
+    return results_list  # Return data, not files!
+
+# CRITICAL: Protect execution with if __name__ == "__main__"
+if __name__ == "__main__":
+    problems = generate_problems()
+
+    # Single Modal session for all GPU work
+    with app.run():
+        results = run_model_inference.remote(problems)
+
+    # ALL file I/O happens locally
+    df = pd.DataFrame(results)
+    df.to_csv("results.csv", index=False)
+
+    plt.plot(df['values'])
+    plt.savefig("plot.png", dpi=300)
 ```
+
+#### Performance
+
+**Typical execution times for GPT-2 inference (431 problems)**:
+- **First run**: ~2-3 minutes (Modal startup + model download + inference)
+- **Subsequent runs**: ~1 minute (cached image + cached model + inference)
+- **GPU time only**: ~30-60 seconds
+
+**Caching** (automatic):
+- **Image caching**: Container images cached by package hash
+- **Model caching**: HuggingFace models cached after first download
+- **Persistent**: Caches persist across experiments
+
+#### Critical Patterns
+
+The AI researcher has been trained to follow these Modal best practices:
+
+1. **Include ALL imports in image**: Modal needs all packages you import at the file level, even if only used locally
+2. **Use `if __name__ == "__main__":`**: Required to prevent code execution during Modal's import phase
+3. **Return data, not files**: Modal functions return Python data structures; all file I/O happens locally
+4. **Single Modal session**: Batch all GPU operations to minimize startup overhead
+
+See `docs/MODAL_CODE_PATTERN.md` for complete documentation.
 
 **Configuration** (in `config.yaml`):
 ```yaml

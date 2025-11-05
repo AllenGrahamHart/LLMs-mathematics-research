@@ -1,26 +1,40 @@
-Peform a machine learning experiment to investigate whether pretrained GPT-2 (124M parameters) can improve its performance in integer multiplication through fine-tuning.
+Evaluate how well pretrained GPT-2 (124M parameters) can perform integer multiplication without any fine-tuning.
+
+RESEARCH QUESTION:
+Can a pretrained language model perform arithmetic multiplication accurately, and how does performance vary with problem difficulty?
 
 TASK:
-1. Evaluate baseline GPT-2 on multiplication problems of varying difficulty (single-digit through multi-digit)
-2. Design and implement a fine-tuning approach to improve performance
-3. Re-evaluate and measure improvements
+1. Evaluate pretrained GPT-2 on multiplication problems of varying difficulty (single-digit through multi-digit)
+2. Analyze accuracy patterns, error types, and failure modes
+3. Generate visualizations showing performance vs difficulty
 4. Write a research paper (4-6 pages) with your findings
 
-TECHNICAL NOTES:
-- GPT-2 (124M) is already downloaded and available via transformers library
-- MANDATORY: Use Modal for ALL GPU operations (evaluation, training, inference)
+EVALUATION METHODOLOGY:
+- Generate test sets programmatically (50-100 problems per difficulty level)
+- Use appropriate prompting strategies
+- Measure exact match accuracy and analyze near-miss patterns
+- Calculate mean absolute error for incorrect answers
+- Track inference time
+
+TECHNICAL CONSTRAINTS:
+- **CRITICAL**: The local machine does NOT have a GPU
+- **MANDATORY**: Use Modal for ALL GPU operations (model loading, inference, evaluation)
   * Import modal and create app: app = modal.App("gpt2-multiplication")
   * Decorate compute functions with: @app.function(gpu="T4", timeout=1800)
   * Modal is already installed and authenticated
-  * This is REQUIRED every iteration - do not run locally
+  * ALL model inference MUST run on Modal or it will fail
+- GPT-2 (124M) is available via transformers library
 - Keep total compute time to 10-30 minutes on GPU (budget <$1)
-- Generate training/test data programmatically
+- Generate all test data programmatically
 
 PAPER REQUIREMENTS:
 - Standard sections: Introduction, Methods, Results, Discussion, Conclusion
-- Include tables/figures comparing baseline vs fine-tuned performance
+- Include tables showing accuracy by difficulty level
+- Include figures: accuracy vs difficulty plots, error distributions
+- Discuss patterns in model failures
 - Write in complete paragraphs (no bullet lists in main text)
 - Anonymous authorship
-- Write as a human researcher would
 
-See nanoGPT codebase context below for reference on model loading and training.
+IMPORTANT:
+- NO training or fine-tuning (evaluation only)
+- ALL model inference must happen on Modal (local machine has no GPU)

@@ -12,6 +12,7 @@
 ## Setup Guides
 
 - **[MODAL_SETUP.md](MODAL_SETUP.md)** - Setting up Modal for GPU computation
+- **[MODAL_CODE_PATTERN.md](MODAL_CODE_PATTERN.md)** - Best practices for writing Modal-integrated code
 - **[NANOGPT_MODELS.md](NANOGPT_MODELS.md)** - Working with nanoGPT models as code context
 - **[QUICK_START_MULTIPLICATION.md](QUICK_START_MULTIPLICATION.md)** - Quick start guide with multiplication example
 

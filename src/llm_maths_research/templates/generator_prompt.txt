@@ -9,8 +9,10 @@ Each iteration, including this one:
 1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, an AI-generated critique)
 2. Based on the paper, code, your previous plan, and external critique, you will create a detailed plan for the remaining iterations
 3. You will output ONLY your updated plan, optional OpenAlex API call, python code and LaTeX
-4. If you have 0 remaining iterations, then the code and LaTeX created this iteration is final
-5. Your code will terminate if it does not finish running within {timeout} seconds.
+4. Each iteration there are 4 seperate stages: planning, coding, writing, and critique
+5. You are currently on either the planning, coding, or writing stage, and this will be revealed later in the prompt
+6. If you have 0 remaining iterations, then the code and LaTeX created this iteration is final
+7. Your code will terminate if it does not finish running within {timeout} seconds.
 
 When writing code, note the Pip-installed packages are:
 - numpy
@@ -23,19 +25,95 @@ When writing code, note the Pip-installed packages are:
 - torch
 - torchvision
 
-When saving figures, use: `plt.savefig("figure_name.png", dpi={figure_dpi})`
-   Figures will automatically be saved to the correct output directory.
-   You can then use for example \includegraphics[width=0.95\textwidth]{{figure_name.png}} in the LaTeX document to embed the figures into the paper
+EXECUTION ENVIRONMENT:
+   Your code is saved as experiment_code.py and executed in the session output directory.
+   This is the same directory where paper.tex is located.
+   Simply save files to the current directory (no path manipulation needed).
+
+   When saving figures: `plt.savefig("figure_name.png", dpi={figure_dpi})`
+   When saving CSVs: `df.to_csv("results.csv", index=False)`
+   Then reference in LaTeX: \includegraphics[width=0.95\textwidth]{{figure_name.png}}
+
+MODAL GPU INTEGRATION (when required):
+   If you need GPU computation, use Modal with this pattern:
+
+   1. Modal functions should be PURE COMPUTATION - they take data in and return data out
+      - NO file I/O inside Modal functions (no pd.to_csv(), no plt.savefig(), no open())
+      - Return Python data structures (lists, dicts, numpy arrays)
+
+   2. ALL file operations (CSV, PNG, JSON) must happen LOCALLY
+      - Save files to current directory: df.to_csv("results.csv")
+      - The code runs in the session output directory alongside paper.tex
+
+   3. Use a SINGLE Modal session when possible to avoid overhead
+      - Combine multiple GPU operations into one Modal function
+      - Each `with app.run():` block adds 2-3 minutes of startup time
+
+   4. Modal automatically caches models after first download
+      - Just load models normally in your function
+      - Modal handles caching automatically across invocations
+
+   5. IMPORTANT: Include ALL packages you import in the Modal image
+      - Modal needs to import your entire file to serialize functions
+      - If you import pandas/matplotlib at the top, add them to the image
+      - Even if they're only used locally, they must be in the image
+
+   6. CRITICAL: Protect Modal execution with `if __name__ == "__main__":`
+      - Modal imports your file to serialize functions
+      - Without this guard, code runs during import and causes errors
+      - Put ALL execution code (with app.run(), plotting, CSV writing) inside this block
+
+   Example pattern:
+   ```python
+   import modal
+   import pandas as pd
+   import matplotlib.pyplot as plt
+
+   app = modal.App("experiment-name")
+
+   # Include ALL packages used anywhere in this file
+   image = modal.Image.debian_slim().pip_install(
+       "torch",
+       "transformers",
+       "numpy",
+       "pandas",
+       "matplotlib"
+   )
+
+   @app.function(gpu="T4", timeout=1800, image=image)
+   def run_model_inference(problems):
+       from transformers import GPT2LMHeadModel, GPT2Tokenizer
+
+       # Load model (Modal caches this after first run)
+       model = GPT2LMHeadModel.from_pretrained("gpt2")
+       tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+
+       # Run inference and return data structures, NOT files
+       return results_list
+
+   # CRITICAL: Protect all execution code with this guard
+   if __name__ == "__main__":
+       # Main code
+       problems = generate_problems()
+
+       # Single Modal session for all GPU work
+       with app.run():
+           results = run_model_inference.remote(problems)
+
+       # ALL file I/O happens locally (in current directory)
+       df = pd.DataFrame(results)
+       df.to_csv("results.csv", index=False)
+
+       plt.plot(df['values'])
+       plt.savefig("plot.png", dpi={figure_dpi})
+   ```
 
 READING DATA FILES:
-   IMPORTANT: The variable `output_dir` is pre-defined for you. DO NOT redefine or modify it.
-   All data files are located in the data/ subdirectory (not data/datasets/).
-   ALWAYS use the EXACT path construction: os.path.join(output_dir, "data", "filename")
-   DO NOT search for files in multiple locations. DO NOT use relative paths like "data/datasets/".
-   The files are already copied to the correct location for you.
+   Data files are located in the data/ subdirectory relative to where code.py runs.
+   Simply use relative paths:
 
-   Example: `df = pd.read_csv(os.path.join(output_dir, "data", "mydata.csv"))`
-   Example: `with open(os.path.join(output_dir, "data", "data.json")) as f: data = json.load(f)`
+   Example: `df = pd.read_csv("data/mydata.csv")`
+   Example: `with open("data/data.json") as f: data = json.load(f)`
 
    Each data file's exact path is listed in the AVAILABLE DATA FILES section above.
 
@@ -131,13 +209,13 @@ Iterations remaining after this one: {iterations_remaining}
 --- Last Execution Output ---
 {execution_output}
 
---- Plan from Previous Iteration ---
+--- Your Most Recent Plan ---
 {plan}
 
 --- Critique from Critic ---
 {critique}
 
---- Your Previous Literature Searches ---
+--- Your Most Recent Literature Searches ---
 {researcher_openalex}
 
 --- Critic's Literature Searches ---

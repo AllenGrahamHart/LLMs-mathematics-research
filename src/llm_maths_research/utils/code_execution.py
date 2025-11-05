@@ -1,128 +1,73 @@
 """Code execution utilities."""
 
 import os
-import threading
-from io import StringIO
-import contextlib
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import subprocess
 from typing import Dict, Any
 from ..config import CONFIG
 
 
 def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
     """
-    Execute Python code and capture output with configurable timeout.
+    Execute Python code by writing to file and running as subprocess.
+
+    This approach allows Modal and other tools that need to inspect source code
+    to work correctly, since the code exists as a real file on disk.
 
     Args:
         code: Python code to execute
-        output_dir: Directory for saving outputs/figures
+        output_dir: Directory for saving outputs/figures (code runs in this directory)
 
     Returns:
         Dictionary with 'success', 'output', and 'timeout' keys
-
-    Note:
-        Uses daemon threads for timeout enforcement. If timeout is reached, the thread
-        continues running in the background until process exit (Python limitation - threads
-        cannot be forcibly killed). This is acceptable for our use case since the process
-        will eventually exit, but users should be aware that timeouts don't immediately
-        terminate runaway computations.
     """
-    stdout_capture = StringIO()
-    stderr_capture = StringIO()
+    # Write code to a file in the output directory
+    # Use 'experiment_code.py' to avoid name collision with Python's stdlib 'code' module
+    code_file = os.path.join(output_dir, 'experiment_code.py')
 
-    # --- Safe savefig helper & monkey-patch ---
-    _abs_out = os.path.abspath(output_dir)
-    _orig_savefig = plt.savefig
+    with open(code_file, 'w', encoding='utf-8') as f:
+        f.write(code)
 
-    def _safe_savefig(path: Any, *args: Any, **kwargs: Any) -> None:
-        """
-        Safely save matplotlib figure to session output directory.
-
-        Monkey-patched replacement for plt.savefig that ensures all figures
-        are saved to the session output directory regardless of the path provided.
-        This prevents LLM-generated code from saving files to arbitrary locations.
-
-        Args:
-            path: Desired figure filename (directory path is ignored, only basename used)
-            *args: Positional arguments passed to matplotlib's original savefig
-            **kwargs: Keyword arguments passed to matplotlib's original savefig
-        """
-        base = str(path)
-        # Always save to output_dir, just use basename of the provided path
-        final = os.path.join(_abs_out, os.path.basename(base))
-        os.makedirs(os.path.dirname(final), exist_ok=True)
-        _orig_savefig(final, *args, **kwargs)
-        try:
-            rel = os.path.relpath(final, _abs_out)
-        except Exception:
-            rel = final
-        print(f"✓ Saved figure -> {final} (relative: {rel})")
-
-    plt.savefig = _safe_savefig
-
-    namespace = {
-        '__name__': '__main__',
-        'np': __import__('numpy'),
-        'plt': plt,
-        'matplotlib': matplotlib,
-        'output_dir': output_dir,
-        'savefig': _safe_savefig,
-        'plt_savefig': _safe_savefig,
-    }
-
-    result = {'success': False, 'output': '', 'timeout': False}
-
-    def run_code() -> None:
-        """
-        Execute user code in isolated namespace with output capture.
-
-        Runs the code with stdout/stderr redirection, closes matplotlib figures,
-        and updates the result dictionary with success status and captured output.
-        This function is executed in a separate daemon thread for timeout handling.
-        """
-        try:
-            with contextlib.redirect_stdout(stdout_capture), \
-                 contextlib.redirect_stderr(stderr_capture):
-                exec(code, namespace)
-
-            for fig_num in plt.get_fignums():
-                plt.close(fig_num)
-
-            try:
-                imgs = sorted([p for p in os.listdir(output_dir)
-                               if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
-                diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
-            except Exception:
-                diag = ""
-
-            result['success'] = True
-            result['timeout'] = False
-            result['output'] = stdout_capture.getvalue() + stderr_capture.getvalue() + diag
-        except Exception as e:
-            try:
-                imgs = sorted([p for p in os.listdir(output_dir)
-                               if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
-                diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
-            except Exception:
-                diag = ""
-            result['success'] = False
-            result['timeout'] = False
-            result['output'] = stdout_capture.getvalue() + stderr_capture.getvalue() + \
-                             f"\n{type(e).__name__}: {str(e)}" + diag
-
-    thread = threading.Thread(target=run_code, daemon=True)
-    thread.start()
+    # Run the code as a subprocess with timeout
     timeout_seconds = CONFIG['execution']['timeout']
-    thread.join(timeout=timeout_seconds)
 
-    if thread.is_alive():
+    try:
+        result = subprocess.run(
+            ['python', 'experiment_code.py'],
+            cwd=output_dir,  # Run in the output directory
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds
+        )
+
+        # Check for figures created
+        try:
+            imgs = sorted([p for p in os.listdir(output_dir)
+                          if p.lower().endswith(('.png', '.pdf', '.jpg', '.jpeg', '.svg'))])
+            diag = "\nFigures in output_dir: " + (", ".join(imgs) if imgs else "(none)")
+        except Exception:
+            diag = ""
+
+        output = result.stdout + result.stderr + diag
+
         return {
-            'success': False,
-            'output': stdout_capture.getvalue() + stderr_capture.getvalue() +
-                     f'\nCode did not finish running in {timeout_seconds} seconds',
-            'timeout': True
+            'success': result.returncode == 0,
+            'output': output,
+            'timeout': False
         }
 
-    return result
+    except subprocess.TimeoutExpired as e:
+        # Collect any output that was produced before timeout
+        stdout = e.stdout.decode('utf-8') if e.stdout else ''
+        stderr = e.stderr.decode('utf-8') if e.stderr else ''
+
+        return {
+            'success': False,
+            'output': stdout + stderr + f'\nCode did not finish running in {timeout_seconds} seconds',
+            'timeout': True
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'output': f'{type(e).__name__}: {str(e)}',
+            'timeout': False
+        }
