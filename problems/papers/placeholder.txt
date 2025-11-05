@@ -1,0 +1,3 @@
+# Placeholder Reference
+
+This is a minimal placeholder to satisfy the --papers requirement when no reference paper is needed for the research task.

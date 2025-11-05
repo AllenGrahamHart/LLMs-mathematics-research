@@ -464,6 +464,82 @@ class ResearchSession:
                 with open(self.current_critic_openalex_file, 'w', encoding='utf-8') as f:
                     f.write(no_search_msg)
 
+    def process_planning_response(self, response: str, iteration: int) -> None:
+        """
+        Process planning phase response (Stage 1: Plan + Literature Search).
+
+        Args:
+            response: Response text from Claude containing <PLAN> and optional <OPENALEX>
+            iteration: Current iteration number
+        """
+        self.write_log(f"\n{'='*60}\nITERATION {iteration} - PLANNING PHASE\n{'='*60}")
+        self.write_log(f"Response:\n{response}\n")
+
+        # Extract plan
+        self.current_plan = extract_plan(response)
+        if self.current_plan:
+            self.write_log(f"✓ Plan extracted: {self.current_plan[:100]}...")
+            self.write_plan(iteration, self.current_plan)
+        else:
+            self.write_log("✗ No plan found in response")
+            self.current_plan = "No plan provided"
+
+        # Process literature search if present
+        self.process_openalex(response, role='researcher')
+
+    def process_code_response(self, response: str, iteration: int) -> None:
+        """
+        Process code generation phase response (Stage 2: Code Generation + Execution).
+
+        Args:
+            response: Response text from Claude containing <PYTHON>
+            iteration: Current iteration number
+        """
+        self.write_log(f"\n{'='*60}\nITERATION {iteration} - CODE GENERATION PHASE\n{'='*60}")
+        self.write_log(f"Response:\n{response}\n")
+
+        # Extract and execute code
+        python_code = extract_python_code(response)
+        if python_code:
+            self.write_log("✓ Found Python code block")
+
+            with open(self.python_file, 'w', encoding='utf-8') as f:
+                f.write(python_code)
+
+            exec_result = execute_code(python_code, self.output_dir)
+            output_limit = CONFIG['execution']['output_limit']
+            if exec_result['success']:
+                self.write_log("✓ Code executed successfully")
+                self.last_execution_output = exec_result['output'][:output_limit]
+            else:
+                self.write_log("✗ Code execution failed")
+                self.last_execution_output = exec_result['output'][:output_limit]
+
+            self.write_log(f"Output:\n{self.last_execution_output}")
+        else:
+            self.write_log("✗ No code found in response")
+            self.last_execution_output = "No code executed this iteration"
+
+    def process_latex_response(self, response: str, iteration: int) -> None:
+        """
+        Process LaTeX generation phase response (Stage 3: LaTeX Generation).
+
+        Args:
+            response: Response text from Claude containing <LATEX>
+            iteration: Current iteration number
+        """
+        self.write_log(f"\n{'='*60}\nITERATION {iteration} - LATEX GENERATION PHASE\n{'='*60}")
+        self.write_log(f"Response:\n{response}\n")
+
+        # Extract and save LaTeX
+        latex_content = extract_latex_content(response)
+        if latex_content:
+            with open(self.latex_file, 'w', encoding='utf-8') as f:
+                f.write(latex_content)
+            self.write_log("✓ LaTeX file updated")
+        else:
+            self.write_log("✗ No LaTeX content found in response")
+
     def write_log(self, entry: str) -> None:
         """
         Append entry to session log.

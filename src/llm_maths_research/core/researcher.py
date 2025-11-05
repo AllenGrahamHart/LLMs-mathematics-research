@@ -368,6 +368,111 @@ class ScaffoldedResearcher:
 
         return (static_content, dynamic_content)
 
+    def build_generator_prompt_for_stage(self, iteration: int, state: Dict[str, str], stage: str) -> tuple:
+        """
+        Build the prompt for a specific generator stage.
+
+        Args:
+            iteration: Current iteration number
+            state: Current session state
+            stage: One of "planning", "coding", "writing"
+
+        Returns:
+            Tuple of (static_content, dynamic_content) where static_content is cacheable
+        """
+        # Define output format instructions for each stage
+        output_formats = {
+            "planning": """<PLAN>
+[detailed plan over the remaining iterations]
+</PLAN>
+
+<OPENALEX>
+[JSON array of API calls - OPTIONAL, only include if you need to search literature]
+</OPENALEX>
+
+You are in the planning stage, ONLY output the <PLAN> and optional <OPENALEX> tags. Do NOT generate code or LaTeX yet.""",
+
+            "coding": """<PYTHON>
+[Python code without markdown code fences - just the raw code]
+</PYTHON>
+
+You are in the coding stage, ONLY output the <PYTHON> tag with your code. The plan and literature search have already been completed.
+You have access to the plan and literature results in the current state below.""",
+
+            "writing": """<LATEX>
+[LaTeX document - must be complete with \\documentclass - without markdown code fences]
+</LATEX>
+
+You are in the writing stage, ONLY output the <LATEX> tag with your complete paper. The plan, literature search, and code execution have already been completed.
+You have access to the plan, literature results, code, and execution output in the current state below."""
+        }
+
+        # Load template from file
+        template_path = os.path.join(os.path.dirname(__file__), "..", "templates", "generator_prompt.txt")
+        with open(template_path, 'r') as f:
+            template = f.read()
+
+        # Split template at the "=== YOUR CURRENT STATE ===" marker
+        split_marker = "=== YOUR CURRENT STATE ==="
+        parts = template.split(split_marker)
+
+        if len(parts) != 2:
+            # Fallback: if template structure changed, return entire prompt as dynamic
+            filled = template.format(
+                problem_statement=self.problem_statement,
+                papers_section=self._build_papers_section(),
+                data_section=self._build_data_section(include_paths=True),
+                code_section=self._build_code_section(),
+                timeout=CONFIG['execution']['timeout'],
+                figure_dpi=CONFIG['output']['figure_dpi'],
+                output_format_instructions=output_formats[stage],
+                iteration=iteration,
+                stage=stage,
+                max_iterations=self.max_iterations,
+                iterations_remaining=self.max_iterations - iteration,
+                latex=state['latex'],
+                compilation=state['compilation'],
+                python=state['python'],
+                execution_output=state['execution_output'],
+                plan=state['plan'],
+                critique=state['critique'],
+                researcher_openalex=state['researcher_openalex'],
+                critic_openalex=state['critic_openalex']
+            )
+            return ("", filled)
+
+        static_template = parts[0]
+        dynamic_template = split_marker + parts[1]
+
+        # Fill in static content (same across all generator calls)
+        static_content = static_template.format(
+            problem_statement=self.problem_statement,
+            papers_section=self._build_papers_section(),
+            data_section=self._build_data_section(include_paths=True),
+            code_section=self._build_code_section(),
+            timeout=CONFIG['execution']['timeout'],
+            figure_dpi=CONFIG['output']['figure_dpi'],
+            output_format_instructions=output_formats[stage]
+        )
+
+        # Fill in dynamic content (changes each iteration)
+        dynamic_content = dynamic_template.format(
+            iteration=iteration,
+            stage=stage,
+            max_iterations=self.max_iterations,
+            iterations_remaining=self.max_iterations - iteration,
+            latex=state['latex'],
+            compilation=state['compilation'],
+            python=state['python'],
+            execution_output=state['execution_output'],
+            plan=state['plan'],
+            critique=state['critique'],
+            researcher_openalex=state['researcher_openalex'],
+            critic_openalex=state['critic_openalex']
+        )
+
+        return (static_content, dynamic_content)
+
     def build_critic_prompt(self, iteration: int, state: Dict[str, str], generator_response: str) -> tuple:
         """
         Build the prompt for the critic phase, split into static (cacheable) and dynamic parts.
@@ -517,27 +622,70 @@ In addition to your critique - please complete this survey:
                 # Clear flag so we don't skip generator in subsequent iterations
                 self.resume_at_critic = None
             else:
-                # GENERATOR PHASE
-                print("\n[GENERATOR]")
-                static_content, dynamic_content = self.build_generator_prompt(self.current_iteration, state)
+                # GENERATOR PHASE - Split into 3 stages
+
+                # STAGE 1: PLANNING + LITERATURE SEARCH
+                print("\n[GENERATOR - Stage 1: Planning & Literature Search]")
+                static_content, dynamic_content = self.build_generator_prompt_for_stage(
+                    self.current_iteration, state, "planning"
+                )
 
                 if self.use_cache:
-                    generator_response = self.session.call_claude(
+                    planning_response = self.session.call_claude(
                         prompt=dynamic_content,
                         cache_static_content=True,
                         static_content=static_content
                     )
                 else:
-                    # No caching - combine prompts
-                    generator_response = self.session.call_claude(static_content + dynamic_content)
+                    planning_response = self.session.call_claude(static_content + dynamic_content)
 
-                # Process generator response
-                self.session.process_response(generator_response, self.current_iteration)
+                # Process planning response (extracts plan and runs literature search)
+                self.session.process_planning_response(planning_response, self.current_iteration)
 
-                # Process OpenAlex calls from generator
-                self.session.process_openalex(generator_response, role='researcher')
+                # STAGE 2: CODE GENERATION + EXECUTION
+                print("\n[GENERATOR - Stage 2: Code Generation & Execution]")
+                # Get updated state with plan and literature results
+                state = self.session.get_state()
+                static_content, dynamic_content = self.build_generator_prompt_for_stage(
+                    self.current_iteration, state, "coding"
+                )
 
-                # Save generator response for potential resume at critic
+                if self.use_cache:
+                    code_response = self.session.call_claude(
+                        prompt=dynamic_content,
+                        cache_static_content=True,
+                        static_content=static_content
+                    )
+                else:
+                    code_response = self.session.call_claude(static_content + dynamic_content)
+
+                # Process code response (extracts and executes code)
+                self.session.process_code_response(code_response, self.current_iteration)
+
+                # STAGE 3: LATEX GENERATION
+                print("\n[GENERATOR - Stage 3: LaTeX Generation]")
+                # Get updated state with execution results
+                state = self.session.get_state()
+                static_content, dynamic_content = self.build_generator_prompt_for_stage(
+                    self.current_iteration, state, "writing"
+                )
+
+                if self.use_cache:
+                    latex_response = self.session.call_claude(
+                        prompt=dynamic_content,
+                        cache_static_content=True,
+                        static_content=static_content
+                    )
+                else:
+                    latex_response = self.session.call_claude(static_content + dynamic_content)
+
+                # Process latex response (extracts and saves LaTeX)
+                self.session.process_latex_response(latex_response, self.current_iteration)
+
+                # Combine all three responses for the generator response log
+                generator_response = f"=== PLANNING STAGE ===\n{planning_response}\n\n=== CODING STAGE ===\n{code_response}\n\n=== WRITING STAGE ===\n{latex_response}"
+
+                # Save combined generator response for potential resume at critic
                 self.session.write_generator_response(self.current_iteration, generator_response)
 
             # CRITIC PHASE

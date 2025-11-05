@@ -58,6 +58,31 @@ Available functions:
 
 Use this strategically to verify critical claims before marking them as errors.
 
+CODE EXECUTION CONTEXT:
+When evaluating Python code, be aware that the research framework provides a pre-configured execution environment:
+
+IMPORTANT: The variable `output_dir` is PRE-DEFINED by the framework. DO NOT flag it as an undefined variable.
+- The framework automatically injects `output_dir` before code execution
+- It points to the session output directory (e.g., outputs/session_name/)
+- Code should use: os.path.join(output_dir, "filename") to save files
+- DO NOT criticize code for using `output_dir` without defining it - this is intentional
+
+Data files are pre-copied to output_dir/data/:
+- Code should access data via: os.path.join(output_dir, "data", "filename")
+- DO NOT criticize code for not defining data paths - they are provided by the framework
+
+Figures are automatically saved to the correct location:
+- Code uses: plt.savefig("figure_name.png", dpi=300)
+- The framework handles the output directory automatically
+- LaTeX can reference figures directly: \includegraphics{{figure_name.png}}
+
+Available pip packages in execution environment:
+- numpy, scipy, pandas, matplotlib, seaborn
+- networkx, scikit-learn
+- torch, torchvision
+- transformers, datasets, tiktoken (for ML experiments)
+- modal (for GPU computation)
+
 ERROR SEVERITY LEVELS - with examples:
 
 FATAL (must be fixed or removed):

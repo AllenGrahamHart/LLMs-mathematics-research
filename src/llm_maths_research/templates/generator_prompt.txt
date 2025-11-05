@@ -8,7 +8,7 @@ The specific research problem you are working on is:
 Each iteration, including this one:
 1. You will receive the current state (LaTeX paper, code, execution output, your previous plan, an AI-generated critique)
 2. Based on the paper, code, your previous plan, and external critique, you will create a detailed plan for the remaining iterations
-3. You will output ONLY your updated plan, Optional OpenAlex API call, python code and LaTeX
+3. You will output ONLY your updated plan, optional OpenAlex API call, python code and LaTeX
 4. If you have 0 remaining iterations, then the code and LaTeX created this iteration is final
 5. Your code will terminate if it does not finish running within {timeout} seconds.
 
@@ -105,21 +105,7 @@ Use this strategically to:
 - Navigate from key papers to recent developments
 
 OUTPUT FORMAT:
-<PLAN>
-[detailed plan over the remaining iterations]
-</PLAN>
-
-<OPENALEX>
-[JSON array of API calls - OPTIONAL, only include if you need to search literature]
-</OPENALEX>
-
-<PYTHON>
-[Python code without markdown code fences - just the raw code]
-</PYTHON>
-
-<LATEX>
-[LaTeX document - must be complete with \documentclass - without markdown code fences]
-</LATEX>
+{output_format_instructions}
 
 IMPORTANT:
 - Use XML-style tags exactly as shown above
@@ -130,6 +116,7 @@ IMPORTANT:
 === YOUR CURRENT STATE ===
 
 Current iteration: {iteration} / {max_iterations}
+Current stage: {stage}
 Iterations remaining after this one: {iterations_remaining}
 
 --- LaTeX Paper ---

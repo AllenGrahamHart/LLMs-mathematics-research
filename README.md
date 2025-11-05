@@ -28,9 +28,22 @@ The system manages the full research workflow including code execution, LaTeX co
 - **Structured Response Format**: XML-based parsing for robust extraction of code, LaTeX, and plans
 - **Comprehensive Logging**: Tracks all iterations, critiques, plans, and metrics
 - **Cost Tracking**: Monitors API usage and costs
-- **Unit Tests**: 76 tests covering core functionality, code loading, XML extraction, and literature integration
+- **Unit Tests**: 74 tests covering core functionality, code loading, XML extraction, literature integration, and three-stage architecture
 - **Configurable**: YAML-based configuration for timeouts, models, and limits
 - **Prompt Caching**: Intelligent 1-hour caching reduces API costs by ~40%
+- **Three-Stage Generator**: Sequential planning → coding → writing for proper information flow
+
+## Three-Stage Generator Architecture
+
+The generator phase uses a novel three-stage approach where each iteration consists of three sequential API calls:
+
+1. **Planning Stage**: Creates detailed plan and performs optional literature search
+2. **Coding Stage**: Generates and executes Python code (with access to plan and literature)
+3. **Writing Stage**: Generates LaTeX paper (with access to plan, literature, code, and execution results)
+
+**Key Benefit**: The LaTeX paper can now reference actual execution results instead of anticipated ones, ensuring papers accurately report real findings.
+
+**Documentation**: See `docs/architecture/THREE_STAGE_IMPLEMENTATION_COMPLETE.md` for full details.
 
 ## Prompt Caching
 
