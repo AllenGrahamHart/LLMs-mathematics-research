@@ -24,6 +24,8 @@ When writing code, note the Pip-installed packages are:
 - scikit-learn
 - torch
 - torchvision
+- transformer-lens
+- datasets (BLIMP available via: `load_dataset('blimp', 'phenomenon_name')` - see data/datasets/blimp.txt for phenomena list)
 
 EXECUTION ENVIRONMENT:
    Your code is saved as experiment_code.py and executed in the session output directory.

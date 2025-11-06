@@ -1,0 +1,43 @@
+BL IMP: The Benchmark of Linguistic Minimal Pairs
+
+BLIMP is a large-scale dataset of linguistic minimal pairs for evaluating language models' grammatical knowledge.
+
+## Loading the Dataset
+
+```python
+from datasets import load_dataset
+
+# Load a specific linguistic phenomenon (67 available)
+dataset = load_dataset('blimp', 'anaphor_gender_agreement')
+# Returns: train split with sentence_good, sentence_bad, field, linguistics_term, etc.
+
+# Or load multiple phenomena
+phenomena = ['determiner_noun_agreement_1', 'subject_verb_agreement_1', 'wh_questions_object_gap']
+datasets = {name: load_dataset('blimp', name) for name in phenomena}
+```
+
+## Available Phenomena (67 total)
+
+**Agreement**: determiner_noun_agreement_*, anaphor_*_agreement, subject_verb_agreement_*, distractor_agreement_*
+**Islands**: adjunct_island, complex_NP_island, wh_island, sentential_subject_island, left_branch_island_*
+**NPI Licensing**: npi_present_*, only_npi_*, sentential_negation_npi_*, matrix_question_npi_*
+**Argument Structure**: transitive, intransitive, causative, inchoative, passive_*, drop_argument
+**Binding**: principle_A_*, anaphor_*
+**Filler-Gap**: wh_questions_*, wh_vs_that_*
+**Ellipsis**: ellipsis_n_bar_*
+**Other**: existential_there_*, tough_vs_raising_*, irregular_*
+
+Each example contains:
+- sentence_good: Grammatically correct sentence
+- sentence_bad: Minimal pair with specific grammatical violation
+- field: Linguistic domain
+- linguistics_term: Specific phenomenon being tested
+- UID: Unique identifier
+
+Perfect for mechanistic interpretability research on:
+- What circuits detect grammatical vs ungrammatical sentences?
+- How do models represent syntactic structure?
+- Where are agreement computations performed?
+- Activation patching to identify critical components
+
+Dataset size: 1,000 examples per phenomenon (67,000 total)

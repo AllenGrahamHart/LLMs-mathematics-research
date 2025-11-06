@@ -7,7 +7,7 @@ TASK:
 1. Evaluate pretrained GPT-2 on multiplication problems of varying difficulty (single-digit through multi-digit)
 2. Analyze accuracy patterns, error types, and failure modes
 3. Generate visualizations showing performance vs difficulty
-4. Write a research paper (4-6 pages) with your findings
+4. Write a research paper with your findings
 
 EVALUATION METHODOLOGY:
 - Generate test sets programmatically (50-100 problems per difficulty level)
