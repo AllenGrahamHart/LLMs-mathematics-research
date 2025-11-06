@@ -49,6 +49,24 @@ The generator phase uses a novel three-stage approach where each iteration consi
 
 The system implements Anthropic's 1-hour prompt caching to significantly reduce API costs during multi-iteration research sessions. By caching static prompt content (problem statements, reference papers, data descriptions), the system achieves approximately 40% cost savings on typical research runs.
 
+### Cache Optimization
+
+The three-stage generator architecture (planning → coding → writing) shares a single cache across all three stages within each iteration. This optimization reduces cache writes from 4 to 2 per iteration:
+
+**Before optimization**:
+- Planning stage: Creates cache (2× cost)
+- Coding stage: Creates different cache (2× cost)
+- Writing stage: Creates different cache (2× cost)
+- Critic stage: Creates cache (2× cost)
+
+**After optimization**:
+- Planning stage: Creates cache (2× cost)
+- Coding stage: **Reads from cache** (0.1× cost, 90% savings)
+- Writing stage: **Reads from cache** (0.1× cost, 90% savings)
+- Critic stage: Creates cache (2× cost)
+
+This is achieved by ensuring all three generator stages share identical static content, with only the output format instructions varying in the dynamic portion.
+
 ### How It Works
 
 Each API call (both generator and critic) is split into two parts:
@@ -63,6 +81,8 @@ Each API call (both generator and critic) is split into two parts:
 
 2. **Dynamic Content (Not Cached)**:
    - Current iteration number
+   - Current stage (planning/coding/writing)
+   - Output format instructions (stage-specific)
    - Latest code and LaTeX
    - Previous execution results
    - Recent critique feedback

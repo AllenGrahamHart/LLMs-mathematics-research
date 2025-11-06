@@ -11,8 +11,10 @@ This script tests that the models can:
 import torch
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import sys
+import pytest
 
 
+@pytest.mark.parametrize("model_name", ['gpt2', 'gpt2-medium'])
 def test_model(model_name: str):
     """Test loading and generating with a GPT-2 model."""
     print(f"\n{'='*70}")

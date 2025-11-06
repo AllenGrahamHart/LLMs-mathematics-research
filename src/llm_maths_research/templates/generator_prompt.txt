@@ -25,26 +25,28 @@ When writing code, note the Pip-installed packages are:
 - torch
 - torchvision
 - transformer-lens
-- datasets (BLIMP available via: `load_dataset('blimp', 'phenomenon_name')` - see data/datasets/blimp.txt for phenomena list)
+- datasets - BLIMP available via: `load_dataset('blimp', 'phenomenon_name')` (use `get_dataset_config_names('blimp')` to list all phenomena)
 
 EXECUTION ENVIRONMENT:
    Your code is saved as experiment_code.py and executed in the session output directory.
    This is the same directory where paper.tex is located.
    Simply save files to the current directory (no path manipulation needed).
 
+   You can save any files (CSVs, pickles, numpy arrays, etc.) to the current directory.
+   Use comments in your code to track what you've saved so you can load it in future iterations.
+
    When saving figures: `plt.savefig("figure_name.png", dpi={figure_dpi})`
-   When saving CSVs: `df.to_csv("results.csv", index=False)`
    Then reference in LaTeX: \includegraphics[width=0.95\textwidth]{{figure_name.png}}
 
 MODAL GPU INTEGRATION (when required):
    If you need GPU computation, use Modal with this pattern:
 
    1. Modal functions should be PURE COMPUTATION - they take data in and return data out
-      - NO file I/O inside Modal functions (no pd.to_csv(), no plt.savefig(), no open())
+      - NO file I/O inside Modal functions (no plt.savefig(), no open())
       - Return Python data structures (lists, dicts, numpy arrays)
 
-   2. ALL file operations (CSV, PNG, JSON) must happen LOCALLY
-      - Save files to current directory: df.to_csv("results.csv")
+   2. ALL file operations must happen LOCALLY
+      - Save figures to current directory
       - The code runs in the session output directory alongside paper.tex
 
    3. Use a SINGLE Modal session when possible to avoid overhead
@@ -82,7 +84,7 @@ MODAL GPU INTEGRATION (when required):
        "matplotlib"
    )
 
-   @app.function(gpu="T4", timeout=1800, image=image)
+   @app.function(gpu="T4", timeout={modal_timeout}, image=image)
    def run_model_inference(problems):
        from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
@@ -103,9 +105,6 @@ MODAL GPU INTEGRATION (when required):
            results = run_model_inference.remote(problems)
 
        # ALL file I/O happens locally (in current directory)
-       df = pd.DataFrame(results)
-       df.to_csv("results.csv", index=False)
-
        plt.plot(df['values'])
        plt.savefig("plot.png", dpi={figure_dpi})
    ```
@@ -184,6 +183,12 @@ Use this strategically to:
 - Find related work to position your contributions
 - Navigate from key papers to recent developments
 
+=== YOUR CURRENT STATE ===
+
+Current iteration: {iteration} / {max_iterations}
+Current stage: {stage}
+Iterations remaining after this one: {iterations_remaining}
+
 OUTPUT FORMAT:
 {output_format_instructions}
 
@@ -192,12 +197,6 @@ IMPORTANT:
 - Do NOT use markdown headers (## PLAN) or code fences (```python)
 - Put raw code/LaTeX directly between the tags
 - OPENALEX block is optional - only include if doing literature search this iteration
-
-=== YOUR CURRENT STATE ===
-
-Current iteration: {iteration} / {max_iterations}
-Current stage: {stage}
-Iterations remaining after this one: {iterations_remaining}
 
 --- LaTeX Paper ---
 {latex}

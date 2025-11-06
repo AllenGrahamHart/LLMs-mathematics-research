@@ -305,21 +305,26 @@ class TestResearcherStageMethods:
 
         state = researcher.session.get_state()
 
-        # Get static content for all three stages
-        static1, _ = researcher.build_generator_prompt_for_stage(1, state, "planning")
-        static2, _ = researcher.build_generator_prompt_for_stage(1, state, "coding")
-        static3, _ = researcher.build_generator_prompt_for_stage(1, state, "writing")
+        # Get static and dynamic content for all three stages
+        static1, dynamic1 = researcher.build_generator_prompt_for_stage(1, state, "planning")
+        static2, dynamic2 = researcher.build_generator_prompt_for_stage(1, state, "coding")
+        static3, dynamic3 = researcher.build_generator_prompt_for_stage(1, state, "writing")
 
-        # Static content should be identical except for output format instructions
-        # Check that problem statement is in all static content
+        # Static content should be IDENTICAL across all stages (for prompt caching)
+        assert static1 == static2 == static3
+
+        # Check that problem statement is in static content
         assert "Test problem statement for caching" in static1
-        assert "Test problem statement for caching" in static2
-        assert "Test problem statement for caching" in static3
 
-        # But output format instructions should differ
-        assert "<PLAN>" in static1
-        assert "<PYTHON>" in static2
-        assert "<LATEX>" in static3
+        # Output format instructions should be in DYNAMIC content and differ by stage
+        assert "<PLAN>" in dynamic1
+        assert "<PYTHON>" in dynamic2
+        assert "<LATEX>" in dynamic3
+
+        # Verify output format instructions are NOT in static content
+        assert "<PLAN>" not in static1
+        assert "<PYTHON>" not in static1
+        assert "<LATEX>" not in static1
 
     def test_stage_name_displayed_in_prompt(self, temp_outputs_dir, monkeypatch):
         """Test that stage name is displayed in the dynamic prompt."""

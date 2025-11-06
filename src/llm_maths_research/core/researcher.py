@@ -324,6 +324,7 @@ class ScaffoldedResearcher:
                 code_section=self._build_code_section(),
                 timeout=CONFIG['execution']['timeout'],
                 figure_dpi=CONFIG['output']['figure_dpi'],
+                modal_timeout=CONFIG['modal']['timeout'],
                 iteration=iteration,
                 max_iterations=self.max_iterations,
                 iterations_remaining=self.max_iterations - iteration,
@@ -348,7 +349,8 @@ class ScaffoldedResearcher:
             data_section=self._build_data_section(include_paths=True),
             code_section=self._build_code_section(),
             timeout=CONFIG['execution']['timeout'],
-            figure_dpi=CONFIG['output']['figure_dpi']
+            figure_dpi=CONFIG['output']['figure_dpi'],
+            modal_timeout=CONFIG['modal']['timeout']
         )
 
         # Fill in dynamic content (changes each iteration)
@@ -425,11 +427,12 @@ You have access to the plan, literature results, code, and execution output in t
                 code_section=self._build_code_section(),
                 timeout=CONFIG['execution']['timeout'],
                 figure_dpi=CONFIG['output']['figure_dpi'],
-                output_format_instructions=output_formats[stage],
+                modal_timeout=CONFIG['modal']['timeout'],
                 iteration=iteration,
                 stage=stage,
                 max_iterations=self.max_iterations,
                 iterations_remaining=self.max_iterations - iteration,
+                output_format_instructions=output_formats[stage],
                 latex=state['latex'],
                 compilation=state['compilation'],
                 python=state['python'],
@@ -452,7 +455,7 @@ You have access to the plan, literature results, code, and execution output in t
             code_section=self._build_code_section(),
             timeout=CONFIG['execution']['timeout'],
             figure_dpi=CONFIG['output']['figure_dpi'],
-            output_format_instructions=output_formats[stage]
+            modal_timeout=CONFIG['modal']['timeout']
         )
 
         # Fill in dynamic content (changes each iteration)
@@ -461,6 +464,7 @@ You have access to the plan, literature results, code, and execution output in t
             stage=stage,
             max_iterations=self.max_iterations,
             iterations_remaining=self.max_iterations - iteration,
+            output_format_instructions=output_formats[stage],
             latex=state['latex'],
             compilation=state['compilation'],
             python=state['python'],
@@ -506,7 +510,7 @@ In addition to your critique - please complete this survey:
 
         # Split template right after papers/data section, before iteration info
         # The iteration numbers change each iteration and should NOT be cached
-        split_marker = "Your critique is part of an AI researcher-critic agentic loop"
+        split_marker = "=== CURRENT WORK TO CRITIQUE ==="
         parts = template.split(split_marker)
 
         if len(parts) != 2:

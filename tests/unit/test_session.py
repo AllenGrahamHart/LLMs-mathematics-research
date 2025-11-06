@@ -60,7 +60,7 @@ class TestSessionInitialization:
         assert session.session_name == "my_session"
         assert session.output_dir == "outputs/my_session"
         assert session.latex_file == "outputs/my_session/paper.tex"
-        assert session.python_file == "outputs/my_session/code.py"
+        assert session.python_file == "outputs/my_session/experiment_code.py"
         assert session.log_file == "outputs/my_session/session_log.txt"
         assert session.data_dir == "outputs/my_session/data"
 
