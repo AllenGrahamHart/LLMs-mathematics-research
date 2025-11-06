@@ -658,6 +658,8 @@ The code execution environment includes:
 - scikit-learn
 - torch (PyTorch)
 - torchvision
+- transformer-lens (for mechanistic interpretability)
+- datasets (for loading HuggingFace datasets like BLIMP)
 - modal (for GPU computation)
 
 ## Available Datasets
@@ -666,6 +668,49 @@ Pre-downloaded datasets in `data/datasets/`:
 - **MNIST**: Handwritten digits (60k train, 10k test, 28×28 grayscale images)
   - Use with `--data mnist` to include in experiments
   - See `data/datasets/mnist.txt` for loading instructions
+- **BLIMP**: 67 linguistic minimal pair datasets for evaluating grammatical knowledge
+  - Load dynamically via HuggingFace: `load_dataset('blimp', 'phenomenon_name')`
+  - See `data/datasets/blimp.txt` for the full list of phenomena
+
+## Mechanistic Interpretability Research
+
+The system supports mechanistic interpretability research using transformer-lens and the BLIMP dataset.
+
+### Available Tools
+
+**transformer-lens**: Analyze transformer model internals
+- Hook access to activations, attention patterns, residual stream components
+- Compatible with GPT-2, Pythia, and other HuggingFace models
+- Supports activation patching, circuit analysis, and feature visualization
+
+**BLIMP Dataset**: 67 linguistic minimal pair datasets
+- Each dataset has 1,000 examples (sentence_good vs sentence_bad)
+- Covers: agreement, islands, NPI licensing, binding, filler-gap, ellipsis
+- Perfect for evaluating grammatical knowledge and finding circuits
+
+### Example Usage
+
+```bash
+# Run mechanistic interpretability research
+python run_experiment.py \
+  --problem problems/open_mechanistic_interpretability.txt \
+  --papers placeholder \
+  --max-iterations 30
+```
+
+The AI researcher will:
+1. Formulate a mechanistic interpretability research question
+2. Design experiments using transformer-lens and/or BLIMP
+3. Use Modal GPUs for efficient model analysis
+4. Generate visualizations and write a research paper
+
+### Example Research Questions
+
+The system encourages autonomous exploration of questions like:
+- What circuits detect subject-verb agreement violations?
+- How do attention heads implement coreference resolution?
+- Where are syntactic structures represented in the residual stream?
+- How do models handle long-distance dependencies?
 
 ## License
 
