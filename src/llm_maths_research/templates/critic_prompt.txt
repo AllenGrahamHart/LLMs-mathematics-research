@@ -80,11 +80,14 @@ DO NOT criticize code for using these paths - they are the correct framework str
 DO NOT suggest using output_dir variable - direct paths like "artifacts/figures/" are preferred.
 
 Available pip packages in execution environment:
-- numpy, scipy, pandas, matplotlib, seaborn
+- numpy, scipy, pandas
+- matplotlib, seaborn
 - networkx, scikit-learn
 - torch, torchvision
-- transformers, datasets, tiktoken (for ML experiments)
-- modal (for GPU computation)
+- transformer-lens, datasets, tiktoken
+- jax, cupy
+- sympy, einops, cvxpy, numba
+- modal
 
 ERROR SEVERITY LEVELS - with examples:
 

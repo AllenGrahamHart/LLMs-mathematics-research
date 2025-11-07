@@ -15,17 +15,15 @@ Each iteration, including this one:
 7. Your code will terminate if it does not finish running within {timeout} seconds.
 
 When writing code, note the Pip-installed packages are:
-- numpy
-- scipy
-- pandas
-- matplotlib
-- seaborn
-- networkx
-- scikit-learn
-- torch
-- torchvision
+- numpy, scipy, pandas
+- matplotlib, seaborn
+- networkx, scikit-learn
+- torch, torchvision
 - transformer-lens
-- datasets - BLIMP available via: `load_dataset('blimp', 'phenomenon_name')` (use `get_dataset_config_names('blimp')` to list all phenomena)
+- datasets (BLIMP available via: `load_dataset('blimp', 'phenomenon_name')`)
+- jax, cupy
+- sympy, einops, cvxpy, numba
+- modal
 
 EXECUTION ENVIRONMENT:
    Your code is saved as experiment_code.py and executed in the session root directory.

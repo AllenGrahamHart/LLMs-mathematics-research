@@ -683,18 +683,27 @@ ruff check .
 ## Available Python Packages
 
 The code execution environment includes:
-- numpy
-- scipy
-- pandas
-- matplotlib
-- seaborn
-- networkx
-- scikit-learn
-- torch (PyTorch)
-- torchvision
-- transformer-lens (for mechanistic interpretability)
-- datasets (for loading HuggingFace datasets like BLIMP)
-- modal (for GPU computation)
+
+**Core Scientific Computing:**
+- numpy, scipy, pandas
+- matplotlib, seaborn
+- networkx, scikit-learn
+
+**Deep Learning:**
+- torch, torchvision
+- transformer-lens (mechanistic interpretability)
+- datasets (HuggingFace datasets including BLIMP)
+
+**GPU-Accelerated Computing:**
+- jax (scientific computing with autodiff and GPU support)
+- cupy (NumPy-compatible GPU arrays)
+- modal (serverless GPU computation)
+
+**Advanced Mathematics:**
+- sympy (symbolic mathematics)
+- cvxpy (convex optimization)
+- numba (JIT compilation)
+- einops (tensor operations)
 
 ## Available Datasets
 
