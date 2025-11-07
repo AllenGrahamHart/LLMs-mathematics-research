@@ -56,7 +56,7 @@ PROVIDER_DEFAULTS = {
     'xai': {
         'model': 'grok-4-0709',
         'display_name': 'Grok 4',
-        'max_tokens': 32768,  # Output limit; 256K input context window
+        'max_tokens': 128000,  # Output limit; 256K input context window
         'thinking_budget': None,
         'supports_thinking': False,
         'supports_caching': True,  # 75% cost savings on cached tokens
@@ -70,19 +70,19 @@ PROVIDER_DEFAULTS = {
     },
 
     'moonshot': {
-        'model': 'moonshot-v1-128k',
-        'display_name': 'Kimi (128k)',
-        'max_tokens': 16000,
+        'model': 'kimi-k2-thinking',
+        'display_name': 'Kimi K2 Thinking',
+        'max_tokens': 128000,  # Output limit; 256K input context window
         'thinking_budget': None,
-        'supports_thinking': False,
-        'supports_caching': False,
+        'supports_thinking': True,  # Extended thinking capabilities
+        'supports_caching': True,  # Automatic token caching
         'costs': {
-            'input_per_million': 1.0,
-            'output_per_million': 1.0,
-            'cache_write_multiplier': 1.0,
-            'cache_read_multiplier': 1.0,
+            'input_per_million': 0.60,
+            'output_per_million': 2.50,
+            'cache_write_multiplier': 1.0,  # Automatic caching
+            'cache_read_multiplier': 0.1,  # Estimated 90% savings (typical for auto-caching)
         },
-        'notes': 'Very cost-effective. Excellent for budget-conscious research.',
+        'notes': 'Very cost-effective thinking model. 256K context with automatic caching for budget-conscious research.',
     },
 }
 

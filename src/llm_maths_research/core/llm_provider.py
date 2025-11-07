@@ -652,6 +652,7 @@ class MoonshotProvider(LLMProvider):
     def get_model_display_name(self) -> str:
         """Get display name for Kimi models."""
         model_map = {
+            "kimi-k2-thinking": "Kimi K2 Thinking",
             "moonshot-v1-8k": "Kimi (8k)",
             "moonshot-v1-32k": "Kimi (32k)",
             "moonshot-v1-128k": "Kimi (128k)",
