@@ -309,60 +309,14 @@ class ResearchSession:
             try:
                 start_time = time.time()
 
-                # For Anthropic with streaming, we need to handle the stream context manager properly
-                provider_name = CONFIG['api'].get('provider', 'anthropic')
-
-                if provider_name == 'anthropic':
-                    # Use Anthropic's streaming which provides token counts
-                    import anthropic
-                    params = {
-                        "model": self.provider.model,
-                        "max_tokens": CONFIG['api']['max_tokens'],
-                        "messages": messages
-                    }
-
-                    if thinking_budget:
-                        params["thinking"] = {"type": "enabled", "budget_tokens": thinking_budget}
-
-                    if extra_headers:
-                        params["extra_headers"] = extra_headers
-
-                    # Use the underlying Anthropic client directly for streaming
-                    with self.provider.client.messages.stream(**params) as stream:
-                        for text in stream.text_stream:
-                            response_text += text
-
-                        # Get final message with usage stats
-                        final_message = stream.get_final_message()
-
-                        # Create LLMResponse from final message
-                        from .llm_provider import LLMResponse
-                        response = LLMResponse(
-                            content=response_text,
-                            input_tokens=final_message.usage.input_tokens,
-                            output_tokens=final_message.usage.output_tokens,
-                            cache_creation_tokens=getattr(final_message.usage, 'cache_creation_input_tokens', 0),
-                            cache_read_tokens=getattr(final_message.usage, 'cache_read_input_tokens', 0),
-                            stop_reason=final_message.stop_reason,
-                            model=final_message.model,
-                        )
-                else:
-                    # For non-Anthropic providers, use streaming then make one call for token counts
-                    for text_chunk in self.provider.create_message_stream(
-                        messages=messages,
-                        max_tokens=CONFIG['api']['max_tokens'],
-                        thinking_budget=thinking_budget,
-                        extra_headers=extra_headers,
-                    ):
-                        response_text += text_chunk
-
-                    # Get token counts with a single non-streaming call
-                    response = self.provider.create_message(
-                        messages=messages,
-                        max_tokens=CONFIG['api']['max_tokens'],
-                        thinking_budget=thinking_budget,
-                        extra_headers=extra_headers,
-                    )
+                # Make a single API call for all providers
+                response = self.provider.create_message(
+                    messages=messages,
+                    max_tokens=CONFIG['api']['max_tokens'],
+                    thinking_budget=thinking_budget,
+                    extra_headers=extra_headers,
+                )
+                response_text = response.content
 
                 end_time = time.time()
                 break
