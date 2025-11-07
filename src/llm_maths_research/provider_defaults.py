@@ -54,19 +54,19 @@ PROVIDER_DEFAULTS = {
     },
 
     'xai': {
-        'model': 'grok-beta',
-        'display_name': 'Grok Beta',
+        'model': 'grok-4-0709',
+        'display_name': 'Grok 4',
         'max_tokens': 32768,
         'thinking_budget': None,
         'supports_thinking': False,
-        'supports_caching': False,
+        'supports_caching': True,  # 75% cost savings on cached tokens
         'costs': {
-            'input_per_million': 5.0,
+            'input_per_million': 3.0,
             'output_per_million': 15.0,
-            'cache_write_multiplier': 1.0,
-            'cache_read_multiplier': 1.0,
+            'cache_write_multiplier': 1.0,  # Full price for cache writes
+            'cache_read_multiplier': 0.25,  # $0.75/M (75% savings from $3.00)
         },
-        'notes': 'Large context window. Good for research with extensive background material.',
+        'notes': 'Latest Grok model. Large context window with caching support for cost-effective research.',
     },
 
     'moonshot': {

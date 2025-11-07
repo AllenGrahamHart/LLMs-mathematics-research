@@ -547,6 +547,7 @@ class xAIProvider(LLMProvider):
     def get_model_display_name(self) -> str:
         """Get display name for Grok models."""
         model_map = {
+            "grok-4-0709": "Grok 4",
             "grok-beta": "Grok Beta",
             "grok-vision-beta": "Grok Vision Beta",
         }
