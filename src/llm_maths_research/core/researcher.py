@@ -2,7 +2,7 @@
 
 import os
 import shutil
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from .session import ResearchSession, SEPARATOR_WIDTH
 from ..config import CONFIG
 from ..utils.xml_extraction import extract_critique
@@ -74,22 +74,20 @@ class ScaffoldedResearcher:
         elif paper_paths:
             # Full paths provided (for pip users)
             for paper_path in paper_paths:
-                if os.path.exists(paper_path):
-                    paper_name = os.path.splitext(os.path.basename(paper_path))[0]
-                    with open(paper_path, 'r') as f:
-                        self.papers_content[paper_name] = f.read()
-                else:
-                    print(f"Warning: Paper file not found: {paper_path}")
+                if not os.path.exists(paper_path):
+                    raise FileNotFoundError(f"Paper file not found: {paper_path}")
+                paper_name = os.path.splitext(os.path.basename(paper_path))[0]
+                with open(paper_path, 'r') as f:
+                    self.papers_content[paper_name] = f.read()
         elif paper_ids:
             # Paper IDs provided (backward compatible - looks in problems/papers/)
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
             for paper_id in paper_ids:
                 paper_path = os.path.join(project_root, "problems", "papers", f"{paper_id}.txt")
-                if os.path.exists(paper_path):
-                    with open(paper_path, 'r') as f:
-                        self.papers_content[paper_id] = f.read()
-                else:
-                    print(f"Warning: Paper file not found: {paper_path}")
+                if not os.path.exists(paper_path):
+                    raise FileNotFoundError(f"Paper file not found: {paper_path}")
+                with open(paper_path, 'r') as f:
+                    self.papers_content[paper_id] = f.read()
 
         # Load and copy data files with priority: data_paths > data_ids
         self.data_files = {}
@@ -105,36 +103,36 @@ class ScaffoldedResearcher:
                            for data_id in data_ids]
 
         for data_path, original_id in data_sources:
-            if os.path.exists(data_path):
-                # Copy file or directory to session data directory
-                filename = os.path.basename(data_path)
-                dest_path = os.path.join(self.session.data_dir, filename)
+            if not os.path.exists(data_path):
+                raise FileNotFoundError(f"Data file not found: {data_path}")
 
-                if os.path.isdir(data_path):
-                    # Copy entire directory
-                    shutil.copytree(data_path, dest_path)
-                else:
-                    # Copy single file
-                    shutil.copy(data_path, dest_path)
+            # Copy file or directory to session data directory
+            filename = os.path.basename(data_path)
+            dest_path = os.path.join(self.session.data_dir, filename)
 
-                # Try to load optional description file
-                # Skip if data file is already .txt (rare edge case - would read itself as description)
-                description = None
-                if not data_path.endswith('.txt'):
-                    desc_path = os.path.splitext(data_path)[0] + ".txt"
-                    if os.path.exists(desc_path):
-                        with open(desc_path, 'r') as f:
-                            description = f.read()
-
-                self.data_files[filename] = {
-                    'original_id': original_id,
-                    'filename': filename,
-                    'description': description
-                }
-
-                print(f"✓ Loaded data {'directory' if os.path.isdir(data_path) else 'file'}: {original_id} → {filename}")
+            if os.path.isdir(data_path):
+                # Copy entire directory
+                shutil.copytree(data_path, dest_path)
             else:
-                print(f"Warning: Data file not found: {data_path}")
+                # Copy single file
+                shutil.copy(data_path, dest_path)
+
+            # Try to load optional description file
+            # Skip if data file is already .txt (rare edge case - would read itself as description)
+            description = None
+            if not data_path.endswith('.txt'):
+                desc_path = os.path.splitext(data_path)[0] + ".txt"
+                if os.path.exists(desc_path):
+                    with open(desc_path, 'r') as f:
+                        description = f.read()
+
+            self.data_files[filename] = {
+                'original_id': original_id,
+                'filename': filename,
+                'description': description
+            }
+
+            print(f"✓ Loaded data {'directory' if os.path.isdir(data_path) else 'file'}: {original_id} → {filename}")
 
         # Load code contexts with priority: code_contexts dict > code_paths > code_ids
         self.code_content = {}
@@ -144,63 +142,67 @@ class ScaffoldedResearcher:
         elif code_paths:
             # Full paths provided (for pip users)
             for code_path in code_paths:
-                if os.path.exists(code_path) and os.path.isdir(code_path):
-                    code_name = os.path.basename(code_path)
-                    code_data = {}
+                if not os.path.exists(code_path):
+                    raise FileNotFoundError(f"Code context directory not found: {code_path}")
+                if not os.path.isdir(code_path):
+                    raise ValueError(f"Code context path must be a directory: {code_path}")
 
-                    # Load description.txt
-                    desc_path = os.path.join(code_path, "description.txt")
-                    if os.path.exists(desc_path):
-                        with open(desc_path, 'r') as f:
-                            code_data['description'] = f.read()
+                code_name = os.path.basename(code_path)
+                code_data = {}
 
-                    # Load code.txt
-                    code_file_path = os.path.join(code_path, "code.txt")
-                    if os.path.exists(code_file_path):
-                        with open(code_file_path, 'r') as f:
-                            code_data['code'] = f.read()
+                # Load description.txt
+                desc_path = os.path.join(code_path, "description.txt")
+                if os.path.exists(desc_path):
+                    with open(desc_path, 'r') as f:
+                        code_data['description'] = f.read()
 
-                    if code_data:
-                        self.code_content[code_name] = code_data
-                        print(f"✓ Loaded code context: {code_name}")
-                    else:
-                        print(f"Warning: No code files found in {code_path}")
-                else:
-                    print(f"Warning: Code context directory not found: {code_path}")
+                # Load code.txt
+                code_file_path = os.path.join(code_path, "code.txt")
+                if os.path.exists(code_file_path):
+                    with open(code_file_path, 'r') as f:
+                        code_data['code'] = f.read()
+
+                if not code_data:
+                    raise FileNotFoundError(f"No code files (description.txt or code.txt) found in {code_path}")
+
+                self.code_content[code_name] = code_data
+                print(f"✓ Loaded code context: {code_name}")
         elif code_ids:
             # Code IDs provided (backward compatible - looks in problems/code/)
             project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
             for code_id in code_ids:
                 code_dir = os.path.join(project_root, "problems", "code", code_id)
-                if os.path.exists(code_dir) and os.path.isdir(code_dir):
-                    code_data = {}
+                if not os.path.exists(code_dir):
+                    raise FileNotFoundError(f"Code context directory not found: {code_dir}")
+                if not os.path.isdir(code_dir):
+                    raise ValueError(f"Code context path must be a directory: {code_dir}")
 
-                    # Load description.txt
-                    desc_path = os.path.join(code_dir, "description.txt")
-                    if os.path.exists(desc_path):
-                        with open(desc_path, 'r') as f:
-                            code_data['description'] = f.read()
+                code_data = {}
 
-                    # Load code.txt
-                    code_file_path = os.path.join(code_dir, "code.txt")
-                    if os.path.exists(code_file_path):
-                        with open(code_file_path, 'r') as f:
-                            code_data['code'] = f.read()
+                # Load description.txt
+                desc_path = os.path.join(code_dir, "description.txt")
+                if os.path.exists(desc_path):
+                    with open(desc_path, 'r') as f:
+                        code_data['description'] = f.read()
 
-                    if code_data:
-                        self.code_content[code_id] = code_data
-                        print(f"✓ Loaded code context: {code_id}")
-                    else:
-                        print(f"Warning: No code files found in {code_dir}")
-                else:
-                    print(f"Warning: Code context directory not found: {code_dir}")
+                # Load code.txt
+                code_file_path = os.path.join(code_dir, "code.txt")
+                if os.path.exists(code_file_path):
+                    with open(code_file_path, 'r') as f:
+                        code_data['code'] = f.read()
+
+                if not code_data:
+                    raise FileNotFoundError(f"No code files (description.txt or code.txt) found in {code_dir}")
+
+                self.code_content[code_id] = code_data
+                print(f"✓ Loaded code context: {code_id}")
 
     def _build_papers_section(self) -> str:
         """
         Build the papers section for prompts.
 
         Returns:
-            Formatted papers section string
+            str: Formatted papers section string
         """
         if not self.papers_content:
             # No papers provided - encourage use of literature search
@@ -215,12 +217,22 @@ class ScaffoldedResearcher:
         """
         Build the data files section for prompts.
 
+        Creates a formatted section describing available data files, optionally including
+        exact path information for code generation. Used to inform the AI researcher
+        about data resources available for analysis.
+
         Args:
-            include_paths: If True, include path instructions (for generator).
-                          If False, use simpler format (for critic).
+            include_paths (bool, optional): If True, include exact path instructions for
+                accessing files in generated code (for generator). If False, use simpler
+                descriptive format (for critic). Defaults to True.
 
         Returns:
-            Formatted data section string
+            str: Formatted data section string with file descriptions and optional paths.
+                 Returns empty string if no data files are loaded.
+
+        Example:
+            >>> researcher._build_data_section(include_paths=True)
+            '=== AVAILABLE DATA FILES ===\\n\\n--- mydata.csv ---\\nDataset description...\\nEXACT PATH: ...'
         """
         data_section = ""
         if self.data_files:
@@ -250,8 +262,17 @@ class ScaffoldedResearcher:
         """
         Build the code context section for prompts.
 
+        Creates a formatted section containing full codebase context (e.g., nanoGPT)
+        for ML research experiments. Includes both descriptive documentation and
+        complete source code that the AI can reference, modify, and experiment with.
+
         Returns:
-            Formatted code section string
+            str: Formatted code section string containing descriptions and source code
+                 for all loaded codebases. Returns empty string if no code contexts loaded.
+
+        Example:
+            >>> researcher._build_code_section()
+            '=== AVAILABLE CODE CONTEXT ===\\n\\n--- nanogpt ---\\n\\nDESCRIPTION:\\n...\\n\\nSOURCE CODE:\\n...'
         """
         code_section = ""
         if self.code_content:
@@ -277,17 +298,22 @@ class ScaffoldedResearcher:
 
         return code_section
 
-    def build_generator_prompt_for_stage(self, iteration: int, state: Dict[str, str], stage: str) -> tuple:
+    def build_generator_prompt_for_stage(
+        self,
+        iteration: int,
+        state: Dict[str, str],
+        stage: str
+    ) -> Tuple[str, str]:
         """
         Build the prompt for a specific generator stage.
 
         Args:
-            iteration: Current iteration number
-            state: Current session state
-            stage: One of "planning", "coding", "writing"
+            iteration (int): Current iteration number
+            state (Dict[str, str]): Current session state
+            stage (str): One of "planning", "coding", "writing"
 
         Returns:
-            Tuple of (static_content, dynamic_content) where static_content is cacheable
+            Tuple[str, str]: Tuple of (static_content, dynamic_content) where static_content is cacheable
         """
         # Define output format instructions for each stage
         output_formats = {
@@ -386,17 +412,22 @@ You have access to the plan, literature results, code, and execution output in t
 
         return (static_content, dynamic_content)
 
-    def build_critic_prompt(self, iteration: int, state: Dict[str, str], generator_response: str) -> tuple:
+    def build_critic_prompt(
+        self,
+        iteration: int,
+        state: Dict[str, str],
+        generator_response: str
+    ) -> Tuple[str, str]:
         """
         Build the prompt for the critic phase, split into static (cacheable) and dynamic parts.
 
         Args:
-            iteration: Current iteration number
-            state: Current session state
-            generator_response: Response from generator phase
+            iteration (int): Current iteration number
+            state (Dict[str, str]): Current session state
+            generator_response (str): Response from generator phase
 
         Returns:
-            Tuple of (static_content, dynamic_content) where static_content is cacheable
+            Tuple[str, str]: Tuple of (static_content, dynamic_content) where static_content is cacheable
         """
         # Load template from file
         template_path = os.path.join(os.path.dirname(__file__), "..", "templates", "critic_prompt.txt")

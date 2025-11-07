@@ -115,14 +115,15 @@ def test_code_context_with_only_description_file(test_code_context):
 
 def test_missing_code_context_directory():
     """Test handling of non-existent code context directory."""
-    researcher = ScaffoldedResearcher(
-        session_name="test_missing_code",
-        max_iterations=1,
-        code_ids=["nonexistent_codebase"]
-    )
+    import pytest
 
-    # Should not crash, just not load anything
-    assert "nonexistent_codebase" not in researcher.code_content
+    # Should raise FileNotFoundError for missing code context
+    with pytest.raises(FileNotFoundError, match="Code context directory not found"):
+        researcher = ScaffoldedResearcher(
+            session_name="test_missing_code",
+            max_iterations=1,
+            code_ids=["nonexistent_codebase"]
+        )
 
 
 def test_code_context_initialization_empty():

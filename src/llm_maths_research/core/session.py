@@ -6,7 +6,7 @@ import time
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import anthropic
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -89,7 +89,22 @@ class ResearchSession:
         self.client = Anthropic(api_key=api_key or os.getenv('ANTHROPIC_API_KEY'))
 
     def load_last_state(self) -> None:
-        """Load the last plan, critique, and OpenAlex results from current state files."""
+        """
+        Load the last plan, critique, and OpenAlex results from current state files.
+
+        This method is used when resuming a research session from disk. It reads the
+        most recent state from the following files:
+        - current_plan.txt: The latest research plan
+        - current_critique.txt: The latest critic feedback
+        - current_researcher_openalex.txt: Latest literature search results from researcher
+        - current_critic_openalex.txt: Latest literature search results from critic
+
+        If any files don't exist or can't be read, default values are used without
+        raising an error (with a warning printed to stdout).
+
+        Raises:
+            None: All errors are caught and logged as warnings with default fallbacks.
+        """
         # Load current plan
         if os.path.exists(self.current_plan_file):
             try:
@@ -217,7 +232,12 @@ class ResearchSession:
         except anthropic.RateLimitError:
             return False
 
-    def call_claude(self, prompt: str, cache_static_content: bool = False, static_content: str = None) -> str:
+    def call_claude(
+        self,
+        prompt: str,
+        cache_static_content: bool = False,
+        static_content: Optional[str] = None
+    ) -> str:
         """
         Call Claude API with streaming, rate limit handling, retry logic, and optional prompt caching.
 
@@ -481,9 +501,21 @@ class ResearchSession:
         """
         Process planning phase response (Stage 1: Plan + Literature Search).
 
+        Extracts the research plan from <PLAN> tags and executes any literature search
+        requests in <OPENALEX> tags. This is the first stage of the three-stage
+        generator architecture where the AI creates a detailed plan for the current
+        iteration and optionally searches for relevant papers.
+
         Args:
-            response: Response text from Claude containing <PLAN> and optional <OPENALEX>
-            iteration: Current iteration number
+            response (str): Response text from Claude containing <PLAN> and optional
+                <OPENALEX> blocks
+            iteration (int): Current iteration number (used for logging)
+
+        Side Effects:
+            - Updates self.current_plan with extracted plan
+            - Writes plan to current_plan.txt and appends to plans.txt
+            - Executes literature searches and updates self.current_researcher_openalex
+            - Writes log entries to session_log.txt
         """
         self.write_log(f"\n{'='*60}\nITERATION {iteration} - PLANNING PHASE\n{'='*60}")
         self.write_log(f"Response:\n{response}\n")
@@ -504,9 +536,19 @@ class ResearchSession:
         """
         Process code generation phase response (Stage 2: Code Generation + Execution).
 
+        Extracts Python code from <PYTHON> tags, saves it to experiment_code.py, and
+        executes it with timeout protection. This is the second stage of the three-stage
+        generator architecture where the AI writes experimental code based on the plan
+        and literature search results from Stage 1.
+
         Args:
-            response: Response text from Claude containing <PYTHON>
-            iteration: Current iteration number
+            response (str): Response text from Claude containing <PYTHON> block
+            iteration (int): Current iteration number (used for logging)
+
+        Side Effects:
+            - Writes extracted code to experiment_code.py in output directory
+            - Executes code and updates self.last_execution_output
+            - Writes log entries to session_log.txt with execution results
         """
         self.write_log(f"\n{'='*60}\nITERATION {iteration} - CODE GENERATION PHASE\n{'='*60}")
         self.write_log(f"Response:\n{response}\n")
@@ -537,9 +579,19 @@ class ResearchSession:
         """
         Process LaTeX generation phase response (Stage 3: LaTeX Generation).
 
+        Extracts LaTeX document from <LATEX> tags and saves it to paper.tex. This is the
+        final stage of the three-stage generator architecture where the AI writes the
+        research paper based on the plan (Stage 1), code (Stage 2), and actual execution
+        results. This ensures the paper accurately reports real findings rather than
+        anticipated ones.
+
         Args:
-            response: Response text from Claude containing <LATEX>
-            iteration: Current iteration number
+            response (str): Response text from Claude containing <LATEX> block
+            iteration (int): Current iteration number (used for logging)
+
+        Side Effects:
+            - Writes extracted LaTeX to paper.tex in output directory
+            - Writes log entries to session_log.txt
         """
         self.write_log(f"\n{'='*60}\nITERATION {iteration} - LATEX GENERATION PHASE\n{'='*60}")
         self.write_log(f"Response:\n{response}\n")

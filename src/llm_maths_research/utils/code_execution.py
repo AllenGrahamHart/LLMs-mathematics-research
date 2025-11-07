@@ -2,23 +2,43 @@
 
 import os
 import subprocess
-from typing import Dict, Any
+from typing import Dict, Any, Union
 from ..config import CONFIG
 
 
-def execute_code(code: str, output_dir: str) -> Dict[str, Any]:
+def execute_code(code: str, output_dir: str) -> Dict[str, Union[bool, str]]:
     """
     Execute Python code by writing to file and running as subprocess.
 
     This approach allows Modal and other tools that need to inspect source code
-    to work correctly, since the code exists as a real file on disk.
+    to work correctly, since the code exists as a real file on disk. The code is
+    written to 'experiment_code.py' in the output directory and executed with a
+    configurable timeout.
 
     Args:
-        code: Python code to execute
-        output_dir: Directory for saving outputs/figures (code runs in this directory)
+        code (str): Python code to execute. Will be written to experiment_code.py
+            before execution.
+        output_dir (str): Directory for saving outputs/figures. The code runs in this
+            directory with it as the current working directory, allowing relative paths
+            like 'artifacts/figures/plot.png' to work correctly.
 
     Returns:
-        Dictionary with 'success', 'output', and 'timeout' keys
+        Dict[str, Union[bool, str]]: Dictionary containing:
+            - 'success' (bool): True if code executed without errors (return code 0)
+            - 'output' (str): Combined stdout and stderr from execution, plus diagnostics
+              about generated figures
+            - 'timeout' (bool): True if execution exceeded the timeout limit
+
+    Examples:
+        >>> result = execute_code("print('Hello')", "/tmp/output")
+        >>> result['success']
+        True
+        >>> result['output']
+        'Hello\\n\\nFigures in output_dir: (none)'
+
+        >>> result = execute_code("import time; time.sleep(10000)", "/tmp/output")
+        >>> result['timeout']
+        True
     """
     # Write code to a file in the output directory
     # Use 'experiment_code.py' to avoid name collision with Python's stdlib 'code' module

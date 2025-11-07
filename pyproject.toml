@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Allen Graham Hart", email = "allenhart094@gmail.com"}
 ]
 keywords = ["mathematics", "research", "llm", "ai", "automation"]
 classifiers = [
@@ -63,9 +63,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/llm-maths-research"
-Repository = "https://github.com/yourusername/llm-maths-research"
-Issues = "https://github.com/yourusername/llm-maths-research/issues"
+Homepage = "https://github.com/AllenGrahamHart/llm-maths-research"
+Repository = "https://github.com/AllenGrahamHart/llm-maths-research"
+Issues = "https://github.com/AllenGrahamHart/llm-maths-research/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
