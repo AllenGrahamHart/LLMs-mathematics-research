@@ -106,14 +106,3 @@ def test_initialization_with_no_data(test_files):
     assert researcher.data_ids == []
     assert researcher.papers_content == {}
     assert researcher.data_files == {}
-
-
-def test_resume_mode_validation():
-    """Test that conflicting resume modes raise error."""
-    with pytest.raises(ValueError, match="Cannot use both"):
-        ScaffoldedResearcher(
-            session_name="test",
-            max_iterations=10,
-            start_iteration=5,
-            resume_at_critic=3
-        )

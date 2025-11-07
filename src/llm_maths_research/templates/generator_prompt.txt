@@ -28,15 +28,25 @@ When writing code, note the Pip-installed packages are:
 - datasets - BLIMP available via: `load_dataset('blimp', 'phenomenon_name')` (use `get_dataset_config_names('blimp')` to list all phenomena)
 
 EXECUTION ENVIRONMENT:
-   Your code is saved as experiment_code.py and executed in the session output directory.
-   This is the same directory where paper.tex is located.
-   Simply save files to the current directory (no path manipulation needed).
+   Your code is saved as experiment_code.py and executed in the session root directory.
 
-   You can save any files (CSVs, pickles, numpy arrays, etc.) to the current directory.
+   Directory structure:
+   outputs/{session_name}/
+   ├── experiment_code.py      # Your code (you are here)
+   ├── paper.tex               # Your LaTeX paper
+   ├── artifacts/
+   │   ├── figures/           # Save ALL figures here
+   │   └── data/              # Save ALL generated data files (CSV, pickle, npy, etc.) here
+   ├── data/                  # Input data files (READ from here)
+   └── logs/                  # System logs (don't touch)
+
+   IMPORTANT FILE PATHS:
+   - Save figures: `plt.savefig("artifacts/figures/my_plot.png", dpi={figure_dpi})`
+   - Save data: `df.to_csv("artifacts/data/results.csv")` or `np.save("artifacts/data/array.npy", arr)`
+   - Load input data: `pd.read_csv("data/input_file.csv")`
+   - Reference figures in LaTeX: \includegraphics[width=0.95\textwidth]{{artifacts/figures/my_plot.png}}
+
    Use comments in your code to track what you've saved so you can load it in future iterations.
-
-   When saving figures: `plt.savefig("figure_name.png", dpi={figure_dpi})`
-   Then reference in LaTeX: \includegraphics[width=0.95\textwidth]{{figure_name.png}}
 
 MODAL GPU INTEGRATION (when required):
    If you need GPU computation, use Modal with this pattern:
@@ -46,8 +56,9 @@ MODAL GPU INTEGRATION (when required):
       - Return Python data structures (lists, dicts, numpy arrays)
 
    2. ALL file operations must happen LOCALLY
-      - Save figures to current directory
-      - The code runs in the session output directory alongside paper.tex
+      - Save figures to artifacts/figures/
+      - Save data to artifacts/data/
+      - The code runs in the session root directory
 
    3. Use a SINGLE Modal session when possible to avoid overhead
       - Combine multiple GPU operations into one Modal function
@@ -104,19 +115,25 @@ MODAL GPU INTEGRATION (when required):
        with app.run():
            results = run_model_inference.remote(problems)
 
-       # ALL file I/O happens locally (in current directory)
+       # ALL file I/O happens locally
        plt.plot(df['values'])
-       plt.savefig("plot.png", dpi={figure_dpi})
+       plt.savefig("artifacts/figures/plot.png", dpi={figure_dpi})
+       df.to_csv("artifacts/data/results.csv", index=False)
    ```
 
-READING DATA FILES:
-   Data files are located in the data/ subdirectory relative to where code.py runs.
-   Simply use relative paths:
+READING INPUT DATA FILES:
+   Input data files are located in the data/ subdirectory.
 
    Example: `df = pd.read_csv("data/mydata.csv")`
    Example: `with open("data/data.json") as f: data = json.load(f)`
 
    Each data file's exact path is listed in the AVAILABLE DATA FILES section above.
+
+LOADING YOUR OWN GENERATED DATA (from previous iterations):
+   If you saved data in a previous iteration, load it from artifacts/data/:
+
+   Example: `df = pd.read_csv("artifacts/data/results.csv")`
+   Example: `arr = np.load("artifacts/data/array.npy")`
 
 IMPORTANT - TIME TRACKING:
   Your code has a {timeout} second execution limit. To manage this effectively:

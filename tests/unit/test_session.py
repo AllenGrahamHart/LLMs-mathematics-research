@@ -61,14 +61,20 @@ class TestSessionInitialization:
         assert session.output_dir == "outputs/my_session"
         assert session.latex_file == "outputs/my_session/paper.tex"
         assert session.python_file == "outputs/my_session/experiment_code.py"
-        assert session.log_file == "outputs/my_session/session_log.txt"
+        assert session.log_file == "outputs/my_session/logs/session_log.txt"
         assert session.data_dir == "outputs/my_session/data"
 
-        # Test new current state file paths
-        assert session.current_plan_file == "outputs/my_session/current_plan.txt"
-        assert session.current_critique_file == "outputs/my_session/current_critique.txt"
-        assert session.current_researcher_openalex_file == "outputs/my_session/current_researcher_openalex.txt"
-        assert session.current_critic_openalex_file == "outputs/my_session/current_critic_openalex.txt"
+        # Test new directory structure
+        assert session.artifacts_dir == "outputs/my_session/artifacts"
+        assert session.figures_dir == "outputs/my_session/artifacts/figures"
+        assert session.data_generated_dir == "outputs/my_session/artifacts/data"
+        assert session.logs_dir == "outputs/my_session/logs"
+
+        # Test current state file paths (in logs/)
+        assert session.current_plan_file == "outputs/my_session/logs/current_plan.txt"
+        assert session.current_critique_file == "outputs/my_session/logs/current_critique.txt"
+        assert session.current_researcher_openalex_file == "outputs/my_session/logs/current_researcher_openalex.txt"
+        assert session.current_critic_openalex_file == "outputs/my_session/logs/current_critic_openalex.txt"
 
 
 class TestSessionState:

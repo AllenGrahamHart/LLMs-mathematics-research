@@ -59,20 +59,25 @@ Use this strategically to verify critical claims before marking them as errors.
 CODE EXECUTION CONTEXT:
 When evaluating Python code, be aware that the research framework provides a pre-configured execution environment:
 
-IMPORTANT: The variable `output_dir` is PRE-DEFINED by the framework. DO NOT flag it as an undefined variable.
-- The framework automatically injects `output_dir` before code execution
-- It points to the session output directory (e.g., outputs/session_name/)
-- Code should use: os.path.join(output_dir, "filename") to save files
-- DO NOT criticize code for using `output_dir` without defining it - this is intentional
+The execution environment has an organized directory structure:
+outputs/{session_name}/
+├── experiment_code.py      # Code runs here (root level)
+├── paper.tex               # LaTeX paper (root level)
+├── artifacts/
+│   ├── figures/           # ALL figures go here
+│   └── data/              # ALL generated data files go here
+├── data/                  # Input data files (provided by framework)
+└── logs/                  # System logs
 
-Data files are pre-copied to output_dir/data/:
-- Code should access data via: os.path.join(output_dir, "data", "filename")
-- DO NOT criticize code for not defining data paths - they are provided by the framework
+Correct file paths:
+- Save figures: plt.savefig("artifacts/figures/plot.png", dpi=300)
+- Save generated data: df.to_csv("artifacts/data/results.csv")
+- Load input data: pd.read_csv("data/input.csv")
+- Load own data from previous iteration: pd.read_csv("artifacts/data/results.csv")
+- LaTeX figure reference: \includegraphics{{artifacts/figures/plot.png}}
 
-Figures are automatically saved to the correct location:
-- Code uses: plt.savefig("figure_name.png", dpi=300)
-- The framework handles the output directory automatically
-- LaTeX can reference figures directly: \includegraphics{{figure_name.png}}
+DO NOT criticize code for using these paths - they are the correct framework structure.
+DO NOT suggest using output_dir variable - direct paths like "artifacts/figures/" are preferred.
 
 Available pip packages in execution environment:
 - numpy, scipy, pandas, matplotlib, seaborn

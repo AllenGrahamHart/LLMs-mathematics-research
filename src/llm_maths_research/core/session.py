@@ -43,24 +43,37 @@ class ResearchSession:
         self.output_dir = f"outputs/{session_name}"
         os.makedirs(self.output_dir, exist_ok=True)
 
-        self.data_dir = os.path.join(self.output_dir, "data")
+        # Create subdirectories for organized output
+        self.artifacts_dir = os.path.join(self.output_dir, "artifacts")
+        self.figures_dir = os.path.join(self.artifacts_dir, "figures")
+        self.data_generated_dir = os.path.join(self.artifacts_dir, "data")
+        self.logs_dir = os.path.join(self.output_dir, "logs")
+        self.data_dir = os.path.join(self.output_dir, "data")  # Input data
+
+        os.makedirs(self.artifacts_dir, exist_ok=True)
+        os.makedirs(self.figures_dir, exist_ok=True)
+        os.makedirs(self.data_generated_dir, exist_ok=True)
+        os.makedirs(self.logs_dir, exist_ok=True)
         os.makedirs(self.data_dir, exist_ok=True)
 
+        # Paper and code files at root for easy access
         self.latex_file = os.path.join(self.output_dir, "paper.tex")
         self.python_file = os.path.join(self.output_dir, "experiment_code.py")
-        self.log_file = os.path.join(self.output_dir, "session_log.txt")
-        self.metrics_file = os.path.join(self.output_dir, "metrics.json")
+
+        # Log files in logs/ directory
+        self.log_file = os.path.join(self.logs_dir, "session_log.txt")
+        self.metrics_file = os.path.join(self.logs_dir, "metrics.json")
 
         # Current state files (overwritten each iteration for easy loading)
-        self.current_plan_file = os.path.join(self.output_dir, "current_plan.txt")
-        self.current_critique_file = os.path.join(self.output_dir, "current_critique.txt")
-        self.current_researcher_openalex_file = os.path.join(self.output_dir, "current_researcher_openalex.txt")
-        self.current_critic_openalex_file = os.path.join(self.output_dir, "current_critic_openalex.txt")
+        self.current_plan_file = os.path.join(self.logs_dir, "current_plan.txt")
+        self.current_critique_file = os.path.join(self.logs_dir, "current_critique.txt")
+        self.current_researcher_openalex_file = os.path.join(self.logs_dir, "current_researcher_openalex.txt")
+        self.current_critic_openalex_file = os.path.join(self.logs_dir, "current_critic_openalex.txt")
 
         # Historical append-only logs (for review/debugging)
-        self.critique_file = os.path.join(self.output_dir, "critiques.txt")
-        self.plans_file = os.path.join(self.output_dir, "plans.txt")
-        self.generator_responses_file = os.path.join(self.output_dir, "generator_responses.txt")
+        self.critique_file = os.path.join(self.logs_dir, "critiques.txt")
+        self.plans_file = os.path.join(self.logs_dir, "plans.txt")
+        self.generator_responses_file = os.path.join(self.logs_dir, "generator_responses.txt")
 
         self._initialize_files()
         self.log = []
