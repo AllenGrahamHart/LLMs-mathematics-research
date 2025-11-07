@@ -22,19 +22,19 @@ PROVIDER_DEFAULTS = {
     },
 
     'openai': {
-        'model': 'gpt-4o',
-        'display_name': 'GPT-4o',
-        'max_tokens': 16000,
+        'model': 'chatgpt-5',
+        'display_name': 'GPT-5',
+        'max_tokens': 128000,
         'thinking_budget': None,  # Not supported
         'supports_thinking': False,
-        'supports_caching': False,
+        'supports_caching': True,  # 90% cost savings on cached tokens
         'costs': {
-            'input_per_million': 2.5,
+            'input_per_million': 1.25,
             'output_per_million': 10.0,
-            'cache_write_multiplier': 1.0,  # No caching
-            'cache_read_multiplier': 1.0,
+            'cache_write_multiplier': 1.0,  # Full price for cache writes
+            'cache_read_multiplier': 0.1,  # $0.125/M (90% savings from $1.25)
         },
-        'notes': 'Fast and cost-effective. Good balance of performance and price.',
+        'notes': 'Best model for coding and agentic tasks. Prompt caching provides 90% cost savings on repeated prompts.',
     },
 
     'google': {

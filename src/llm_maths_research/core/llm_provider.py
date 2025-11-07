@@ -301,6 +301,7 @@ class OpenAIProvider(LLMProvider):
     def get_model_display_name(self) -> str:
         """Get display name for GPT models."""
         model_map = {
+            "chatgpt-5": "GPT-5",
             "gpt-4": "GPT-4",
             "gpt-4-turbo": "GPT-4 Turbo",
             "gpt-4o": "GPT-4o",
