@@ -224,10 +224,16 @@ class OpenAIProvider(LLMProvider):
             temperature=temperature,
         )
 
+        # Extract cache tokens if available (for o1 and GPT-5 models)
+        cached_tokens = 0
+        if hasattr(response.usage, 'prompt_tokens_details'):
+            cached_tokens = getattr(response.usage.prompt_tokens_details, 'cached_tokens', 0)
+
         return LLMResponse(
             content=response.choices[0].message.content or "",
             input_tokens=response.usage.prompt_tokens,
             output_tokens=response.usage.completion_tokens,
+            cache_read_tokens=cached_tokens,
             stop_reason=response.choices[0].finish_reason,
             model=response.model,
         )
@@ -354,14 +360,16 @@ class GoogleProvider(LLMProvider):
             generation_config=generation_config,
         )
 
-        # Estimate token counts (Gemini doesn't always provide exact counts)
-        input_tokens = sum(len(m.get("content", "").split()) for m in messages) * 1.3
-        output_tokens = len(response.text.split()) * 1.3
+        # Get exact token counts and cache info from usage_metadata
+        input_tokens = response.usage_metadata.prompt_token_count
+        output_tokens = response.usage_metadata.candidates_token_count
+        cached_tokens = getattr(response.usage_metadata, 'cached_content_token_count', 0)
 
         return LLMResponse(
             content=response.text,
-            input_tokens=int(input_tokens),
-            output_tokens=int(output_tokens),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_tokens=cached_tokens,
             stop_reason=str(response.candidates[0].finish_reason) if response.candidates else None,
             model=self.model,
         )
@@ -481,10 +489,16 @@ class xAIProvider(LLMProvider):
             temperature=temperature,
         )
 
+        # Extract cache tokens if available (Grok-4 automatic caching)
+        cached_tokens = 0
+        if hasattr(response.usage, 'prompt_tokens_details'):
+            cached_tokens = getattr(response.usage.prompt_tokens_details, 'cached_tokens', 0)
+
         return LLMResponse(
             content=response.choices[0].message.content or "",
             input_tokens=response.usage.prompt_tokens,
             output_tokens=response.usage.completion_tokens,
+            cache_read_tokens=cached_tokens,
             stop_reason=response.choices[0].finish_reason,
             model=response.model,
         )
@@ -586,10 +600,16 @@ class MoonshotProvider(LLMProvider):
             temperature=temperature,
         )
 
+        # Extract cache tokens (Kimi K2 automatic caching uses same fields as Anthropic)
+        cache_creation_tokens = getattr(response.usage, 'cache_creation_input_tokens', 0)
+        cache_read_tokens = getattr(response.usage, 'cache_read_input_tokens', 0)
+
         return LLMResponse(
             content=response.choices[0].message.content or "",
             input_tokens=response.usage.prompt_tokens,
             output_tokens=response.usage.completion_tokens,
+            cache_creation_tokens=cache_creation_tokens,
+            cache_read_tokens=cache_read_tokens,
             stop_reason=response.choices[0].finish_reason,
             model=response.model,
         )
