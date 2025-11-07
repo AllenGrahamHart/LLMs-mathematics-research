@@ -47,8 +47,8 @@ PROVIDER_DEFAULTS = {
         'costs': {
             'input_per_million': 1.25,  # For prompts <= 200K tokens
             'output_per_million': 10.0,
-            'cache_write_multiplier': 0.1,  # $0.125/M (90% savings from $1.25)
-            'cache_read_multiplier': 0.1,
+            'cache_write_multiplier': 1.0,  # Same price as regular input (automatic caching)
+            'cache_read_multiplier': 0.1,   # $0.125/M (90% savings from $1.25)
         },
         'notes': 'Most capable Gemini model. State-of-the-art reasoning for code, math, and STEM. Context caching provides 90% cost savings on repeated prompts.',
     },

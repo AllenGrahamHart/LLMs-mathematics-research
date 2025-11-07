@@ -258,8 +258,9 @@ class ResearchSession:
         """
         Call LLM API with streaming, rate limit handling, retry logic, and optional prompt caching.
 
-        Note: Prompt caching is only supported by Anthropic models. For other providers,
-        cache_static_content and static_content parameters are ignored.
+        Note: Manual prompt caching (cache_static_content/static_content) is only supported
+        by Anthropic. Other providers (OpenAI, Google, xAI, Moonshot) use automatic caching
+        that detects repeated prompt prefixes without requiring explicit cache markers.
 
         Args:
             prompt: Full prompt OR dynamic content (if cache_static_content=True)
