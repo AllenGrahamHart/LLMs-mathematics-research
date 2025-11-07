@@ -515,7 +515,9 @@ In addition to your critique - please complete this survey:
         Args:
             problem: Research problem statement
         """
-        self.problem_statement = problem
+        # Replace {model} placeholder with actual model display name
+        model_display_name = self.session.provider.get_model_display_name()
+        self.problem_statement = problem.replace("{model}", model_display_name)
 
         print("="*SEPARATOR_WIDTH)
         print("SCAFFOLDED RESEARCH WITH CRITIC")

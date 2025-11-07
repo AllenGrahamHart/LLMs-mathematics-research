@@ -3,9 +3,34 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from src.llm_maths_research import ScaffoldedResearcher
+from src.llm_maths_research.config import set_provider
+from src.llm_maths_research.provider_defaults import list_providers, get_provider_info
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run mathematical research experiment')
+    parser = argparse.ArgumentParser(
+        description='Run mathematical research experiment with LLM',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Available Providers:
+  anthropic, openai, google, xai, moonshot
+
+  Use --list-providers to see detailed information about each provider.
+
+Examples:
+  # Use default provider from config.yaml
+  python run_experiment.py --problem problems/open_research.txt
+
+  # Override provider via CLI
+  python run_experiment.py --provider openai --problem problems/open_research.txt
+
+  # See provider details
+  python run_experiment.py --list-providers
+        """
+    )
+    parser.add_argument('--provider', type=str, choices=list_providers(),
+                       help='LLM provider to use (overrides config.yaml). Choices: ' + ', '.join(list_providers()))
+    parser.add_argument('--list-providers', action='store_true',
+                       help='List available providers with details and exit')
     parser.add_argument('--papers', nargs='*', help='Paper file names (without .txt extension) from problems/papers/ directory (e.g., Paolo MyPaper). Optional - if not provided, researcher will use literature search tools.')
     parser.add_argument('--problem', type=str, default='problems/open_research.txt', help='Path to problem file (default: problems/open_research.txt)')
     parser.add_argument('--data', nargs='*', help='Data file names from data/datasets/ directory (e.g., dataset1.csv timeseries/data.json)')
@@ -13,6 +38,21 @@ if __name__ == "__main__":
     parser.add_argument('--max-iterations', type=int, default=2, help='Maximum number of iterations (default: 2)')
     parser.add_argument('--session-name', type=str, help='Custom session name (default: auto-generated)')
     args = parser.parse_args()
+
+    # Handle --list-providers
+    if args.list_providers:
+        print("Available LLM Providers")
+        print("=" * 80)
+        print()
+        for provider in list_providers():
+            print(get_provider_info(provider))
+            print()
+        sys.exit(0)
+
+    # Override provider if specified via CLI
+    if args.provider:
+        print(f"Using provider: {args.provider} (overriding config.yaml)")
+        set_provider(args.provider)
 
     # Read problem file with error handling
     problem_path = Path(args.problem)

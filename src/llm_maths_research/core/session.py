@@ -7,8 +7,6 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-import anthropic
-from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from ..config import CONFIG
@@ -21,6 +19,7 @@ from ..utils.openalex_blocks import (
     format_openalex_results,
     log_openalex_calls,
 )
+from .llm_provider import create_provider, LLMProvider
 
 load_dotenv()
 
@@ -37,7 +36,7 @@ class ResearchSession:
 
         Args:
             session_name: Unique name for this session
-            api_key: Anthropic API key (if not provided, reads from ANTHROPIC_API_KEY env var)
+            api_key: LLM provider API key (if not provided, reads from appropriate env var)
         """
         self.session_name = session_name
         self.output_dir = f"outputs/{session_name}"
@@ -85,8 +84,22 @@ class ResearchSession:
         self.current_researcher_openalex = "No literature searches performed yet"
         self.current_critic_openalex = "No literature searches performed yet"
 
-        # Initialize Anthropic client with provided key or fallback to environment
-        self.client = Anthropic(api_key=api_key or os.getenv('ANTHROPIC_API_KEY'))
+        # Initialize LLM provider from config
+        provider_name = CONFIG['api'].get('provider', 'anthropic')
+        model = CONFIG['api']['model']
+
+        # Get API key from parameter or environment
+        if api_key is None:
+            env_var_map = {
+                'anthropic': 'ANTHROPIC_API_KEY',
+                'openai': 'OPENAI_API_KEY',
+                'google': 'GOOGLE_API_KEY',
+                'xai': 'XAI_API_KEY',
+                'moonshot': 'MOONSHOT_API_KEY',
+            }
+            api_key = os.getenv(env_var_map.get(provider_name, 'ANTHROPIC_API_KEY'))
+
+        self.provider = create_provider(provider_name, api_key, model)
 
     def load_last_state(self) -> None:
         """
@@ -223,14 +236,18 @@ class ResearchSession:
             True if API is available, False if rate limited
         """
         try:
-            self.client.messages.create(
-                model=CONFIG['api']['model'],
-                max_tokens=1,
-                messages=[{"role": "user", "content": "x"}]
+            self.provider.create_message(
+                messages=[{"role": "user", "content": "x"}],
+                max_tokens=1
             )
             return True
-        except anthropic.RateLimitError:
-            return False
+        except Exception as e:
+            # Check if it's a rate limit error (provider-specific)
+            error_type = type(e).__name__
+            if 'RateLimit' in error_type or 'rate_limit' in str(e).lower():
+                return False
+            # For other errors, assume API is available (may be temporary issue)
+            return True
 
     def call_claude(
         self,
@@ -239,23 +256,25 @@ class ResearchSession:
         static_content: Optional[str] = None
     ) -> str:
         """
-        Call Claude API with streaming, rate limit handling, retry logic, and optional prompt caching.
+        Call LLM API with streaming, rate limit handling, retry logic, and optional prompt caching.
+
+        Note: Prompt caching is only supported by Anthropic models. For other providers,
+        cache_static_content and static_content parameters are ignored.
 
         Args:
             prompt: Full prompt OR dynamic content (if cache_static_content=True)
-            cache_static_content: If True, use static_content as cached portion with 1-hour TTL
-            static_content: Static prompt content to cache (papers, instructions, etc.)
+            cache_static_content: If True, use static_content as cached portion (Anthropic only)
+            static_content: Static prompt content to cache (Anthropic only)
 
         Returns:
-            Response text from Claude
+            Response text from LLM
         """
-        import httpx
-
         wait_time = CONFIG['api']['rate_limit_wait']
         max_retries = 5
 
-        # Build messages with caching if requested
-        if cache_static_content and static_content:
+        # Build messages with caching if requested (only for Anthropic)
+        provider_name = CONFIG['api'].get('provider', 'anthropic')
+        if cache_static_content and static_content and provider_name == 'anthropic':
             messages = [{
                 "role": "user",
                 "content": [
@@ -270,65 +289,99 @@ class ResearchSession:
                     }
                 ]
             }]
+            # Add beta header for 1-hour cache
+            extra_headers = {"anthropic-beta": "prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11"}
         else:
             # Original behavior - simple string prompt
             messages = [{"role": "user", "content": prompt}]
+            extra_headers = None
 
-        params = {
-            "model": CONFIG['api']['model'],
-            "max_tokens": CONFIG['api']['max_tokens'],
-            "thinking": {
-                "type": "enabled",
-                "budget_tokens": CONFIG['api']['thinking_budget']
-            },
-            "messages": messages
-        }
-
-        # Add beta header for 1-hour cache
-        extra_headers = {}
-        if cache_static_content:
-            extra_headers["anthropic-beta"] = "prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11"
+        # Get thinking budget (only supported by Anthropic)
+        thinking_budget = None
+        if provider_name == 'anthropic':
+            thinking_budget = CONFIG['api'].get('thinking_budget')
 
         # Retry loop with rate limit and timeout handling
+        response = None
+        response_text = ""
+
         for retry_attempt in range(max_retries):
             try:
                 start_time = time.time()
 
-                # Use streaming for long requests
-                response_text = ""
-                input_tokens = 0
-                output_tokens = 0
-                cache_creation_tokens = 0
-                cache_read_tokens = 0
+                # For Anthropic with streaming, we need to handle the stream context manager properly
+                provider_name = CONFIG['api'].get('provider', 'anthropic')
 
-                with self.client.messages.stream(**params, extra_headers=extra_headers if cache_static_content else None) as stream:
-                    for text in stream.text_stream:
-                        response_text += text
+                if provider_name == 'anthropic':
+                    # Use Anthropic's streaming which provides token counts
+                    import anthropic
+                    params = {
+                        "model": self.provider.model,
+                        "max_tokens": CONFIG['api']['max_tokens'],
+                        "messages": messages
+                    }
 
-                    # Get final message for usage stats
-                    final_message = stream.get_final_message()
-                    input_tokens = final_message.usage.input_tokens
-                    output_tokens = final_message.usage.output_tokens
+                    if thinking_budget:
+                        params["thinking"] = {"type": "enabled", "budget_tokens": thinking_budget}
 
-                    # Track cache metrics if available
-                    if hasattr(final_message.usage, 'cache_creation_input_tokens'):
-                        cache_creation_tokens = final_message.usage.cache_creation_input_tokens
-                    if hasattr(final_message.usage, 'cache_read_input_tokens'):
-                        cache_read_tokens = final_message.usage.cache_read_input_tokens
+                    if extra_headers:
+                        params["extra_headers"] = extra_headers
+
+                    # Use the underlying Anthropic client directly for streaming
+                    with self.provider.client.messages.stream(**params) as stream:
+                        for text in stream.text_stream:
+                            response_text += text
+
+                        # Get final message with usage stats
+                        final_message = stream.get_final_message()
+
+                        # Create LLMResponse from final message
+                        from .llm_provider import LLMResponse
+                        response = LLMResponse(
+                            content=response_text,
+                            input_tokens=final_message.usage.input_tokens,
+                            output_tokens=final_message.usage.output_tokens,
+                            cache_creation_tokens=getattr(final_message.usage, 'cache_creation_input_tokens', 0),
+                            cache_read_tokens=getattr(final_message.usage, 'cache_read_input_tokens', 0),
+                            stop_reason=final_message.stop_reason,
+                            model=final_message.model,
+                        )
+                else:
+                    # For non-Anthropic providers, use streaming then make one call for token counts
+                    for text_chunk in self.provider.create_message_stream(
+                        messages=messages,
+                        max_tokens=CONFIG['api']['max_tokens'],
+                        thinking_budget=thinking_budget,
+                        extra_headers=extra_headers,
+                    ):
+                        response_text += text_chunk
+
+                    # Get token counts with a single non-streaming call
+                    response = self.provider.create_message(
+                        messages=messages,
+                        max_tokens=CONFIG['api']['max_tokens'],
+                        thinking_budget=thinking_budget,
+                        extra_headers=extra_headers,
+                    )
 
                 end_time = time.time()
                 break
-            except anthropic.RateLimitError:
-                print(f"  Rate limited, waiting {wait_time}s...")
-                time.sleep(wait_time)
-                continue
-            except (anthropic.APIStatusError, httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError, anthropic.APIConnectionError) as e:
-                # Handle API errors, overloaded errors, and connection errors
-                if retry_attempt < max_retries - 1:
+            except Exception as e:
+                error_type = type(e).__name__
+                is_rate_limit = 'RateLimit' in error_type or 'rate_limit' in str(e).lower()
+
+                if is_rate_limit:
+                    print(f"  Rate limited, waiting {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                elif retry_attempt < max_retries - 1:
+                    # Handle API errors and connection errors
                     backoff_time = (2 ** retry_attempt) * 60  # 1min, 2min, 4min, 8min, 16min
-                    error_msg = f"{type(e).__name__}"
+                    error_msg = f"{error_type}"
                     if hasattr(e, 'status_code'):
                         error_msg += f" ({e.status_code}): {str(e)}"
+                    else:
+                        error_msg += f": {str(e)}"
                     print(f"  API/Connection error: {error_msg}")
                     print(f"  Attempt {retry_attempt + 1}/{max_retries}, retrying in {backoff_time}s...")
                     time.sleep(backoff_time)
@@ -338,6 +391,12 @@ class ResearchSession:
 
         self._last_call_time = end_time
         response_time = end_time - start_time
+
+        # Extract token counts from response
+        input_tokens = response.input_tokens
+        output_tokens = response.output_tokens
+        cache_creation_tokens = response.cache_creation_tokens
+        cache_read_tokens = response.cache_read_tokens
 
         # Calculate costs with cache multipliers
         base_input_cost_per_million = CONFIG['api']['costs']['input_per_million']
@@ -377,6 +436,7 @@ class ResearchSession:
             cache_info += f" | Cache read: {cache_read_tokens:,}"
         print(f"  Input: {input_tokens:,} tokens | Output: {output_tokens:,} tokens{cache_info} | Cost: ${total_cost:.4f}")
 
+        # Return the streamed response (which should match the non-streaming one)
         return response_text
 
     def update_state_from_response(self, response: str) -> None:

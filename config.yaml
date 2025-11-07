@@ -9,16 +9,23 @@ compilation:
   error_limit: 500  # characters to show from compilation errors
 
 api:
-  model: claude-sonnet-4-5-20250929
-  max_tokens: 64000
-  thinking_budget: 32000
+  # LLM Provider - Default provider to use
+  # Options: anthropic, openai, google, xai, moonshot
+  # Can be overridden via CLI: --provider openai
+  provider: anthropic
+
+  # Optional: Override provider defaults (see provider_defaults.py for full list)
+  # If not specified, uses sensible defaults for each provider
+  # Uncomment to customize:
+  # model: claude-opus-4-20250514
+  # max_tokens: 32000
+  # thinking_budget: 16000
+  # costs:
+  #   input_per_million: 3.0
+  #   output_per_million: 15.0
+
+  # Rate limiting
   rate_limit_wait: 20  # seconds to wait when rate limited
-  costs:
-    input_per_million: 3.0  # USD per million input tokens
-    output_per_million: 15.0  # USD per million output tokens
-    # 1-hour prompt caching multipliers (applied to input_per_million)
-    cache_write_multiplier: 2.0  # Cache creation costs 2x base input price
-    cache_read_multiplier: 0.1   # Cache reads cost 0.1x base input price
 
 output:
   figure_dpi: 300  # DPI for saved figures

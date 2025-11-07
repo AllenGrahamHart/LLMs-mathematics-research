@@ -45,9 +45,33 @@ The generator phase uses a novel three-stage approach where each iteration consi
 
 **Documentation**: See `docs/architecture/THREE_STAGE_IMPLEMENTATION_COMPLETE.md` for full details.
 
+## Multi-Provider Support
+
+The system supports multiple LLM providers, allowing you to choose between different models based on your needs:
+
+- **Anthropic**: Claude Sonnet 4.5, Opus 4, etc. (with extended thinking & prompt caching)
+- **OpenAI**: GPT-4o, GPT-4 Turbo, o1 series
+- **Google**: Gemini 2.0 Flash, Gemini 1.5 Pro/Flash
+- **xAI**: Grok Beta, Grok Vision
+- **Moonshot**: Kimi (8k/32k/128k context)
+
+Switch providers by editing one line in `config.yaml`:
+
+```yaml
+api:
+  provider: anthropic  # or: openai, google, xai, moonshot
+  model: claude-sonnet-4-5-20250929
+```
+
+When the AI writes research papers, it lists itself as an author using the appropriate model name (e.g., "GPT-4o", "Gemini 2.0 Flash"). The `{model}` placeholder in problem files is automatically replaced with the correct display name.
+
+**Full Documentation**: See [`docs/providers/MULTI_PROVIDER_GUIDE.md`](docs/providers/MULTI_PROVIDER_GUIDE.md) for detailed configuration examples, cost comparisons, and feature matrix.
+
 ## Prompt Caching
 
 The system implements Anthropic's 1-hour prompt caching to significantly reduce API costs during multi-iteration research sessions. By caching static prompt content (problem statements, reference papers, data descriptions), the system achieves approximately 40% cost savings on typical research runs.
+
+**Note**: Prompt caching is currently only supported by Anthropic models.
 
 ### Cache Optimization
 
@@ -155,19 +179,28 @@ pip install -e ".[dev]"
 
 - Python >= 3.10
 - LaTeX distribution (for PDF compilation)
-- Anthropic API key
+- API key for at least one supported provider (Anthropic, OpenAI, Google, xAI, or Moonshot)
 
 ## Setup
 
-1. Create a `.env` file with your API key:
+1. Create a `.env` file with your API key(s):
 ```bash
-ANTHROPIC_API_KEY=your-api-key-here
+# At least one of these (depending on which provider you want to use)
+ANTHROPIC_API_KEY=your-anthropic-key-here
+OPENAI_API_KEY=your-openai-key-here
+GOOGLE_API_KEY=your-google-key-here
+XAI_API_KEY=your-xai-key-here
+MOONSHOT_API_KEY=your-moonshot-key-here
 ```
 
+See `.env.example` for a template.
+
 2. Configure `config.yaml` to adjust:
+   - **LLM Provider**: Choose from anthropic, openai, google, xai, or moonshot
+   - **Model**: Select specific model for your chosen provider
    - Code execution timeout
    - LaTeX compilation settings
-   - API parameters (model, tokens, costs)
+   - API parameters (tokens, thinking budget, costs)
    - Output preferences
 
 ## Usage
