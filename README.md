@@ -49,29 +49,34 @@ The generator phase uses a novel three-stage approach where each iteration consi
 
 The system supports multiple LLM providers, allowing you to choose between different models based on your needs:
 
-- **Anthropic**: Claude Sonnet 4.5, Opus 4, etc. (with extended thinking & prompt caching)
-- **OpenAI**: GPT-4o, GPT-4 Turbo, o1 series
-- **Google**: Gemini 2.0 Flash, Gemini 1.5 Pro/Flash
-- **xAI**: Grok Beta, Grok Vision
-- **Moonshot**: Kimi (8k/32k/128k context)
+- **Anthropic**: Claude Sonnet 4.5 (with extended thinking & prompt caching)
+- **OpenAI**: GPT-5 (with prompt caching for 90% cost savings)
+- **Google**: Gemini 2.5 Pro (state-of-the-art thinking model with context caching)
+- **xAI**: Grok 4 (256K context window with 75% cache savings)
+- **Moonshot**: Kimi K2 Thinking (cost-effective thinking model with 256K context)
 
 Switch providers by editing one line in `config.yaml`:
 
 ```yaml
 api:
   provider: anthropic  # or: openai, google, xai, moonshot
-  model: claude-sonnet-4-5-20250929
+  model: claude-sonnet-4-5-20250929  # defaults set in provider_defaults.py
 ```
 
-When the AI writes research papers, it lists itself as an author using the appropriate model name (e.g., "GPT-4o", "Gemini 2.0 Flash"). The `{model}` placeholder in problem files is automatically replaced with the correct display name.
+When the AI writes research papers, it lists itself as an author using the appropriate model name (e.g., "GPT-5", "Gemini 2.5 Pro", "Kimi K2 Thinking"). The `{model}` placeholder in problem files is automatically replaced with the correct display name.
 
 **Full Documentation**: See [`docs/providers/MULTI_PROVIDER_GUIDE.md`](docs/providers/MULTI_PROVIDER_GUIDE.md) for detailed configuration examples, cost comparisons, and feature matrix.
 
 ## Prompt Caching
 
-The system implements Anthropic's 1-hour prompt caching to significantly reduce API costs during multi-iteration research sessions. By caching static prompt content (problem statements, reference papers, data descriptions), the system achieves approximately 40% cost savings on typical research runs.
+The system implements intelligent prompt caching to significantly reduce API costs during multi-iteration research sessions. By caching static prompt content (problem statements, reference papers, data descriptions), the system achieves substantial cost savings on typical research runs.
 
-**Note**: Prompt caching is currently only supported by Anthropic models.
+**Caching Support by Provider**:
+- **Anthropic**: 1-hour cache, 90% savings on cache reads
+- **OpenAI**: Automatic caching, 90% savings on cache reads
+- **Google**: Automatic context caching, 90% savings on cache reads
+- **xAI**: Automatic caching, 75% savings on cache reads
+- **Moonshot**: Automatic caching, 90% savings on cache reads (estimated)
 
 ### Cache Optimization
 
@@ -486,7 +491,7 @@ For GPU-intensive tasks (model training, large-scale inference), the system inte
 #### How It Works
 
 The AI researcher generates Python code that uses Modal to:
-- Run model inference on cloud GPUs (T4, A10G, A100)
+- Run model inference on cloud GPUs (T4, L4, A10G, A100)
 - Execute training jobs with automatic scaling
 - Cache models and images for fast subsequent runs
 
@@ -562,8 +567,8 @@ See `docs/MODAL_CODE_PATTERN.md` for complete documentation.
 **Configuration** (in `config.yaml`):
 ```yaml
 modal:
-  timeout: 3600  # 1 hour for training
-  gpu: "T4"      # GPU type (T4, A10G, A100)
+  timeout: 1800  # 30 minutes for GPU tasks
+  gpu: "L4"      # GPU type (T4, L4, A10G, A100)
 ```
 
 ### Token Efficiency
@@ -650,24 +655,31 @@ Edit `config.yaml` to customize:
 
 ```yaml
 execution:
-  timeout: 3600             # Code execution timeout (seconds)
+  timeout: 1800             # Code execution timeout (seconds) - 30 minutes
   output_limit: 100000      # Output length limit (characters)
 
 compilation:
-  timeout: 30               # LaTeX compilation timeout
-  error_limit: 500          # Error message length
+  timeout: 30               # LaTeX compilation timeout (seconds)
+  error_limit: 500          # Error message length (characters)
 
 api:
-  model: claude-sonnet-4-5-20250929
-  max_tokens: 64000
-  thinking_budget: 32000
-  rate_limit_wait: 20       # Wait time on rate limit
-  costs:
-    input_per_million: 3.0  # USD per million input tokens
-    output_per_million: 15.0 # USD per million output tokens
+  provider: anthropic       # LLM provider (anthropic, openai, google, xai, moonshot)
+  rate_limit_wait: 20       # Wait time on rate limit (seconds)
+
+  # Optional overrides (defaults from provider_defaults.py):
+  # model: claude-sonnet-4-5-20250929
+  # max_tokens: 64000
+  # thinking_budget: 32000
+  # costs:
+  #   input_per_million: 3.0
+  #   output_per_million: 15.0
 
 research:
   max_iterations: 20        # Default iteration limit
+
+modal:
+  timeout: 1800             # GPU task timeout (seconds) - 30 minutes
+  gpu: "L4"                 # Default GPU type (T4, L4, A10G, A100)
 
 output:
   figure_dpi: 300           # DPI for saved figures
@@ -747,6 +759,9 @@ Pre-downloaded datasets in `data/datasets/`:
 - **BLIMP**: 67 linguistic minimal pair datasets for evaluating grammatical knowledge
   - Load dynamically via HuggingFace: `load_dataset('blimp', 'phenomenon_name')`
   - See `data/datasets/blimp.txt` for the full list of phenomena
+- **Example Timeseries**: Sample temperature and humidity measurements (10 days, CSV format)
+  - Use with `--data example_timeseries.csv` for testing data analysis
+  - See `data/datasets/example_timeseries.txt` for format details
 
 ## Mechanistic Interpretability Research
 
