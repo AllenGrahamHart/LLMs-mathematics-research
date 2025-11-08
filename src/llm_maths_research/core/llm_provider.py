@@ -109,7 +109,7 @@ class AnthropicProvider(LLMProvider):
         thinking_budget: Optional[int] = None,
         extra_headers: Optional[Dict[str, str]] = None,
     ) -> LLMResponse:
-        """Create an Anthropic message."""
+        """Create an Anthropic message using streaming (required for long operations)."""
         kwargs = {
             "model": self.model,
             "max_tokens": max_tokens,
@@ -126,22 +126,23 @@ class AnthropicProvider(LLMProvider):
         if extra_headers:
             kwargs["extra_headers"] = extra_headers
 
-        response = self.client.messages.create(**kwargs)
-
-        # Extract text content
+        # Use streaming to avoid 10-minute timeout on long operations
         content = ""
-        for block in response.content:
-            if hasattr(block, 'text'):
-                content += block.text
+        with self.client.messages.stream(**kwargs) as stream:
+            for text in stream.text_stream:
+                content += text
+
+            # Get final message with usage stats
+            final_message = stream.get_final_message()
 
         return LLMResponse(
             content=content,
-            input_tokens=response.usage.input_tokens,
-            output_tokens=response.usage.output_tokens,
-            cache_creation_tokens=getattr(response.usage, 'cache_creation_input_tokens', 0),
-            cache_read_tokens=getattr(response.usage, 'cache_read_input_tokens', 0),
-            stop_reason=response.stop_reason,
-            model=response.model,
+            input_tokens=final_message.usage.input_tokens,
+            output_tokens=final_message.usage.output_tokens,
+            cache_creation_tokens=getattr(final_message.usage, 'cache_creation_input_tokens', 0),
+            cache_read_tokens=getattr(final_message.usage, 'cache_read_input_tokens', 0),
+            stop_reason=final_message.stop_reason,
+            model=final_message.model,
         )
 
     def create_message_stream(
