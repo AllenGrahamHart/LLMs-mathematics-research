@@ -32,6 +32,7 @@ The system manages the full research workflow including code execution, LaTeX co
 - **Configurable**: YAML-based configuration for timeouts, models, and limits
 - **Prompt Caching**: Intelligent 1-hour caching reduces API costs by ~40%
 - **Three-Stage Generator**: Sequential planning → coding → writing for proper information flow
+- **Reasoning Capture**: Logs chain-of-thought reasoning from supported providers (Anthropic, Moonshot)
 
 ## Three-Stage Generator Architecture
 
@@ -98,6 +99,23 @@ Each provider has different parameters for controlling reasoning depth and effor
 - OpenAI-compatible API
 
 **Full Documentation**: See [`docs/providers/MULTI_PROVIDER_GUIDE.md`](docs/providers/MULTI_PROVIDER_GUIDE.md) for detailed configuration examples, cost comparisons, and feature matrix.
+
+### Reasoning Capture
+
+The system can capture and log the chain-of-thought reasoning from models that expose their internal thinking process. This provides transparency into how the AI approaches problems.
+
+**Provider Support**:
+- **Anthropic Claude** ✓ - Captures thinking from `ThinkingBlock` content
+- **Moonshot Kimi K2** ✓ - Captures reasoning via `reasoning_content` field
+- **OpenAI** ✗ - Reasoning intentionally hidden by design
+- **Google Gemini** ✗ - API does not expose thinking content
+- **xAI Grok** ✗ - API does not expose reasoning content
+
+**Output Files** (per session, in `outputs/<session>/logs/`):
+- `reasoning.jsonl` - Structured data with iteration/stage metadata for programmatic analysis
+- `reasoning_readable.md` - Human-readable markdown format with formatted reasoning content
+
+Example reasoning log entry captures the model's internal thought process for each stage (planning, coding, writing, critique), enabling deeper understanding of the AI's problem-solving approach.
 
 ## Prompt Caching
 

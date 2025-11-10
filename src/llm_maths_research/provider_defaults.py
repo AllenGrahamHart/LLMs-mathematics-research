@@ -26,7 +26,7 @@ PROVIDER_DEFAULTS = {
             'cache_write_multiplier': 2.0,
             'cache_read_multiplier': 0.1,
         },
-        'notes': 'Extended thinking with explicit budget control. Prompt caching with 90% savings on reads.',
+        'notes': 'Extended thinking with explicit budget control. Prompt caching with 90% savings on reads. ✓ EXPOSES reasoning content via ThinkingBlock.',
     },
 
     'openai': {
@@ -56,7 +56,7 @@ PROVIDER_DEFAULTS = {
             'cache_write_multiplier': 1.0,  # Automatic caching
             'cache_read_multiplier': 0.1,   # 90% savings on cached tokens
         },
-        'notes': 'Adaptive thinking model with automatic context caching. Uses thinking_budget=-1 for dynamic reasoning depth. 1M input context, 65.5K output.',
+        'notes': 'Adaptive thinking model with automatic context caching. Note: Gemini does NOT expose reasoning/thought content via API - thinking_budget is for documentation only. 1M input context, 65.5K output.',
     },
 
     'xai': {
@@ -69,7 +69,7 @@ PROVIDER_DEFAULTS = {
             'cache_write_multiplier': 1.0,
             'cache_read_multiplier': 0.25,  # 75% savings on cached tokens
         },
-        'notes': 'OpenAI-compatible API. 256K context window with prompt caching (75% cost savings).',
+        'notes': 'OpenAI-compatible API. 256K context window with prompt caching (75% cost savings). Note: Grok does NOT expose reasoning content via API.',
     },
 
     'moonshot': {
@@ -82,7 +82,7 @@ PROVIDER_DEFAULTS = {
             'cache_write_multiplier': 1.0,
             'cache_read_multiplier': 0.1,  # Estimated 90% savings
         },
-        'notes': 'Extended thinking model with automatic caching. OpenAI-compatible API. Very cost-effective for budget-conscious research.',
+        'notes': 'Extended thinking model with automatic caching. OpenAI-compatible API. Very cost-effective for budget-conscious research. ✓ EXPOSES reasoning content via reasoning_content field.',
     },
 }
 

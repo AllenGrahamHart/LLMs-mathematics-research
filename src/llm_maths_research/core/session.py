@@ -20,6 +20,7 @@ from ..utils.openalex_blocks import (
     log_openalex_calls,
 )
 from .llm_provider import create_provider, LLMProvider
+from .reasoning_logger import ReasoningLogger
 
 load_dotenv()
 
@@ -105,6 +106,13 @@ class ResearchSession:
             provider_kwargs['reasoning_effort'] = CONFIG['api']['reasoning_effort']
 
         self.provider = create_provider(provider_name, api_key, model, **provider_kwargs)
+
+        # Initialize reasoning logger
+        self.reasoning_logger = ReasoningLogger(self.logs_dir)
+
+        # Track current iteration and stage for reasoning logging
+        self.current_iteration = 0
+        self.current_stage = None
 
     def load_last_state(self) -> None:
         """
@@ -232,6 +240,17 @@ class ResearchSession:
             'researcher_openalex': self.current_researcher_openalex,
             'critic_openalex': self.current_critic_openalex
         }
+
+    def set_reasoning_context(self, iteration: int, stage: str) -> None:
+        """
+        Set the current iteration and stage context for reasoning logging.
+
+        Args:
+            iteration: Current iteration number (1-indexed)
+            stage: Current stage ("planning", "coding", "writing", or "critique")
+        """
+        self.current_iteration = iteration
+        self.current_stage = stage
 
     def can_make_api_call(self) -> bool:
         """
@@ -418,6 +437,18 @@ class ResearchSession:
         if cache_read_tokens > 0:
             cache_info += f" | Cache read: {cache_read_tokens:,}"
         print(f"  Input: {input_tokens:,} tokens | Output: {output_tokens:,} tokens{cache_info} | Cost: ${total_cost:.4f}")
+
+        # Log reasoning content if available and context is set
+        if response.reasoning_content and self.current_iteration and self.current_stage:
+            self.reasoning_logger.log_reasoning(
+                iteration=self.current_iteration,
+                stage=self.current_stage,
+                model=response.model or CONFIG['api']['model'],
+                reasoning_content=response.reasoning_content,
+                reasoning_tokens=None,  # We don't have separate reasoning token count yet
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
 
         # Return the streamed response (which should match the non-streaming one)
         return response_text

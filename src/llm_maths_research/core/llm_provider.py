@@ -15,6 +15,7 @@ class LLMResponse:
     cache_read_tokens: int = 0
     stop_reason: Optional[str] = None
     model: Optional[str] = None
+    reasoning_content: Optional[str] = None  # Chain of thought/thinking content (if exposed by provider)
 
 
 class LLMProvider(ABC):
@@ -136,6 +137,12 @@ class AnthropicProvider(LLMProvider):
             # Get final message with usage stats
             final_message = stream.get_final_message()
 
+        # Extract reasoning content from ThinkingBlocks (if any)
+        reasoning_content = ""
+        for block in final_message.content:
+            if block.type == "thinking":
+                reasoning_content += block.thinking
+
         return LLMResponse(
             content=content,
             input_tokens=final_message.usage.input_tokens,
@@ -144,6 +151,7 @@ class AnthropicProvider(LLMProvider):
             cache_read_tokens=getattr(final_message.usage, 'cache_read_input_tokens', 0),
             stop_reason=final_message.stop_reason,
             model=final_message.model,
+            reasoning_content=reasoning_content if reasoning_content else None,
         )
 
     def create_message_stream(
@@ -404,9 +412,9 @@ class GoogleProvider(LLMProvider):
             "temperature": temperature,
         }
 
-        # Add thinking config if thinking_budget is provided
-        if thinking_budget is not None:
-            generation_config["thinking_config"] = {"thinking_budget": thinking_budget}
+        # Note: Google Gemini does not support thinking_config parameter in the API
+        # The thinking_budget in config is kept for documentation purposes only
+        # Gemini does not expose reasoning content via the API
 
         # Add system instruction if provided
         if system:
@@ -424,6 +432,7 @@ class GoogleProvider(LLMProvider):
         )
 
         # Accumulate content from stream
+        # Note: Google Gemini does not expose reasoning/thought content via API
         content = ""
         final_chunk = None
         for chunk in response_stream:
@@ -454,6 +463,7 @@ class GoogleProvider(LLMProvider):
             cache_read_tokens=cached_tokens,
             stop_reason=stop_reason,
             model=self.model,
+            reasoning_content=None,  # Google does not expose reasoning content
         )
 
     def create_message_stream(
@@ -576,14 +586,15 @@ class xAIProvider(LLMProvider):
             stream_options={"include_usage": True}  # Request usage stats in stream
         )
 
+        # Note: xAI Grok does not expose reasoning content via OpenAI-compatible API
         content = ""
         final_chunk = None
 
         for chunk in stream:
             if chunk.choices and len(chunk.choices) > 0:
-                delta_content = chunk.choices[0].delta.content
-                if delta_content:
-                    content += delta_content
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    content += delta.content
             final_chunk = chunk
 
         # Extract usage stats from final chunk
@@ -617,6 +628,7 @@ class xAIProvider(LLMProvider):
             cache_read_tokens=cached_tokens,
             stop_reason=stop_reason,
             model=model_name,
+            reasoning_content=None,  # xAI does not expose reasoning content
         )
 
     def create_message_stream(
@@ -722,13 +734,18 @@ class MoonshotProvider(LLMProvider):
         )
 
         content = ""
+        reasoning_content = ""
         final_chunk = None
 
         for chunk in stream:
             if chunk.choices and len(chunk.choices) > 0:
-                delta_content = chunk.choices[0].delta.content
-                if delta_content:
-                    content += delta_content
+                delta = chunk.choices[0].delta
+                # Capture regular content
+                if delta.content:
+                    content += delta.content
+                # Capture reasoning content (Kimi K2 exposes this)
+                if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
+                    reasoning_content += delta.reasoning_content
             # Keep the last chunk which should have usage stats
             final_chunk = chunk
 
@@ -763,6 +780,7 @@ class MoonshotProvider(LLMProvider):
             cache_read_tokens=cache_read_tokens,
             stop_reason=stop_reason,
             model=model_name,
+            reasoning_content=reasoning_content if reasoning_content else None,
         )
 
     def create_message_stream(

@@ -1,5 +1,7 @@
 Example Time Series Dataset
 
+Filename: example_timeseries.csv
+
 This is a demonstration dataset containing daily temperature and humidity measurements.
 
 Format: CSV file with three columns

@@ -544,6 +544,9 @@ In addition to your critique - please complete this survey:
                 self.current_iteration, state, "planning"
             )
 
+            # Set reasoning context for logging
+            self.session.set_reasoning_context(self.current_iteration, "planning")
+
             if self.use_cache:
                 planning_response = self.session.call_claude(
                     prompt=dynamic_content,
@@ -564,6 +567,9 @@ In addition to your critique - please complete this survey:
                 self.current_iteration, state, "coding"
             )
 
+            # Set reasoning context for logging
+            self.session.set_reasoning_context(self.current_iteration, "coding")
+
             if self.use_cache:
                 code_response = self.session.call_claude(
                     prompt=dynamic_content,
@@ -583,6 +589,9 @@ In addition to your critique - please complete this survey:
             static_content, dynamic_content = self.build_generator_prompt_for_stage(
                 self.current_iteration, state, "writing"
             )
+
+            # Set reasoning context for logging
+            self.session.set_reasoning_context(self.current_iteration, "writing")
 
             if self.use_cache:
                 latex_response = self.session.call_claude(
@@ -607,6 +616,9 @@ In addition to your critique - please complete this survey:
             # Get updated state after generator's changes
             state = self.session.get_state()
             static_content, dynamic_content = self.build_critic_prompt(self.current_iteration, state, generator_response)
+
+            # Set reasoning context for logging
+            self.session.set_reasoning_context(self.current_iteration, "critique")
 
             if self.use_cache:
                 critic_response = self.session.call_claude(
