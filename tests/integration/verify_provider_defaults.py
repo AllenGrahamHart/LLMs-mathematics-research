@@ -1,7 +1,7 @@
 """Test provider defaults and CLI integration."""
 
-from src.llm_maths_research.config import CONFIG, set_provider
-from src.llm_maths_research.provider_defaults import get_provider_config, list_providers
+from llm_maths_research.config import CONFIG, set_provider
+from llm_maths_research.provider_defaults import get_provider_config, list_providers
 
 print("=" * 80)
 print("Testing Provider Defaults System")
@@ -35,12 +35,12 @@ original_model = CONFIG['api']['model']
 # Switch to OpenAI
 set_provider('openai')
 # Re-import CONFIG to get updated value
-from src.llm_maths_research import config
+from llm_maths_research import config
 print(f"Switched to: {config.CONFIG['api']['provider']}")
 print(f"Model: {config.CONFIG['api']['model']}")
 print(f"Max Tokens: {config.CONFIG['api']['max_tokens']:,}")
 assert config.CONFIG['api']['provider'] == 'openai'
-assert config.CONFIG['api']['model'] == 'gpt-4o'
+assert config.CONFIG['api']['model'] == 'gpt-5'
 print("✓ Provider switch works")
 
 # Switch back

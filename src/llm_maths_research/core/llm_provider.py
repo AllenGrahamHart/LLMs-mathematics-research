@@ -99,6 +99,7 @@ class AnthropicProvider(LLMProvider):
         import anthropic
         self.client = anthropic.Anthropic(api_key=api_key)
         self.anthropic = anthropic
+        print(f"[DEBUG] AnthropicProvider initialized: model={model}")
 
     def create_message(
         self,
@@ -200,10 +201,15 @@ class AnthropicProvider(LLMProvider):
 class OpenAIProvider(LLMProvider):
     """OpenAI GPT provider."""
 
-    def __init__(self, api_key: str, model: str):
+    def __init__(self, api_key: str, model: str, reasoning_effort: str = 'medium'):
         super().__init__(api_key, model)
         from openai import OpenAI
-        self.client = OpenAI(api_key=api_key)
+        self.reasoning_effort = reasoning_effort
+        print(f"[DEBUG] OpenAIProvider initialized: model={model}, reasoning_effort={reasoning_effort}")
+        self.client = OpenAI(
+            api_key=api_key,
+            timeout=None  # No timeout - let thinking models take as long as needed
+        )
 
     def create_message(
         self,
@@ -214,29 +220,63 @@ class OpenAIProvider(LLMProvider):
         thinking_budget: Optional[int] = None,
         extra_headers: Optional[Dict[str, str]] = None,
     ) -> LLMResponse:
-        """Create an OpenAI message."""
+        """Create an OpenAI message (non-streaming for compatibility)."""
         # Convert messages to OpenAI format
         openai_messages = self._convert_messages(messages, system)
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=openai_messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+        # GPT-5 models use max_completion_tokens instead of max_tokens
+        # Check if this is a GPT-5 model
+        uses_completion_tokens = 'gpt-5' in self.model.lower() or 'o1' in self.model.lower()
 
-        # Extract cache tokens if available (for o1 and GPT-5 models)
-        cached_tokens = 0
-        if hasattr(response.usage, 'prompt_tokens_details'):
-            cached_tokens = getattr(response.usage.prompt_tokens_details, 'cached_tokens', 0)
+        # Build the API call parameters (non-streaming to avoid organization verification requirement)
+        api_params = {
+            "model": self.model,
+            "messages": openai_messages,
+            "temperature": temperature,
+        }
+
+        # Use the appropriate parameter name based on the model
+        if uses_completion_tokens:
+            api_params["max_completion_tokens"] = max_tokens
+        else:
+            api_params["max_tokens"] = max_tokens
+
+        # Add reasoning_effort for GPT-5 and o1 models
+        if uses_completion_tokens and self.reasoning_effort:
+            api_params["reasoning_effort"] = self.reasoning_effort
+
+        # Use non-streaming mode (streaming requires organization verification for GPT-5)
+        response = self.client.chat.completions.create(**api_params)
+
+        # Extract content
+        content = response.choices[0].message.content or ""
+
+        # Extract usage stats
+        if response.usage:
+            usage = response.usage
+            input_tokens = usage.prompt_tokens
+            output_tokens = usage.completion_tokens
+            # Extract cache tokens if available (for o1 and GPT-5 models)
+            if hasattr(usage, 'prompt_tokens_details'):
+                cached_tokens = getattr(usage.prompt_tokens_details, 'cached_tokens', 0)
+            else:
+                cached_tokens = 0
+        else:
+            input_tokens = 0
+            output_tokens = 0
+            cached_tokens = 0
+
+        # Get stop reason and model
+        stop_reason = response.choices[0].finish_reason if response.choices else None
+        model_name = response.model if hasattr(response, 'model') else self.model
 
         return LLMResponse(
-            content=response.choices[0].message.content or "",
-            input_tokens=response.usage.prompt_tokens,
-            output_tokens=response.usage.completion_tokens,
+            content=content,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             cache_read_tokens=cached_tokens,
-            stop_reason=response.choices[0].finish_reason,
-            model=response.model,
+            stop_reason=stop_reason,
+            model=model_name,
         )
 
     def create_message_stream(
@@ -251,13 +291,24 @@ class OpenAIProvider(LLMProvider):
         """Create a streaming OpenAI message."""
         openai_messages = self._convert_messages(messages, system)
 
-        stream = self.client.chat.completions.create(
-            model=self.model,
-            messages=openai_messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            stream=True,
-        )
+        # GPT-5 models use max_completion_tokens instead of max_tokens
+        uses_completion_tokens = 'gpt-5' in self.model.lower() or 'o1' in self.model.lower()
+
+        # Build the API call parameters
+        api_params = {
+            "model": self.model,
+            "messages": openai_messages,
+            "temperature": temperature,
+            "stream": True,
+        }
+
+        # Use the appropriate parameter name based on the model
+        if uses_completion_tokens:
+            api_params["max_completion_tokens"] = max_tokens
+        else:
+            api_params["max_tokens"] = max_tokens
+
+        stream = self.client.chat.completions.create(**api_params)
 
         for chunk in stream:
             if chunk.choices[0].delta.content:
@@ -326,7 +377,12 @@ class GoogleProvider(LLMProvider):
     def __init__(self, api_key: str, model: str):
         super().__init__(api_key, model)
         import google.generativeai as genai
-        genai.configure(api_key=api_key)
+        print(f"[DEBUG] GoogleProvider initialized: model={model}")
+        # Configure with timeout for long-running requests
+        genai.configure(
+            api_key=api_key,
+            transport='rest',  # Use REST transport for better timeout control
+        )
         self.client = genai.GenerativeModel(model)
         self.genai = genai
 
@@ -339,7 +395,7 @@ class GoogleProvider(LLMProvider):
         thinking_budget: Optional[int] = None,
         extra_headers: Optional[Dict[str, str]] = None,
     ) -> LLMResponse:
-        """Create a Gemini message."""
+        """Create a Gemini message using streaming to avoid timeouts."""
         # Convert messages to Gemini format
         gemini_messages = self._convert_messages(messages)
 
@@ -347,6 +403,10 @@ class GoogleProvider(LLMProvider):
             "max_output_tokens": max_tokens,
             "temperature": temperature,
         }
+
+        # Add thinking config if thinking_budget is provided
+        if thinking_budget is not None:
+            generation_config["thinking_config"] = {"thinking_budget": thinking_budget}
 
         # Add system instruction if provided
         if system:
@@ -356,22 +416,43 @@ class GoogleProvider(LLMProvider):
                 system_instruction=system
             )
 
-        response = self.client.generate_content(
+        # Use streaming to avoid hanging on slow/unresponsive API
+        response_stream = self.client.generate_content(
             gemini_messages,
             generation_config=generation_config,
+            stream=True,
         )
 
-        # Get exact token counts and cache info from usage_metadata
-        input_tokens = response.usage_metadata.prompt_token_count
-        output_tokens = response.usage_metadata.candidates_token_count
-        cached_tokens = getattr(response.usage_metadata, 'cached_content_token_count', 0)
+        # Accumulate content from stream
+        content = ""
+        final_chunk = None
+        for chunk in response_stream:
+            if chunk.text:
+                content += chunk.text
+            final_chunk = chunk
+
+        # Get exact token counts and cache info from final chunk
+        if final_chunk and hasattr(final_chunk, 'usage_metadata'):
+            input_tokens = final_chunk.usage_metadata.prompt_token_count
+            output_tokens = final_chunk.usage_metadata.candidates_token_count
+            cached_tokens = getattr(final_chunk.usage_metadata, 'cached_content_token_count', 0)
+        else:
+            # Fallback if usage not available
+            input_tokens = 0
+            output_tokens = 0
+            cached_tokens = 0
+
+        # Get stop reason from final chunk
+        stop_reason = None
+        if final_chunk and hasattr(final_chunk, 'candidates') and final_chunk.candidates:
+            stop_reason = str(final_chunk.candidates[0].finish_reason)
 
         return LLMResponse(
-            content=response.text,
+            content=content,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             cache_read_tokens=cached_tokens,
-            stop_reason=str(response.candidates[0].finish_reason) if response.candidates else None,
+            stop_reason=stop_reason,
             model=self.model,
         )
 
@@ -464,10 +545,12 @@ class xAIProvider(LLMProvider):
     def __init__(self, api_key: str, model: str):
         super().__init__(api_key, model)
         from openai import OpenAI
+        print(f"[DEBUG] xAIProvider initialized: endpoint=https://api.x.ai/v1, model={model}")
         # xAI uses OpenAI-compatible API
         self.client = OpenAI(
             api_key=api_key,
-            base_url="https://api.x.ai/v1"
+            base_url="https://api.x.ai/v1",
+            timeout=None  # No timeout - let thinking models take as long as needed
         )
 
     def create_message(
@@ -479,29 +562,61 @@ class xAIProvider(LLMProvider):
         thinking_budget: Optional[int] = None,
         extra_headers: Optional[Dict[str, str]] = None,
     ) -> LLMResponse:
-        """Create a Grok message."""
+        """Create a Grok message using streaming to avoid timeouts."""
         # Convert messages to OpenAI format
         openai_messages = self._convert_messages(messages, system)
 
-        response = self.client.chat.completions.create(
+        # Use streaming to avoid hanging on slow/unresponsive API
+        stream = self.client.chat.completions.create(
             model=self.model,
             messages=openai_messages,
             max_tokens=max_tokens,
             temperature=temperature,
+            stream=True,
+            stream_options={"include_usage": True}  # Request usage stats in stream
         )
 
-        # Extract cache tokens if available (Grok-4 automatic caching)
-        cached_tokens = 0
-        if hasattr(response.usage, 'prompt_tokens_details'):
-            cached_tokens = getattr(response.usage.prompt_tokens_details, 'cached_tokens', 0)
+        content = ""
+        final_chunk = None
+
+        for chunk in stream:
+            if chunk.choices and len(chunk.choices) > 0:
+                delta_content = chunk.choices[0].delta.content
+                if delta_content:
+                    content += delta_content
+            final_chunk = chunk
+
+        # Extract usage stats from final chunk
+        if final_chunk and hasattr(final_chunk, 'usage') and final_chunk.usage:
+            usage = final_chunk.usage
+            input_tokens = usage.prompt_tokens
+            output_tokens = usage.completion_tokens
+            # Extract cache tokens if available (Grok-4 automatic caching)
+            if hasattr(usage, 'prompt_tokens_details'):
+                cached_tokens = getattr(usage.prompt_tokens_details, 'cached_tokens', 0)
+            else:
+                cached_tokens = 0
+        else:
+            # Fallback if usage not available in stream
+            input_tokens = 0
+            output_tokens = 0
+            cached_tokens = 0
+
+        # Get stop reason and model from final chunk
+        stop_reason = None
+        model_name = self.model
+        if final_chunk and final_chunk.choices and len(final_chunk.choices) > 0:
+            stop_reason = final_chunk.choices[0].finish_reason
+        if final_chunk and hasattr(final_chunk, 'model'):
+            model_name = final_chunk.model
 
         return LLMResponse(
-            content=response.choices[0].message.content or "",
-            input_tokens=response.usage.prompt_tokens,
-            output_tokens=response.usage.completion_tokens,
+            content=content,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             cache_read_tokens=cached_tokens,
-            stop_reason=response.choices[0].finish_reason,
-            model=response.model,
+            stop_reason=stop_reason,
+            model=model_name,
         )
 
     def create_message_stream(
@@ -576,11 +691,13 @@ class MoonshotProvider(LLMProvider):
     def __init__(self, api_key: str, model: str):
         super().__init__(api_key, model)
         from openai import OpenAI
-        # Kimi uses OpenAI-compatible API
+        # Kimi uses OpenAI-compatible API (international endpoint)
         self.client = OpenAI(
             api_key=api_key,
-            base_url="https://api.moonshot.cn/v1"
+            base_url="https://api.moonshot.ai/v1",
+            timeout=None  # No timeout - let thinking models take as long as needed
         )
+        print(f"[DEBUG] MoonshotProvider initialized: endpoint=https://api.moonshot.ai/v1, model={model}")
 
     def create_message(
         self,
@@ -591,28 +708,61 @@ class MoonshotProvider(LLMProvider):
         thinking_budget: Optional[int] = None,
         extra_headers: Optional[Dict[str, str]] = None,
     ) -> LLMResponse:
-        """Create a Kimi message."""
+        """Create a Kimi message using streaming to avoid timeouts."""
         openai_messages = self._convert_messages(messages, system)
 
-        response = self.client.chat.completions.create(
+        # Use streaming to avoid hanging on slow/unresponsive API
+        stream = self.client.chat.completions.create(
             model=self.model,
             messages=openai_messages,
             max_tokens=max_tokens,
             temperature=temperature,
+            stream=True,
+            stream_options={"include_usage": True}  # Request usage stats in stream
         )
 
-        # Extract cache tokens (Kimi K2 automatic caching uses same fields as Anthropic)
-        cache_creation_tokens = getattr(response.usage, 'cache_creation_input_tokens', 0)
-        cache_read_tokens = getattr(response.usage, 'cache_read_input_tokens', 0)
+        content = ""
+        final_chunk = None
+
+        for chunk in stream:
+            if chunk.choices and len(chunk.choices) > 0:
+                delta_content = chunk.choices[0].delta.content
+                if delta_content:
+                    content += delta_content
+            # Keep the last chunk which should have usage stats
+            final_chunk = chunk
+
+        # Extract usage stats from final chunk
+        if final_chunk and hasattr(final_chunk, 'usage') and final_chunk.usage:
+            usage = final_chunk.usage
+            input_tokens = usage.prompt_tokens
+            output_tokens = usage.completion_tokens
+            # Extract cache tokens (Kimi K2 automatic caching uses same fields as Anthropic)
+            cache_creation_tokens = getattr(usage, 'cache_creation_input_tokens', 0)
+            cache_read_tokens = getattr(usage, 'cache_read_input_tokens', 0)
+        else:
+            # Fallback if usage not available in stream
+            input_tokens = 0
+            output_tokens = 0
+            cache_creation_tokens = 0
+            cache_read_tokens = 0
+
+        # Get stop reason and model from final chunk
+        stop_reason = None
+        model_name = self.model
+        if final_chunk and final_chunk.choices and len(final_chunk.choices) > 0:
+            stop_reason = final_chunk.choices[0].finish_reason
+        if final_chunk and hasattr(final_chunk, 'model'):
+            model_name = final_chunk.model
 
         return LLMResponse(
-            content=response.choices[0].message.content or "",
-            input_tokens=response.usage.prompt_tokens,
-            output_tokens=response.usage.completion_tokens,
+            content=content,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             cache_creation_tokens=cache_creation_tokens,
             cache_read_tokens=cache_read_tokens,
-            stop_reason=response.choices[0].finish_reason,
-            model=response.model,
+            stop_reason=stop_reason,
+            model=model_name,
         )
 
     def create_message_stream(
@@ -682,13 +832,14 @@ class MoonshotProvider(LLMProvider):
         return model_map.get(self.model, f"Kimi ({self.model})")
 
 
-def create_provider(provider_name: str, api_key: str, model: str) -> LLMProvider:
+def create_provider(provider_name: str, api_key: str, model: str, **provider_kwargs) -> LLMProvider:
     """Factory function to create LLM providers.
 
     Args:
         provider_name: Name of provider ('anthropic', 'openai', 'google', 'xai', 'moonshot')
         api_key: API key for the provider
         model: Model ID to use
+        **provider_kwargs: Provider-specific keyword arguments (e.g., reasoning_effort for OpenAI)
 
     Returns:
         LLMProvider instance
@@ -711,4 +862,8 @@ def create_provider(provider_name: str, api_key: str, model: str) -> LLMProvider
             f"Supported providers: {', '.join(providers.keys())}"
         )
 
-    return provider_class(api_key, model)
+    # Only pass provider_kwargs to providers that support them
+    if provider_name.lower() == 'openai':
+        return provider_class(api_key, model, **provider_kwargs)
+    else:
+        return provider_class(api_key, model)

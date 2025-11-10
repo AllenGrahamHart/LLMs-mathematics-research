@@ -66,6 +66,10 @@ def load_config() -> Dict[str, Any]:
     config['api']['max_tokens'] = provider_config['max_tokens']
     config['api']['thinking_budget'] = provider_config.get('thinking_budget')
 
+    # Add OpenAI-specific parameters if present
+    if 'reasoning_effort' in provider_config:
+        config['api']['reasoning_effort'] = provider_config['reasoning_effort']
+
     # Merge costs (allow partial overrides)
     if 'costs' not in config['api']:
         config['api']['costs'] = {}
@@ -124,13 +128,18 @@ def set_provider(provider_name: str) -> None:
     config['api']['max_tokens'] = provider_config['max_tokens']
     config['api']['thinking_budget'] = provider_config.get('thinking_budget')
 
+    # Add OpenAI-specific parameters if present
+    if 'reasoning_effort' in provider_config:
+        config['api']['reasoning_effort'] = provider_config['reasoning_effort']
+
     # Merge costs
     if 'costs' not in config['api']:
         config['api']['costs'] = {}
     config['api']['costs'] = {**provider_config['costs'], **config['api'].get('costs', {})}
 
-    # Update global CONFIG
-    CONFIG = config
+    # Update global CONFIG in-place (don't reassign, update the dict)
+    CONFIG.clear()
+    CONFIG.update(config)
 
 
 # Global config instance

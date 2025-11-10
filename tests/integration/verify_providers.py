@@ -1,7 +1,7 @@
 """Test script to verify LLM provider implementations."""
 
 import os
-from src.llm_maths_research.core.llm_provider import create_provider
+from llm_maths_research.core.llm_provider import create_provider
 
 def test_provider(provider_name: str, model: str, api_key: str):
     """Test a provider with a simple message."""

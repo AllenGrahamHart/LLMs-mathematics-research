@@ -99,7 +99,12 @@ class ResearchSession:
             }
             api_key = os.getenv(env_var_map.get(provider_name, 'ANTHROPIC_API_KEY'))
 
-        self.provider = create_provider(provider_name, api_key, model)
+        # Get provider-specific parameters from config (e.g., reasoning_effort for OpenAI)
+        provider_kwargs = {}
+        if provider_name == 'openai' and 'reasoning_effort' in CONFIG['api']:
+            provider_kwargs['reasoning_effort'] = CONFIG['api']['reasoning_effort']
+
+        self.provider = create_provider(provider_name, api_key, model, **provider_kwargs)
 
     def load_last_state(self) -> None:
         """
@@ -237,15 +242,22 @@ class ResearchSession:
         """
         try:
             self.provider.create_message(
-                messages=[{"role": "user", "content": "x"}],
-                max_tokens=1
+                messages=[{"role": "user", "content": "Reply with only the character 'x' and nothing else."}],
+                max_tokens=1  # Minimal tokens - even "max_tokens reached" means API works
             )
             return True
         except Exception as e:
             # Check if it's a rate limit error (provider-specific)
             error_type = type(e).__name__
-            if 'RateLimit' in error_type or 'rate_limit' in str(e).lower():
+            error_msg = str(e).lower()
+
+            if 'RateLimit' in error_type or 'rate_limit' in error_msg:
                 return False
+
+            # "max_tokens reached" means API call succeeded (GPT-5/o1 used tokens for thinking)
+            if 'max_tokens' in error_msg or 'max_completion_tokens' in error_msg:
+                return True
+
             # For other errors, assume API is available (may be temporary issue)
             return True
 
@@ -273,6 +285,17 @@ class ResearchSession:
         wait_time = CONFIG['api']['rate_limit_wait']
         max_retries = 5
 
+        # Check if we can make API call (proactive rate limit detection)
+        max_rate_limit_checks = 10  # Prevent infinite loop
+        for check_attempt in range(max_rate_limit_checks):
+            if self.can_make_api_call():
+                break
+            print(f"  Rate limit detected (pre-check), waiting {wait_time}s... (attempt {check_attempt + 1}/{max_rate_limit_checks})")
+            time.sleep(wait_time)
+        else:
+            # Exhausted all rate limit checks
+            raise Exception(f"API rate limit persists after {max_rate_limit_checks} checks ({max_rate_limit_checks * wait_time}s)")
+
         # Build messages with caching if requested (only for Anthropic)
         provider_name = CONFIG['api'].get('provider', 'anthropic')
         if cache_static_content and static_content and provider_name == 'anthropic':
@@ -292,6 +315,11 @@ class ResearchSession:
             }]
             # Add beta header for 1-hour cache
             extra_headers = {"anthropic-beta": "prompt-caching-2024-07-31,extended-cache-ttl-2025-04-11"}
+        elif cache_static_content and static_content:
+            # Non-Anthropic provider with caching: combine static + dynamic content
+            # (automatic caching will handle repeated prefixes)
+            messages = [{"role": "user", "content": static_content + prompt}]
+            extra_headers = None
         else:
             # Original behavior - simple string prompt
             messages = [{"role": "user", "content": prompt}]

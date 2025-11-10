@@ -1,8 +1,8 @@
 """Test Gemini 2.5 Pro configuration."""
 
-from src.llm_maths_research.provider_defaults import get_provider_config
-from src.llm_maths_research.config import set_provider
-from src.llm_maths_research import config
+from llm_maths_research.provider_defaults import get_provider_config
+from llm_maths_research.config import set_provider
+from llm_maths_research import config
 
 print("=" * 80)
 print("Testing Gemini 2.5 Pro Configuration")
@@ -15,8 +15,6 @@ gemini_config = get_provider_config('google')
 print(f"Model: {gemini_config['model']}")
 print(f"Display Name: {gemini_config['display_name']}")
 print(f"Max Tokens: {gemini_config['max_tokens']:,}")
-print(f"Supports Thinking: {gemini_config['supports_thinking']}")
-print(f"Supports Caching: {gemini_config['supports_caching']}")
 print(f"Input Cost: ${gemini_config['costs']['input_per_million']:.2f}/M")
 print(f"Output Cost: ${gemini_config['costs']['output_per_million']:.2f}/M")
 print(f"Cache Multiplier: {gemini_config['costs']['cache_read_multiplier']:.1f}x (90% savings)")
@@ -24,8 +22,6 @@ print(f"Cache Multiplier: {gemini_config['costs']['cache_read_multiplier']:.1f}x
 assert gemini_config['model'] == 'gemini-2.5-pro'
 assert gemini_config['display_name'] == 'Gemini 2.5 Pro'
 assert gemini_config['max_tokens'] == 65536
-assert gemini_config['supports_thinking'] == True
-assert gemini_config['supports_caching'] == True
 assert gemini_config['costs']['input_per_million'] == 1.25
 assert gemini_config['costs']['output_per_million'] == 10.0
 assert gemini_config['costs']['cache_read_multiplier'] == 0.1
@@ -49,7 +45,7 @@ print("✓ Config switching works!")
 print("\nTest 3: Gemini Provider Instantiation")
 print("-" * 40)
 try:
-    from src.llm_maths_research.core.llm_provider import create_provider
+    from llm_maths_research.core.llm_provider import create_provider
     import os
 
     # Note: This will fail if GOOGLE_API_KEY is not set, which is fine

@@ -2,6 +2,16 @@
 
 These are sensible defaults for the most powerful/recommended model from each provider.
 Users can override these in config.yaml if needed.
+
+IMPORTANT: The 'max_tokens' key is a generic configuration value used by the system.
+Each provider implementation maps this to the appropriate provider-specific parameter:
+- Anthropic: max_tokens
+- OpenAI (GPT-5, o1): max_completion_tokens
+- Google (Gemini): max_output_tokens
+- xAI (Grok): max_tokens (OpenAI-compatible)
+- Moonshot (Kimi): max_tokens (OpenAI-compatible)
+
+Each provider dict only includes fields that are meaningful for that specific provider.
 """
 
 PROVIDER_DEFAULTS = {
@@ -9,80 +19,70 @@ PROVIDER_DEFAULTS = {
         'model': 'claude-sonnet-4-5-20250929',
         'display_name': 'Claude Sonnet 4.5',
         'max_tokens': 64000,
-        'thinking_budget': 32000,  # Extended thinking for complex reasoning
-        'supports_thinking': True,
-        'supports_caching': True,
+        'thinking_budget': 32000,  # Anthropic-specific: explicit thinking token budget
         'costs': {
             'input_per_million': 3.0,
             'output_per_million': 15.0,
             'cache_write_multiplier': 2.0,
             'cache_read_multiplier': 0.1,
         },
-        'notes': 'Best for complex reasoning tasks. Supports extended thinking and prompt caching.',
+        'notes': 'Extended thinking with explicit budget control. Prompt caching with 90% savings on reads.',
     },
 
     'openai': {
-        'model': 'chatgpt-5',
+        'model': 'gpt-5',
         'display_name': 'GPT-5',
         'max_tokens': 128000,
-        'thinking_budget': None,  # Not supported
-        'supports_thinking': False,
-        'supports_caching': True,  # 90% cost savings on cached tokens
+        'max_completion_tokens': 128000,  # OpenAI-specific parameter name for GPT-5/o1
+        'reasoning_effort': 'high',  # GPT-5 reasoning effort: minimal, low, medium, high
         'costs': {
             'input_per_million': 1.25,
             'output_per_million': 10.0,
-            'cache_write_multiplier': 1.0,  # Full price for cache writes
-            'cache_read_multiplier': 0.1,  # $0.125/M (90% savings from $1.25)
+            'cache_write_multiplier': 1.0,
+            'cache_read_multiplier': 0.1,  # 90% savings on cached tokens
         },
-        'notes': 'Best model for coding and agentic tasks. Prompt caching provides 90% cost savings on repeated prompts.',
+        'notes': 'GPT-5 with high reasoning effort for maximum performance. Uses max_completion_tokens parameter. Prompt caching provides 90% cost savings.',
     },
 
     'google': {
         'model': 'gemini-2.5-pro',
         'display_name': 'Gemini 2.5 Pro',
-        'max_tokens': 65536,  # 65.5K output, 1M input context
-        'thinking_budget': None,
-        'supports_thinking': True,  # State-of-the-art thinking model
-        'supports_caching': True,  # Context caching with 90% savings
+        'max_tokens': 65536,
+        'max_output_tokens': 65536,  # Google-specific parameter name
+        'thinking_budget': -1,  # -1 = adaptive thinking (model adjusts automatically), 0 = disabled, or up to 32000 tokens
         'costs': {
             'input_per_million': 1.25,  # For prompts <= 200K tokens
             'output_per_million': 10.0,
-            'cache_write_multiplier': 1.0,  # Same price as regular input (automatic caching)
-            'cache_read_multiplier': 0.1,   # $0.125/M (90% savings from $1.25)
+            'cache_write_multiplier': 1.0,  # Automatic caching
+            'cache_read_multiplier': 0.1,   # 90% savings on cached tokens
         },
-        'notes': 'Most capable Gemini model. State-of-the-art reasoning for code, math, and STEM. Context caching provides 90% cost savings on repeated prompts.',
+        'notes': 'Adaptive thinking model with automatic context caching. Uses thinking_budget=-1 for dynamic reasoning depth. 1M input context, 65.5K output.',
     },
 
     'xai': {
         'model': 'grok-4-0709',
         'display_name': 'Grok 4',
-        'max_tokens': 128000,  # Output limit; 256K input context window
-        'thinking_budget': None,
-        'supports_thinking': False,
-        'supports_caching': True,  # 75% cost savings on cached tokens
+        'max_tokens': 128000,  # 256K input context, 128K output
         'costs': {
             'input_per_million': 3.0,
             'output_per_million': 15.0,
-            'cache_write_multiplier': 1.0,  # Full price for cache writes
-            'cache_read_multiplier': 0.25,  # $0.75/M (75% savings from $3.00)
+            'cache_write_multiplier': 1.0,
+            'cache_read_multiplier': 0.25,  # 75% savings on cached tokens
         },
-        'notes': 'Latest Grok model. 256K context window with caching support for cost-effective research.',
+        'notes': 'OpenAI-compatible API. 256K context window with prompt caching (75% cost savings).',
     },
 
     'moonshot': {
         'model': 'kimi-k2-thinking',
         'display_name': 'Kimi K2 Thinking',
-        'max_tokens': 128000,  # Output limit; 256K input context window
-        'thinking_budget': None,
-        'supports_thinking': True,  # Extended thinking capabilities
-        'supports_caching': True,  # Automatic token caching
+        'max_tokens': 128000,  # 256K input context, 128K output
         'costs': {
             'input_per_million': 0.60,
             'output_per_million': 2.50,
-            'cache_write_multiplier': 1.0,  # Automatic caching
-            'cache_read_multiplier': 0.1,  # Estimated 90% savings (typical for auto-caching)
+            'cache_write_multiplier': 1.0,
+            'cache_read_multiplier': 0.1,  # Estimated 90% savings
         },
-        'notes': 'Very cost-effective thinking model. 256K context with automatic caching for budget-conscious research.',
+        'notes': 'Extended thinking model with automatic caching. OpenAI-compatible API. Very cost-effective for budget-conscious research.',
     },
 }
 
@@ -158,7 +158,7 @@ def get_provider_info(provider_name: str) -> str:
     ]
 
     if config['supports_thinking']:
-        if config['thinking_budget']:
+        if config.get('thinking_budget'):
             info.append(f"  Extended Thinking: Yes (budget: {config['thinking_budget']:,} tokens)")
         else:
             info.append("  Extended Thinking: Yes")

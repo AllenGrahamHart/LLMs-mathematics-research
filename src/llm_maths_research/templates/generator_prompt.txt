@@ -18,6 +18,7 @@ When writing code, note the Pip-installed packages are:
 - numpy, scipy, pandas
 - matplotlib, seaborn
 - networkx, scikit-learn
+- statsmodels (for statistical modeling and time series analysis)
 - torch, torchvision
 - transformer-lens
 - datasets (BLIMP available via: `load_dataset('blimp', 'phenomenon_name')`)

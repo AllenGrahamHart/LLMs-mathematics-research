@@ -65,6 +65,38 @@ api:
 
 When the AI writes research papers, it lists itself as an author using the appropriate model name (e.g., "GPT-5", "Gemini 2.5 Pro", "Kimi K2 Thinking"). The `{model}` placeholder in problem files is automatically replaced with the correct display name.
 
+### Reasoning Control
+
+Each provider has different parameters for controlling reasoning depth and effort:
+
+**Anthropic Claude** - Explicit thinking budget:
+- `thinking_budget: 32000` - Fixed 32K token budget for extended thinking
+- Provides explicit control over thinking depth
+- Set in `provider_defaults.py` or override in `config.yaml`
+
+**OpenAI GPT-5** - Reasoning effort levels:
+- `reasoning_effort: 'high'` - Maximum reasoning capability (default)
+- Options: `'minimal'`, `'low'`, `'medium'`, `'high'`
+- Higher effort = more thorough reasoning but ~23× more output tokens
+- Best performance with `'high'` for complex research tasks
+
+**Google Gemini 2.5 Pro** - Adaptive thinking:
+- `thinking_budget: -1` - Adaptive/dynamic reasoning (default)
+- Model automatically adjusts thinking depth based on task complexity
+- Alternative: Set explicit budget (0 to disable, or up to 32000 tokens)
+- `-1` provides optimal balance for autonomous research
+
+**xAI Grok 4** - Automatic reasoning:
+- No user-controllable parameters
+- Model automatically determines reasoning depth
+- OpenAI-compatible API
+
+**Moonshot Kimi K2** - Automatic test-time scaling:
+- No explicit thinking control parameters
+- Uses automatic test-time scaling for reasoning
+- Recommended: `temperature: 1.0` for optimal performance
+- OpenAI-compatible API
+
 **Full Documentation**: See [`docs/providers/MULTI_PROVIDER_GUIDE.md`](docs/providers/MULTI_PROVIDER_GUIDE.md) for detailed configuration examples, cost comparisons, and feature matrix.
 
 ## Prompt Caching
@@ -733,6 +765,7 @@ The code execution environment includes:
 - numpy, scipy, pandas
 - matplotlib, seaborn
 - networkx, scikit-learn
+- statsmodels (statistical modeling and time series analysis)
 
 **Deep Learning:**
 - torch, torchvision
