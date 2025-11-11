@@ -1,0 +1,2143 @@
+# ============================================================================
+# Proton Beam SDE Simulator - C++ Source Files
+# Repository: https://github.com/JereKoskela/proton-beam-sde
+# ============================================================================
+
+# ============================================================================
+# File: simulate.cc (Main simulation driver)
+# ============================================================================
+
+#include "cross_sections.cc"
+#include "grid.cc"
+#include "material.cc"
+#include "proton_beam.cc"
+#include <cfloat>
+#include <cstdlib>
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_rng.h>
+#include <iostream>
+#include <libconfig.h++>
+#include <string>
+#include <vector>
+
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    std::cout << "Call " << argv[0] << " config-path" << std::endl;
+    return 1;
+  }
+  gsl_rng *gen = gsl_rng_alloc(gsl_rng_mt19937);
+  gsl_rng_set(gen, time(NULL));
+  double Rutherford_cutoff, Backscatter_cutoff;
+  libconfig::Config cfg;
+  cfg.readFile(argv[1]);
+  cfg.lookupValue("Rutherford_cutoff", Rutherford_cutoff);
+  cfg.lookupValue("Backscatter_cutoff", Backscatter_cutoff);
+  std::vector<Atom> atoms;
+  int a, z;
+  std::string name;
+  std::ifstream file;
+  file.open("./Materials/atoms.txt");
+  std::string line, token;
+  while (getline(file, line)) {
+    std::stringstream iss;
+    iss << line;
+    getline(iss, token, ' ');
+    name = token.c_str();
+    getline(iss, token, ' ');
+    z = atoi(token.c_str());
+    getline(iss, token, ' ');
+    a = atoi(token.c_str());
+    if (name == "hydrogen") {
+      Atom tmp(a, z, "./Splines/" + name + "_el_ruth_cross_sec.txt",
+               Rutherford_cutoff, Backscatter_cutoff);
+      atoms.push_back(tmp);
+    } else {
+      Atom tmp(a, z, "./Splines/" + name + "_ne_rate.txt",
+               "./Splines/" + name + "_el_ruth_cross_sec.txt",
+               "./Splines/" + name + "_ne_energyangle_cdf.txt",
+               Rutherford_cutoff);
+      atoms.push_back(tmp);
+    }
+  }
+  file.close();
+
+  std::vector<std::string> material_names;
+  file.open("./Materials/materials.txt");
+  while (getline(file, line)) {
+    material_names.push_back(line);
+  }
+  file.close();
+
+  std::vector<Material> materials(material_names.size());
+  for (unsigned int i = 0; i < material_names.size(); i++) {
+    materials[i].read_material("./Materials/" + material_names[i], atoms);
+  }
+
+  double nozzle_radius, e0, initial_x_sd;
+  std::vector<double> x(3, 0), w(2, 0);
+  w[0] = M_PI / 2;
+  cfg.lookupValue("nozzle_radius", nozzle_radius);
+  cfg.lookupValue("initial_x_sd", initial_x_sd);
+
+  double initial_e_mean, initial_e_sd;
+  cfg.lookupValue("initial_e_mean", initial_e_mean);
+  cfg.lookupValue("initial_e_sd", initial_e_sd);
+
+  double dt, absorption_e;
+  int nrep;
+  cfg.lookupValue("step_size", dt);
+  cfg.lookupValue("absorption_energy", absorption_e);
+  cfg.lookupValue("replicates", nrep);
+
+  const libconfig::Setting &root = cfg.getRoot();
+  std::vector<double> change_points(root["change_points"].getLength() + 2);
+  change_points[0] = -DBL_MAX;
+  for (unsigned int i = 0; i < change_points.size() - 2; i++) {
+    change_points[i + 1] = root["change_points"][i];
+  }
+  change_points[change_points.size() - 1] = DBL_MAX;
+  std::vector<int> interval_materials(root["interval_materials"].getLength());
+  for (unsigned int i = 0; i < interval_materials.size(); i++) {
+    interval_materials[i] = root["interval_materials"][i];
+  }
+  double grid_dx;
+  cfg.lookupValue("grid_dx", grid_dx);
+  std::string out_path;
+  cfg.lookupValue("out_path", out_path);
+
+  proton_path p(initial_e_mean + 3 * initial_e_sd, dt, absorption_e,
+                change_points, interval_materials, materials);
+  int n = p.energy.size();
+  Grid grid(n * grid_dx / dt, grid_dx);
+
+  int len;
+  for (int i = 0; i < nrep; i++) {
+    e0 = initial_e_mean + gsl_ran_gaussian_ziggurat(gen, initial_e_sd);
+    do {
+      x[1] = gsl_ran_gaussian_ziggurat(gen, initial_x_sd);
+      x[2] = gsl_ran_gaussian_ziggurat(gen, initial_x_sd);
+    } while (x[1] * x[1] + x[2] * x[2] > nozzle_radius * nozzle_radius);
+    p.reset(e0, x, w);
+    len = p.simulate(dt, absorption_e, change_points, interval_materials,
+                     materials, gen);
+    grid.add(p.x, p.s, len);
+  }
+  grid.print(out_path);
+  gsl_rng_free(gen);
+  return 1;
+}
+
+# ============================================================================
+# File: proton_beam.cc (Proton beam simulation logic)
+# ============================================================================
+
+#include "material.cc"
+#include <cmath>
+#include <cstdlib>
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_sf_gamma.h>
+#include <iostream>
+#include <vector>
+
+#ifndef PB
+#define PB
+
+struct proton_path {
+
+  proton_path(const double e0, const double dt, const double absorption_e,
+              const std::vector<double> &change_points,
+              const std::vector<int> &interval_materials,
+              std::vector<Material> &materials)
+      : energy(1), s(1), x(1), omega(1), u(3, 0), z(3, 0), w(3, 0) {
+    int n = solve_track_length(e0, dt, absorption_e, change_points,
+                               interval_materials, materials);
+    std::vector<double> tmp_x(3, 0);
+    std::vector<double> tmp_w(2, 0);
+    energy.resize(n, 0);
+    s.resize(n, 0);
+    x.resize(n, tmp_x);
+    omega.resize(n, tmp_w);
+  }
+
+  void reset(const double e0, const std::vector<double> x0,
+             const std::vector<double> w0) {
+    x[0] = x0;
+    omega[0] = w0;
+    energy[0] = e0;
+    s[0] = 0;
+    return;
+  }
+
+  int solve_track_length(const double e0, const double dt,
+                         const double absorption_e,
+                         const std::vector<double> &change_points,
+                         const std::vector<int> &interval_materials,
+                         std::vector<Material> &materials) {
+    double e = e0;
+    double x = 0;
+    int n = 1;
+    int material_index = 1;
+    while (e > absorption_e) {
+      while (x >= change_points[material_index]) {
+        material_index++;
+      }
+      e -=
+          materials[interval_materials[material_index - 1]].bethe_bloch(e) * dt;
+      x += dt;
+      n++;
+    }
+    return n;
+  }
+
+  double log_a(const int k, const int m, const double theta) const {
+    double ret = log(theta + 2 * k - 1) + gsl_sf_lnpoch(theta + m, k - 1) -
+                 gsl_sf_lnfact(m) - gsl_sf_lnfact(k - m);
+    return ret;
+  }
+
+  double b(const int k, const int m, const double t, const double theta) const {
+    double ret = 1;
+    if (k > 0) {
+      ret = exp(log_a(k, m, theta) - k * (k + theta - 1) * t / 2);
+    }
+    return ret;
+  }
+
+  int c(const int m, const double t, const double theta) const {
+    int i = 0;
+    double b_curr = b(m, m, t, theta);
+    double b_next = b(m + 1, m, t, theta);
+    while (b_next >= b_curr) {
+      i++;
+      b_curr = b_next;
+      b_next = b(i + m + 1, m, t, theta);
+    }
+    return i;
+  }
+
+  int number_of_blocks(const double t, gsl_rng *gen) const {
+    int m = 0;
+    double theta = 1;
+    if (t < 0.07) {
+      double mu = 2 / t;
+      double sigma = sqrt(2 / (3 * t));
+      m = round(mu + sigma * gsl_ran_gaussian_ziggurat(gen, 1));
+    } else {
+      std::vector<int> k(1, 0);
+      bool proceed = true;
+      double u = gsl_rng_uniform_pos(gen);
+      double smin = 0, smax = 0, increment = 0;
+      while (proceed) {
+        k[m] = ceil(c(m, t, theta) / 2.0);
+        for (int i = 0; i < k[m]; i++) {
+          increment = b(m + 2 * i, m, t, theta) - b(m + 2 * i + 1, m, t, theta);
+          smin += increment;
+          smax += increment;
+        }
+        increment = b(m + 2 * k[m], m, t, theta);
+        smin += increment - b(m + 2 * k[m] + 1, m, t, theta);
+        smax += increment;
+        while (smin < u && u < smax) {
+          for (int i = 0; i <= m; i++) {
+            k[i]++;
+            increment = b(i + 2 * k[i], i, t, theta);
+            smax = smin + increment;
+            smin += increment - b(i + 2 * k[i] + 1, i, t, theta);
+          }
+        }
+        if (smin > u) {
+          proceed = false;
+        } else {
+          k.push_back(0);
+          m++;
+        }
+      }
+    }
+    return m;
+  }
+
+  double wright_fisher(const double r, gsl_rng *gen) const {
+    double y;
+    if (r > 1e-9) {
+      int m = number_of_blocks(r, gen);
+      y = gsl_ran_beta(gen, 1, 1 + m);
+    } else {
+      y = r / 2;
+      y = fabs(gsl_ran_gaussian_ziggurat(gen, sqrt(r * y * (1 - y))));
+    }
+    return y;
+  }
+
+  double spherical_bm(const double dt, int &ix, gsl_rng *gen,
+                      const Material &mat, const double prev_change,
+                      const double next_change) {
+    z[0] = sin(omega[ix - 1][0]) * cos(omega[ix - 1][1]);
+    z[1] = sin(omega[ix - 1][0]) * sin(omega[ix - 1][1]);
+    z[2] = cos(omega[ix - 1][0]);
+    double y = wright_fisher(
+        pow(mat.multiple_scattering_sd(energy[ix - 1], dt), 2), gen);
+    double theta = 2 * M_PI * gsl_rng_uniform(gen);
+    // Set up defaults for when z is near (0, 0, 1)
+    u[0] = 1;
+    u[1] = 1;
+    u[2] = 1;
+    if (z[0] > 0) {
+      u[0] = -1;
+    }
+    if (z[1] > 0) {
+      u[1] = -1;
+    }
+    double denom = sqrt(z[0] * z[0] + z[1] * z[1] + (z[2] - 1) * (z[2] - 1));
+    if (denom > 1e-10) {
+      u[0] = -z[0] / denom;
+      u[1] = -z[1] / denom;
+      u[2] = (1 - z[2]) / denom;
+    }
+    z[0] = 2 * sqrt(y * (1 - y)) * cos(theta);
+    z[1] = 2 * sqrt(y * (1 - y)) * sin(theta);
+    z[2] = 1 - 2 * y;
+    w[0] = (1 - 2 * u[0] * u[0]) * z[0] - 2 * u[0] * u[1] * z[1] -
+           2 * u[0] * u[2] * z[2];
+    w[1] = (1 - 2 * u[1] * u[1]) * z[1] - 2 * u[0] * u[1] * z[0] -
+           2 * u[1] * u[2] * z[2];
+    w[2] = (1 - 2 * u[2] * u[2]) * z[2] - 2 * u[0] * u[2] * z[0] -
+           2 * u[1] * u[2] * z[1];
+    if (ix == int(omega.size())) {
+      omega.resize(2 * omega.size(), omega.back());
+      energy.resize(2 * energy.size(), energy.back());
+      x.resize(2 * x.size(), x.back());
+      s.resize(2 * s.size(), s.back());
+    }
+    omega[ix][0] = acos(w[2]);
+    omega[ix][1] = atan2(w[1], w[0]);
+    double v0 = omega[ix - 1][0];
+    double v1 = omega[ix][0];
+    double w0 = omega[ix - 1][1];
+    double w1 = omega[ix][1];
+
+    // Check for division by zero in x and y position updates
+    double denom_xy = (v0 - v1 + w0 - w1) * (v0 - v1 - w0 + w1);
+    double direction;
+    double time_step = dt;
+    if (fabs(denom_xy) > 1e-9) {
+      direction = ((v0 - v1) * (cos(v0) * cos(w0) - cos(v1) * cos(w1)) +
+                   (w0 - w1) * (sin(v0) * sin(w0) - sin(v1) * sin(w1))) /
+                  denom_xy;
+      if (direction < 0 && -(next_change - x[ix - 1][0]) / direction < dt) {
+        time_step = -(next_change - x[ix - 1][0]) / direction;
+      }
+      if (direction > 0 && (x[ix - 1][0] - prev_change) / direction < dt) {
+        time_step = (x[ix - 1][0] - prev_change) / direction;
+      }
+      x[ix][0] = x[ix - 1][0] - time_step * direction;
+      x[ix][1] = x[ix - 1][1] +
+                 time_step *
+                     ((w0 - w1) * (cos(w0) * sin(v0) - cos(w1) * sin(v1)) -
+                      (v0 - v1) * (cos(v0) * sin(w0) - cos(v1) * sin(w1))) /
+                     denom_xy;
+    } else {
+      // Linear approximation when denominator is too small
+      direction = sin(v0) * cos(w0);
+      if (direction > 0 && (next_change - x[ix - 1][0]) / direction < dt) {
+        time_step = (next_change - x[ix - 1][0]) / direction;
+      }
+      if (direction < 0 && -(x[ix - 1][0] - prev_change) / direction < dt) {
+        time_step = -(x[ix - 1][0] - prev_change) / direction;
+      }
+      x[ix][0] = x[ix - 1][0] + time_step * direction;
+      x[ix][1] = x[ix - 1][1] + time_step * sin(v0) * sin(w0);
+    }
+    // Z position update
+    if (fabs(v0 - v1) > 1e-9) {
+      x[ix][2] = x[ix - 1][2] + (sin(v0) - sin(v1)) * time_step / (v0 - v1);
+    } else {
+      x[ix][2] = x[ix - 1][2] - time_step * (cos(v0) + cos(v1)) / 2;
+    }
+    double bethe_block_update = mat.bethe_bloch(energy[ix - 1]) * time_step;
+    energy[ix] = energy[ix - 1] -
+                 fmin(fmax(bethe_block_update +
+                               sqrt(time_step) *
+                                   mat.energy_straggling_sd(energy[ix - 1]) *
+                                   gsl_ran_gaussian_ziggurat(gen, 1),
+                           0),
+                      2 * bethe_block_update);
+    energy[ix] = fmax(energy[ix], 0);
+    s[ix] = energy[ix - 1] - energy[ix];
+    ix++;
+    return time_step;
+  }
+
+  int simulate(const double dt, const double absorption_energy,
+               const std::vector<double> &change_points,
+               const std::vector<int> &interval_materials,
+               const std::vector<Material> &materials, gsl_rng *gen) {
+    double nonelastic_jump_rate;
+    double rutherford_elastic_jump_rate;
+    double alpha;
+    double time_step = dt;
+    int ix = 1;
+    int material_index = 1;
+    while (energy[ix - 1] > absorption_energy) {
+      time_step = spherical_bm(
+          dt, ix, gen, materials[interval_materials[material_index - 1]],
+          change_points[material_index - 1], change_points[material_index]);
+      if (energy[ix - 1] > absorption_energy) {
+        nonelastic_jump_rate =
+            materials[interval_materials[material_index - 1]].nonelastic_rate(
+                energy[ix - 1]);
+        rutherford_elastic_jump_rate =
+            materials[interval_materials[material_index - 1]]
+                .rutherford_and_elastic_rate(energy[ix - 1]);
+        alpha = rutherford_elastic_jump_rate + nonelastic_jump_rate;
+        if (gsl_rng_uniform(gen) < 1 - exp(-alpha * time_step)) {
+          if (gsl_rng_uniform(gen) < rutherford_elastic_jump_rate / alpha) {
+            materials[interval_materials[material_index - 1]]
+                .rutherford_elastic_scatter(omega[ix - 1], energy[ix - 1], gen);
+          } else {
+            materials[interval_materials[material_index - 1]]
+                .nonelastic_scatter(omega[ix - 1], energy[ix - 1], gen);
+          }
+        }
+      }
+      if (fabs(x[ix - 1][0] - change_points[material_index]) < 1e-9) {
+        material_index++;
+      } else if (fabs(x[ix - 1][0] - change_points[material_index - 1]) <
+                 1e-9) {
+        material_index--;
+      }
+    }
+    return ix;
+  }
+
+  std::vector<double> energy, s;
+  std::vector<std::vector<double>> x, omega;
+  // Dummy vectors for spherical BM
+  std::vector<double> u, z, w;
+};
+
+#endif
+
+# ============================================================================
+# File: material.cc (Material properties and handling)
+# ============================================================================
+
+#include "cross_sections.cc"
+#include <cstdlib>
+#include <vector>
+
+#ifndef MAT
+#define MAT
+
+struct Atom {
+  Atom(const int a0, const int z0, const std::string ne_r,
+       const std::string el_ruth_cs, const std::string ne_ea,
+       const double cutoff)
+      : a(a0), z(z0), el_ruth_rate(el_ruth_cs, cutoff), ne_rate(ne_r),
+        el_ruth_angle_cdf(el_ruth_cs, cutoff), ne_energy_angle(ne_ea) {}
+
+  // Constructor for zero non-elastic rate for hydrogen
+  Atom(const int a0, const int z0, const std::string el_ruth_cs,
+       const double cutoff, const double back_cutoff)
+      : a(a0), z(z0), el_ruth_rate(el_ruth_cs, cutoff, back_cutoff), ne_rate(),
+        el_ruth_angle_cdf(el_ruth_cs, cutoff, back_cutoff), ne_energy_angle() {}
+
+  Atom(const Atom &other)
+      : a(other.a), z(other.z), el_ruth_rate(other.el_ruth_rate),
+        ne_rate(other.ne_rate), el_ruth_angle_cdf(other.el_ruth_angle_cdf),
+        ne_energy_angle(other.ne_energy_angle) {}
+
+  double s() const {
+    double a_c = a + 1;
+    double n_c = a - z;
+    double z_c = z + 1;
+    double a_a = a;
+    double n_a = a - z;
+    double z_a = z;
+    double ret = 15.68 * (a_c - a_a) -
+                 28.07 * (pow(n_c - z_c, 2) / a_c - pow(n_a - z_a, 2) / a_a) -
+                 18.56 * (pow(a_c, 2 / 3) - pow(a_a, 2 / 3)) +
+                 33.22 * (pow(n_c - z_c, 2) / pow(a_c, 4.0 / 3) -
+                          pow(n_a - z_a, 2) / pow(a_a, 4.0 / 3)) -
+                 0.717 * (z_c * z_c / pow(a_c, 1.0 / 3) -
+                          z_a * z_a / pow(a_a, 1.0 / 3)) +
+                 1.211 * (z_c * z_c / a_c - z_a * z_a / a_a);
+    return ret;
+  }
+
+  void sample_nonelastic_collision(double &e, double &alpha,
+                                   gsl_rng *gen) const {
+    double out_rvalue, out_energy_cm;
+    ne_energy_angle.sample(e, out_rvalue, out_energy_cm, gen);
+    double eps_a = a * e / (a + 1);
+    double eps_b = (a + 1) * out_energy_cm / a;
+    double e_a = eps_a + s();
+    double e_b = eps_b + s();
+    double x1 = fmin(e_a, 130) * e_b / e_a;
+    double x3 = fmin(e_a, 41) * e_b / e_a;
+    double aval = 0.04 * x1 + 1.8 * 1e-6 * pow(x1, 3) + 6.7 * 1e-7 * pow(x3, 4);
+    double cdfc2 = out_rvalue * cosh(aval) - sinh(aval);
+    double cdfc1 = 2 * sinh(aval);
+    double u2 = gsl_rng_uniform(gen);
+    double z1 = cdfc1 * u2 + cdfc2;
+    double z2 =
+        (z1 + sqrt(pow(z1, 2) - pow(out_rvalue, 2) + 1)) / (out_rvalue + 1);
+    double out_angle_cm = log(z2) / aval;
+    double out_energy_lab =
+        out_energy_cm + e / pow(a + 1, 2) +
+        2 * sqrt(out_energy_cm * e) * out_angle_cm / (a + 1);
+    double out_angle_lab = sqrt(out_energy_cm / out_energy_lab) * out_angle_cm +
+                           sqrt(e / out_energy_lab) / (a + 1);
+    e = out_energy_lab;
+    alpha = out_angle_lab;
+  }
+
+  const int a, z;
+  CS_1d el_ruth_rate, ne_rate;
+  CS_2d el_ruth_angle_cdf;
+  CS_3d ne_energy_angle;
+};
+
+struct Material {
+
+  Material(std::vector<Atom> &atoms, const std::vector<int> &id,
+           const std::vector<double> &x0, const double d0, const double I0)
+      : density(d0), I(I0 / 1e6), x(x0), at() {
+    for (unsigned int i = 0; i < id.size(); i++) {
+      at.push_back(atoms[id[i]]);
+    }
+  }
+
+  Material() : density(), I(), x(), at() {}
+
+  void read_material(const std::string filename, std::vector<Atom> &atoms) {
+    std::ifstream file;
+    file.open(filename + ".txt");
+    std::string line, token;
+    getline(file, line);
+    density = atof(line.c_str());
+    getline(file, line);
+    I = atof(line.c_str()) / 1e6;
+    while (getline(file, line)) {
+      std::stringstream iss;
+      iss << line;
+      getline(iss, token, ' ');
+      at.push_back(atoms[atoi(token.c_str())]);
+      getline(iss, token, ' ');
+      x.push_back(atof(token.c_str()));
+    }
+    file.close();
+    return;
+  }
+
+  double bethe_bloch(const double e) const {
+    double mecsq = 0.511;   // mass of electron * speed of light squared, MeV
+    double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
+    double betasq = (2 * mpcsq + e) * e / pow(mpcsq + e, 2);
+    double ret = 0;
+    for (unsigned int i = 0; i < at.size(); i++) {
+      ret += x[i] * 0.3072 * at[i].z * density *
+             (log(2 * mecsq * betasq / (I * (1 - betasq))) - betasq) /
+             (betasq * at[i].a); // MeV / cm
+    }
+    return ret;
+  }
+
+  double multiple_scattering_sd(const double e, const double dt) const {
+    double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
+    double pv = (2 * mpcsq + e) * e / (mpcsq + e);
+    double betasq = (2 * mpcsq + e) * e / pow(mpcsq + e, 2);
+    double c = 29979245800; // speed of light
+    double vel = sqrt(betasq) * c;
+    double p = pv / sqrt(betasq); // momentum in MeV / c.
+    // effective chi_c_sq is just the sum of individual elements
+    double chi_c_sq = 0;
+    std::vector<double> chi_a_sq_vec(at.size());
+    for (unsigned int i = 0; i < at.size(); i++) {
+      chi_c_sq += x[i] * at[i].z * (at[i].z + 1.0) / at[i].a;
+      chi_a_sq_vec[i] = 2.007e-5 * pow(at[i].z, 2 / 3) *
+                        (1 + 3.34 * pow(at[i].z / (137 * vel), 2)) / (p * p);
+    }
+    chi_c_sq *= 0.157 * dt * density / (pv * pv);
+    // effective chi_a_sq is a weighted average on the log-scale
+    double chi_a_sq = 0;
+    double denom = 0;
+    for (unsigned int i = 0; i < at.size(); i++) {
+      chi_a_sq +=
+          x[i] * at[i].z * (at[i].z + 1) * log(chi_a_sq_vec[i]) / at[i].a;
+      denom += x[i] * at[i].z * (at[i].z + 1.0) / at[i].a;
+    }
+    chi_a_sq = exp(chi_a_sq / denom);
+    double omega = chi_c_sq / chi_a_sq;
+    double F = 0.98;
+    double v = omega / (2 * (1 - F));
+    double ret = sqrt(chi_c_sq * ((1 + v) * log(1 + v) / v - 1) / (1 + F * F));
+    return ret;
+  }
+
+  double energy_straggling_sd(const double e) const {
+    double alpha = 1 / 137.0;
+    double log_hbar = -21 * log(10) + log(4.136) - log(2 * M_PI); // MeV * s
+    double log_c = log(29979245800);                              // cm / s
+    double log_avogadro = log(6) + 23 * log(10);
+    double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
+    double betasq = (2 * mpcsq + e) * e / pow(mpcsq + e, 2);
+    double z = 0;
+    for (unsigned int i = 0; i < at.size(); i++) {
+      z += x[i] * at[i].z / at[i].a; // electrons per average molecule
+    }
+    double log_molecule_density =
+        log(density) + log_avogadro; // molecules / cm^3
+    double ret =
+        4 * M_PI * z * (1 - betasq / 2) / sqrt(1 - betasq) *
+        exp(2 * (log(alpha) + log_hbar + log_c) + log_molecule_density);
+    return sqrt(ret);
+  }
+
+  double nonelastic_rate(const double e) const {
+    double log_avogadro = log(6) + 23 * log(10);
+    double log_barns_to_cmsq = -24 * log(10);
+    double a = 0;
+    double ret = 0;
+    for (unsigned int i = 0; i < at.size(); i++) {
+      a += x[i] * at[i].a; // average molar mass
+      ret += x[i] * at[i].ne_rate.evaluate(e);
+    }
+    double log_molecule_density =
+        log(density) + log_avogadro - log(a); // molecules / cm^3
+    ret *= exp(log_barns_to_cmsq + log_molecule_density);
+    return ret; // rate per cm
+  }
+
+  double rutherford_and_elastic_rate(const double e) const {
+    double log_avogadro = log(6) + 23 * log(10);
+    double log_barns_to_cmsq = -24 * log(10);
+    double a = 0;
+    double ret = 0;
+    for (unsigned int i = 0; i < at.size(); i++) {
+      a += x[i] * at[i].a; // average molar mass
+      ret += x[i] * at[i].el_ruth_rate.evaluate(e);
+    }
+    double log_molecule_density =
+        log(density) + log_avogadro - log(a); // molecules / cm^3
+    ret *= exp(log_barns_to_cmsq + log_molecule_density);
+    return ret; // rate per cm
+  }
+
+  void compute_new_angle(std::vector<double> &ang, const double alpha,
+                         const double beta) const {
+    double omega_new1 =
+        sin(ang[0]) * cos(ang[1]) * cos(alpha) +
+        (cos(ang[0]) * cos(ang[1]) * sin(beta) - sin(ang[1]) * cos(beta)) *
+            sin(alpha);
+    double omega_new2 =
+        sin(ang[0]) * sin(ang[1]) * cos(alpha) +
+        (cos(ang[0]) * sin(ang[1]) * sin(beta) + cos(ang[1]) * cos(beta)) *
+            sin(alpha);
+    double omega_new3 =
+        cos(ang[0]) * cos(alpha) - sin(ang[0]) * sin(beta) * sin(alpha);
+    double magnitude =
+        std::sqrt(omega_new1 * omega_new1 + omega_new2 * omega_new2 +
+                  omega_new3 * omega_new3);
+    omega_new1 /= magnitude;
+    omega_new2 /= magnitude;
+    omega_new3 /= magnitude;
+    ang[0] = acos(omega_new3);
+    ang[1] = atan2(omega_new2, omega_new1);
+    return;
+  }
+
+  void nonelastic_scatter(std::vector<double> &ang, double &e,
+                          gsl_rng *gen) const {
+    double beta = 2 * M_PI * gsl_rng_uniform(gen);
+    double rate = 0;
+    for (unsigned int i = 0; i < at.size(); i++) {
+      rate += x[i] * at[i].ne_rate.evaluate(e);
+    }
+    double u = gsl_rng_uniform(gen);
+    double ind = 0;
+    double tmp = x[ind] * at[ind].ne_rate.evaluate(e) / rate;
+    while (tmp < u) {
+      ind++;
+      tmp += x[ind] * at[ind].ne_rate.evaluate(e) / rate;
+    }
+    double alpha;
+    // ENDF non-elastic scattering, both energy + angle from CM to LAB
+    at[ind].sample_nonelastic_collision(e, alpha, gen);
+    alpha = acos(alpha);
+    compute_new_angle(ang, alpha, beta);
+    return;
+  }
+
+  void rutherford_elastic_scatter(std::vector<double> &ang, double &e,
+                                  gsl_rng *gen) const {
+    double beta = 2 * M_PI * gsl_rng_uniform(gen);
+    double rate = 0;
+    for (unsigned int i = 0; i < at.size(); i++) {
+      rate += x[i] * at[i].el_ruth_rate.evaluate(e);
+    }
+    double u = gsl_rng_uniform(gen);
+    double ind = 0;
+    double tmp = x[ind] * at[ind].el_ruth_rate.evaluate(e) / rate;
+    while (tmp < u) {
+      ind++;
+      tmp += x[ind] * at[ind].el_ruth_rate.evaluate(e) / rate;
+    }
+    double alpha;
+    alpha = at[ind].el_ruth_angle_cdf.sample(e, gen);
+    compute_new_angle(ang, alpha, beta);
+    return;
+  }
+
+  double density; // density, g / cm^3
+  double I;       // mean excitation energy, MeV
+  std::vector<double> x;
+  std::vector<Atom> at;
+};
+
+#endif
+
+# ============================================================================
+# File: cross_sections.cc (Cross-section calculations)
+# ============================================================================
+
+#include <cmath>
+#include <cstdlib>
+#include <fstream>
+#include <gsl/gsl_rng.h>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#ifndef CS
+#define CS
+
+struct CS_1d {
+
+  CS_1d(const std::string filename) : energy(), rate() {
+    std::ifstream file;
+    file.open(filename);
+    std::string line, token;
+    std::stringstream iss;
+
+    getline(file, line);
+    iss << line;
+    while (getline(iss, token, ' ')) {
+      energy.push_back(atof(token.c_str()));
+    }
+
+    getline(file, line);
+    std::stringstream iss2;
+    iss2 << line;
+    while (getline(iss2, token, ' ')) {
+      rate.push_back(atof(token.c_str()));
+    }
+  }
+  CS_1d(const std::string filename, const double cuttoff) : energy(), rate() {
+    std::ifstream file;
+    file.open(filename);
+    std::string line, token;
+    getline(file, line);
+    std::stringstream iss;
+    iss << line;
+    while (getline(iss, token, ' ')) {
+      energy.push_back(atof(token.c_str()));
+    }
+    double tmp_val, tmp_val_old = 0, lin_inter_val = 0;
+    int tmp_count, tmp_count_2;
+    bool lin_inter_bool;
+    while (getline(file, line)) {
+      tmp_count = 0;
+      lin_inter_bool = true;
+      std::stringstream iss2;
+      iss2 << line;
+      while (getline(iss2, token, ' ')) {
+        tmp_val = atof(token.c_str());
+        if (tmp_val > cuttoff) {
+          tmp_count++;
+          tmp_val_old = tmp_val;
+        } else if (lin_inter_bool) {
+          lin_inter_val = (tmp_val - cuttoff) / (tmp_val - tmp_val_old);
+          lin_inter_bool = false;
+        }
+      }
+      tmp_count_2 = 0;
+      lin_inter_bool = true;
+      getline(file, line);
+      std::stringstream iss3;
+      iss3 << line;
+      while (getline(iss3, token, ' ')) {
+        tmp_val = atof(token.c_str());
+        if (tmp_count_2 < tmp_count) {
+          tmp_count_2++;
+          tmp_val_old = tmp_val;
+        } else if (lin_inter_bool) {
+          rate.push_back(tmp_val * lin_inter_val +
+                         (1 - lin_inter_val) * tmp_val_old);
+          lin_inter_bool = false;
+        }
+      }
+    }
+    file.close();
+  }
+
+  double hydrogen_cm_to_lab(double ang, const double E) {
+    ang = M_PI - ang;
+    double mp = 938.346;
+    double p = sqrt(E * (E + 2 * mp));
+    double u = p / (E + 2 * mp);
+    double g = 1 / sqrt(1 - u * u);
+    double e = E + mp;
+    double v_ratio = u * (e - u * p) / (p - u * e);
+    double out;
+    if (fabs(g * (cos(ang) + v_ratio)) == 0) {
+      out = M_PI / 2;
+    } else {
+      out = atan(sin(ang) / (g * (cos(ang) + v_ratio)));
+    }
+    if (out < 0) {
+      out += M_PI;
+    }
+    return out;
+  }
+
+  CS_1d(const std::string filename, const double cuttoff,
+        const double back_cuttoff)
+      : energy(), rate() {
+    std::ifstream file;
+    file.open(filename);
+    std::string line, token;
+    getline(file, line);
+    std::stringstream iss;
+    iss << line;
+    while (getline(iss, token, ' ')) {
+      energy.push_back(atof(token.c_str()));
+    }
+    std::vector<double> tmp_vec;
+    double lab_ang_cutoff, tmp_val, tmp_val_old = 0, top_rate, bottom_rate,
+                                    total_rate, lin_inter_val = 0;
+    int tmp_count, tmp_count_2, tmp_count_back, tmp_count_back_2,
+        energy_index = 0;
+    bool lin_inter_bool;
+    while (getline(file, line)) {
+      lab_ang_cutoff = hydrogen_cm_to_lab(back_cuttoff, energy[energy_index]);
+      energy_index++;
+      tmp_count = 0;
+      tmp_count_back = 0;
+      lin_inter_bool = true;
+      std::stringstream iss2;
+      iss2 << line;
+      while (getline(iss2, token, ' ')) {
+        tmp_val = atof(token.c_str());
+        if (tmp_val > lab_ang_cutoff) {
+          tmp_count++;
+          tmp_count_back++;
+        } else if (tmp_val > cuttoff) {
+          tmp_count++;
+          tmp_val_old = tmp_val;
+        } else if (lin_inter_bool) {
+          lin_inter_val = (cuttoff - tmp_val_old) / (tmp_val - tmp_val_old);
+          lin_inter_bool = false;
+        }
+      }
+      tmp_count_2 = 0;
+      tmp_count_back_2 = 0;
+      lin_inter_bool = true;
+      getline(file, line);
+      tmp_vec.clear();
+      std::stringstream iss3;
+      iss3 << line;
+      while (getline(iss3, token, ' ')) {
+        tmp_val = atof(token.c_str());
+        if (tmp_count_back_2 < tmp_count_back) {
+          tmp_count_back_2++;
+          tmp_count_2++;
+        } else if (tmp_count_2 < tmp_count) {
+          tmp_count_2++;
+          tmp_vec.push_back(tmp_val);
+          tmp_val_old = tmp_val;
+        } else if (lin_inter_bool) {
+          tmp_vec.push_back(tmp_val * lin_inter_val +
+                            (1 - lin_inter_val) * tmp_val_old);
+          lin_inter_bool = false;
+        }
+      }
+      top_rate = tmp_vec.back();
+      bottom_rate = tmp_vec.front();
+      total_rate = top_rate - bottom_rate;
+      rate.push_back(total_rate);
+    }
+    file.close();
+  }
+
+  CS_1d(const CS_1d &other) : energy(other.energy), rate(other.rate) {}
+
+  CS_1d() : energy(), rate() {}
+
+  double evaluate(const double e) const {
+    double ret = 0;
+    int r;
+    double tol = 1e-7;
+    if (energy.size() > 0) {
+      if (e <= energy[0]) {
+        ret = rate[0];
+      } else if (e >= energy.back()) {
+        ret = rate.back();
+      } else {
+        r = std::distance(energy.begin(),
+                          std::lower_bound(energy.begin(), energy.end(), e));
+        if (energy[r] - energy[r - 1] > tol) {
+          ret =
+              ((energy[r] - e) * rate[r - 1] + (e - energy[r - 1]) * rate[r]) /
+              (energy[r] - energy[r - 1]);
+        } else {
+          ret = energy[r];
+        }
+      }
+    }
+    return ret;
+  }
+
+  std::vector<double> energy, rate;
+};
+
+struct CS_3d {
+
+  CS_3d(const std::string filename) : energy(), exit_energy(), cdf(), rvalue() {
+    std::ifstream file;
+    file.open(filename);
+    std::string line, token;
+    getline(file, line);
+    std::stringstream iss;
+    iss << line;
+    while (getline(iss, token, ' ')) {
+      energy.push_back(atof(token.c_str()));
+    }
+    std::vector<double> tmp_vec;
+    while (getline(file, line)) {
+      tmp_vec.clear();
+      std::stringstream iss3;
+      iss3 << line;
+      while (getline(iss3, token, ' ')) {
+        tmp_vec.push_back(atof(token.c_str()));
+      }
+      exit_energy.push_back(tmp_vec);
+      getline(file, line);
+      tmp_vec.clear();
+      std::stringstream iss4;
+      iss4 << line;
+      while (getline(iss4, token, ' ')) {
+        tmp_vec.push_back(atof(token.c_str()));
+      }
+      cdf.push_back(tmp_vec);
+      getline(file, line);
+      tmp_vec.clear();
+      std::stringstream iss5;
+      iss5 << line;
+      while (getline(iss5, token, ' ')) {
+        tmp_vec.push_back(atof(token.c_str()));
+      }
+      rvalue.push_back(tmp_vec);
+    }
+    file.close();
+  }
+
+  CS_3d(const CS_3d &other)
+      : energy(other.energy), exit_energy(other.exit_energy), cdf(other.cdf),
+        rvalue(other.rvalue) {}
+
+  CS_3d() : energy(), exit_energy(), cdf(), rvalue() {}
+
+  void sample_from_energy_index(const double energy_index, const double u,
+                                double &out_energy_cm,
+                                double &out_rvalue) const {
+    double diff = 0;
+    double tol = 1e-7;
+    int density_index =
+        std::distance(cdf[energy_index].begin(),
+                      std::lower_bound(cdf[energy_index].begin(),
+                                       cdf[energy_index].end(), u));
+    if (density_index == 0) {
+      out_energy_cm = exit_energy[energy_index][0];
+      out_rvalue = rvalue[energy_index][0];
+    } else if (density_index == int(cdf[energy_index].size())) {
+      out_energy_cm = exit_energy[energy_index].back();
+      out_rvalue = rvalue[energy_index].back();
+    } else {
+      if (cdf[energy_index][density_index] -
+              cdf[energy_index][density_index - 1] >
+          tol) {
+        diff = (u - cdf[energy_index][density_index - 1]) /
+               (cdf[energy_index][density_index] -
+                cdf[energy_index][density_index - 1]);
+        out_energy_cm =
+            exit_energy[energy_index][density_index] * diff +
+            exit_energy[energy_index][density_index - 1] * (1 - diff);
+        out_rvalue = rvalue[energy_index][density_index] * diff +
+                     rvalue[energy_index][density_index - 1] * (1 - diff);
+      } else {
+        out_energy_cm = exit_energy[energy_index][density_index];
+        out_rvalue = rvalue[energy_index][density_index];
+      }
+    }
+    return;
+  }
+
+  void sample(const double e, double &r, double &out_e_cm, gsl_rng *gen) const {
+    int energy_index = std::distance(
+        energy.begin(), std::lower_bound(energy.begin(), energy.end(), e));
+    double u = gsl_rng_uniform(gen);
+    double out_energy_cm;
+    double out_energy_cm_2;
+    double out_rvalue;
+    double out_rvalue_2;
+    double diff;
+    double tol = 1e-7;
+    if (energy_index == 0) {
+      sample_from_energy_index(0, u, out_energy_cm, out_rvalue);
+    } else if (energy_index == int(energy.size())) {
+      sample_from_energy_index(energy_index - 1, u, out_energy_cm, out_rvalue);
+    } else {
+      sample_from_energy_index(energy_index, u, out_energy_cm, out_rvalue);
+      if (energy[energy_index] - energy[energy_index - 1] > tol) {
+        sample_from_energy_index(energy_index - 1, u, out_energy_cm_2,
+                                 out_rvalue_2);
+        diff = (e - energy[energy_index - 1]) /
+               (energy[energy_index] - energy[energy_index - 1]);
+        out_energy_cm = out_energy_cm * diff + out_energy_cm_2 * (1 - diff);
+        out_rvalue = out_rvalue * diff + out_rvalue_2 * (1 - diff);
+      }
+    }
+    r = out_rvalue;
+    out_e_cm = out_energy_cm;
+    return;
+  }
+
+  std::vector<double> energy;
+  std::vector<std::vector<double>> exit_energy, cdf, rvalue;
+};
+
+struct CS_2d {
+
+  CS_2d(const std::string filename, const double cuttoff)
+      : energy(), exit_angle(), cdf() {
+    std::ifstream file;
+    file.open(filename);
+    std::string line, token;
+    getline(file, line);
+    std::stringstream iss;
+    iss << line;
+    while (getline(iss, token, ' ')) {
+      energy.push_back(atof(token.c_str()));
+    }
+    std::vector<double> tmp_vec;
+    double tmp_val, tmp_val_old = 0, total_rate, lin_inter_val = 0;
+    int tmp_count, tmp_count_2;
+    bool lin_inter_bool;
+    while (getline(file, line)) {
+      tmp_vec.clear();
+      tmp_count = 0;
+      lin_inter_bool = true;
+      std::stringstream iss2;
+      iss2 << line;
+      while (getline(iss2, token, ' ')) {
+        tmp_val = atof(token.c_str());
+        if (tmp_val > cuttoff) {
+          tmp_count++;
+          tmp_vec.push_back(tmp_val);
+          tmp_val_old = tmp_val;
+        } else if (lin_inter_bool) {
+          lin_inter_val = (cuttoff - tmp_val_old) / (tmp_val - tmp_val_old);
+          lin_inter_bool = false;
+          tmp_vec.push_back(cuttoff);
+        }
+      }
+      exit_angle.push_back(tmp_vec);
+      tmp_count_2 = 0;
+      lin_inter_bool = true;
+      getline(file, line);
+      tmp_vec.clear();
+      std::stringstream iss3;
+      iss3 << line;
+      while (getline(iss3, token, ' ')) {
+        tmp_val = atof(token.c_str());
+        if (tmp_count_2 < tmp_count) {
+          tmp_count_2++;
+          tmp_vec.push_back(tmp_val);
+          tmp_val_old = tmp_val;
+        } else if (lin_inter_bool) {
+          tmp_vec.push_back(tmp_val * lin_inter_val +
+                            (1 - lin_inter_val) * tmp_val_old);
+          lin_inter_bool = false;
+        }
+      }
+      total_rate = tmp_vec.back();
+      for (double &i : tmp_vec) {
+        i /= total_rate;
+      }
+      cdf.push_back(tmp_vec);
+    }
+    file.close();
+  }
+
+  double hydrogen_cm_to_lab(double ang, const double E) {
+    ang = M_PI - ang;
+    double mp = 938.346;
+    double p = sqrt(E * (E + 2 * mp));
+    double u = p / (E + 2 * mp);
+    double g = 1 / sqrt(1 - u * u);
+    double e = E + mp;
+    double v_ratio = u * (e - u * p) / (p - u * e);
+    double out;
+    if (fabs(g * (cos(ang) + v_ratio)) == 0) {
+      out = M_PI / 2;
+    } else {
+      out = atan(sin(ang) / (g * (cos(ang) + v_ratio)));
+    }
+    if (out < 0) {
+      out += M_PI;
+    }
+    return out;
+  }
+
+  CS_2d(const std::string filename, const double cuttoff,
+        const double back_cuttoff)
+      : energy(), exit_angle(), cdf() {
+    std::ifstream file;
+    file.open(filename);
+    std::string line, token;
+    getline(file, line);
+    std::stringstream iss;
+    iss << line;
+    while (getline(iss, token, ' ')) {
+      energy.push_back(atof(token.c_str()));
+    }
+    std::vector<double> tmp_vec;
+    double lab_ang_cutoff, tmp_val, tmp_val_old = 0, top_rate, bottom_rate,
+                                    total_rate, lin_inter_val = 0;
+    int tmp_count, tmp_count_2, tmp_count_back, tmp_count_back_2,
+        energy_index = 0;
+    bool lin_inter_bool;
+    while (getline(file, line)) {
+      lab_ang_cutoff = hydrogen_cm_to_lab(back_cuttoff, energy[energy_index]);
+      energy_index++;
+      tmp_vec.clear();
+      tmp_count = 0;
+      tmp_count_back = 0;
+      lin_inter_bool = true;
+      std::stringstream iss2;
+      iss2 << line;
+      while (getline(iss2, token, ' ')) {
+        tmp_val = atof(token.c_str());
+        if (tmp_val > lab_ang_cutoff) {
+          tmp_count++;
+          tmp_count_back++;
+        } else if (tmp_val > cuttoff) {
+          tmp_count++;
+          tmp_vec.push_back(tmp_val);
+          tmp_val_old = tmp_val;
+        } else if (lin_inter_bool) {
+          lin_inter_val = (cuttoff - tmp_val_old) / (tmp_val - tmp_val_old);
+          lin_inter_bool = false;
+          tmp_vec.push_back(cuttoff);
+        }
+      }
+      exit_angle.push_back(tmp_vec);
+      tmp_count_2 = 0;
+      tmp_count_back_2 = 0;
+      lin_inter_bool = true;
+      getline(file, line);
+      tmp_vec.clear();
+      std::stringstream iss3;
+      iss3 << line;
+      while (getline(iss3, token, ' ')) {
+        tmp_val = atof(token.c_str());
+        if (tmp_count_back_2 < tmp_count_back) {
+          tmp_count_back_2++;
+          tmp_count_2++;
+        } else if (tmp_count_2 < tmp_count) {
+          tmp_count_2++;
+          tmp_vec.push_back(tmp_val);
+          tmp_val_old = tmp_val;
+        } else if (lin_inter_bool) {
+          tmp_vec.push_back(tmp_val * lin_inter_val +
+                            (1 - lin_inter_val) * tmp_val_old);
+          lin_inter_bool = false;
+        }
+      }
+      top_rate = tmp_vec.back();
+      bottom_rate = tmp_vec.front();
+      total_rate = top_rate - bottom_rate;
+      for (double &i : tmp_vec) {
+        i = (i - bottom_rate) / total_rate;
+      }
+      cdf.push_back(tmp_vec);
+    }
+    file.close();
+  }
+
+  CS_2d(const CS_2d &other)
+      : energy(other.energy), exit_angle(other.exit_angle), cdf(other.cdf) {}
+
+  CS_2d() : energy(), exit_angle(), cdf() {}
+
+  double sample_from_energy_index(const double energy_index,
+                                  const double u) const {
+    double ret = 0;
+    double diff = 0;
+    double tol = 1e-7;
+    int density_index =
+        std::distance(cdf[energy_index].begin(),
+                      std::lower_bound(cdf[energy_index].begin(),
+                                       cdf[energy_index].end(), u));
+    if (density_index == 0) {
+      ret = exit_angle[energy_index][0];
+    } else if (density_index == int(cdf[energy_index].size())) {
+      ret = exit_angle[energy_index].back();
+    } else {
+      if (cdf[energy_index][density_index] -
+              cdf[energy_index][density_index - 1] >
+          tol) {
+        diff = (u - cdf[energy_index][density_index - 1]) /
+               (cdf[energy_index][density_index] -
+                cdf[energy_index][density_index - 1]);
+        ret = exit_angle[energy_index][density_index] * diff +
+              exit_angle[energy_index][density_index - 1] * (1 - diff);
+      } else {
+        ret = exit_angle[energy_index][density_index];
+      }
+    }
+    return ret;
+  }
+
+  double sample(const double e, gsl_rng *gen) const {
+    int energy_index = std::distance(
+        energy.begin(), std::lower_bound(energy.begin(), energy.end(), e));
+    double u = gsl_rng_uniform(gen);
+    double out_angle_cm;
+    double out_angle_cm_2;
+    double diff;
+    double tol = 1e-7;
+    if (energy_index == 0) {
+      out_angle_cm = sample_from_energy_index(0, u);
+    } else if (energy_index == int(energy.size())) {
+      out_angle_cm = sample_from_energy_index(energy_index - 1, u);
+    } else {
+      out_angle_cm = sample_from_energy_index(energy_index, u);
+      if (energy[energy_index] - energy[energy_index - 1] > tol) {
+        out_angle_cm_2 = sample_from_energy_index(energy_index - 1, u);
+        diff = (e - energy[energy_index - 1]) /
+               (energy[energy_index] - energy[energy_index - 1]);
+        out_angle_cm = out_angle_cm * diff + out_angle_cm_2 * (1 - diff);
+      }
+    }
+    return out_angle_cm;
+  }
+
+  std::vector<double> energy;
+  std::vector<std::vector<double>> exit_angle, cdf;
+};
+
+#endif
+
+# ============================================================================
+# File: grid.cc (Spatial grid handling)
+# ============================================================================
+
+#include <cmath>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
+
+#ifndef GRID
+#define GRID
+
+struct Grid {
+
+  Grid(const int n, const double dx_)
+      : dx(dx_), x_pp(n), x_pm(n), x_mp(n), x_mm(n) {
+    std::vector<double> tmp(1, 0);
+    std::vector<std::vector<double>> tmp2(1, tmp);
+    for (int i = 0; i < n; i++) {
+      x_pp[i] = tmp2;
+      x_pm[i] = tmp2;
+      x_mp[i] = tmp2;
+      x_mm[i] = tmp2;
+    }
+  }
+
+  void print(const std::string filename) {
+    std::ofstream outfile(filename);
+    for (unsigned int ix = 0; ix < x_pp.size(); ix++) {
+      for (unsigned int j = 0; j < x_pp[ix].size(); j++) {
+        for (unsigned int k = 0; k < x_pp[ix][j].size(); k++) {
+          if (x_pp[ix][j][k] > 0) {
+            outfile << dx * ix << " " << dx * j << " " << dx * k << " "
+                    << x_pp[ix][j][k] << std::endl;
+          }
+        }
+      }
+      for (unsigned int j = 0; j < x_pm[ix].size(); j++) {
+        for (unsigned int k = 0; k < x_pm[ix][j].size(); k++) {
+          if (x_pm[ix][j][k] > 0) {
+            outfile << dx * ix << " " << dx * j << " " << -dx * (k + 1) << " "
+                    << x_pm[ix][j][k] << std::endl;
+          }
+        }
+      }
+      for (unsigned int j = 0; j < x_mp[ix].size(); j++) {
+        for (unsigned int k = 0; k < x_mp[ix][j].size(); k++) {
+          if (x_mp[ix][j][k] > 0) {
+            outfile << dx * ix << " " << -dx * (j + 1) << " " << dx * k << " "
+                    << x_mp[ix][j][k] << std::endl;
+          }
+        }
+      }
+      for (unsigned int j = 0; j < x_mm[ix].size(); j++) {
+        for (unsigned int k = 0; k < x_mm[ix][j].size(); k++) {
+          if (x_mm[ix][j][k] > 0) {
+            outfile << dx * ix << " " << -dx * (j + 1) << " " << -dx * (k + 1)
+                    << " " << x_mm[ix][j][k] << std::endl;
+          }
+        }
+      }
+    }
+    outfile.close();
+    return;
+  }
+
+  void add(const std::vector<std::vector<double>> &y,
+           const std::vector<double> &s, const int len) {
+    int ix;
+    unsigned int iy, iz;
+    std::vector<double> tmp(1, 0);
+    std::vector<std::vector<double>> tmp2(1, tmp);
+    for (int i = 0; i < len; i++) {
+      ix = floor(y[i][0] / dx);
+      iy = floor(fabs(y[i][1]) / dx);
+      iz = floor(fabs(y[i][2]) / dx);
+      if (ix >= 0) {
+        if (ix >= int(x_pp.size())) {
+          x_pp.resize(ix + 1, tmp2);
+          x_pm.resize(ix + 1, tmp2);
+          x_mp.resize(ix + 1, tmp2);
+          x_mm.resize(ix + 1, tmp2);
+        }
+        if (y[i][1] >= 0 && y[i][2] >= 0) {
+          if (iy >= x_pp[ix].size()) {
+            x_pp[ix].resize(iy + 1, tmp);
+          }
+          if (iz >= x_pp[ix][iy].size()) {
+            x_pp[ix][iy].resize(iz + 1, 0);
+          }
+          x_pp[ix][iy][iz] += s[i];
+        } else if (y[i][1] >= 0 && y[i][2] < 0) {
+          if (iy >= x_pm[ix].size()) {
+            x_pm[ix].resize(iy + 1, tmp);
+          }
+          if (iz >= x_pm[ix][iy].size()) {
+            x_pm[ix][iy].resize(iz + 1, 0);
+          }
+          x_pm[ix][iy][iz] += s[i];
+        } else if (y[i][1] < 0 && y[i][2] >= 0) {
+          if (iy >= x_mp[ix].size()) {
+            x_mp[ix].resize(iy + 1, tmp);
+          }
+          if (iz >= x_mp[ix][iy].size()) {
+            x_mp[ix][iy].resize(iz + 1, 0);
+          }
+          x_mp[ix][iy][iz] += s[i];
+        } else {
+          if (iy >= x_mm[ix].size()) {
+            x_mm[ix].resize(iy + 1, tmp);
+          }
+          if (iz >= x_mm[ix][iy].size()) {
+            x_mm[ix][iy].resize(iz + 1, 0);
+          }
+          x_mm[ix][iy][iz] += s[i];
+        }
+      }
+    }
+    return;
+  }
+
+  double dx;
+  std::vector<std::vector<std::vector<double>>> x_pp, x_pm, x_mp, x_mm;
+};
+
+#endif
+
+# ============================================================================
+# Python Scripts for Cross-Section Generation
+# ============================================================================
+
+# File: Splines/Elastic_cross_section_generator.py
+# ============================================================================
+
+import math
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+import scipy.interpolate
+
+from endf_parserpy import EndfParser
+
+Element = "carbon"
+CrossSectionFile = "Splines/" + Element + "_cs_el.txt"
+AngleFile = "Splines/" + Element + "_ang_el.txt"
+A_targ = 12
+A_inc = 1
+Z_targ = 6
+Z_inc = 1
+
+
+# Rutherford total CrossSection in Barns from -1 to y in [-1,1)
+def RutherfordCrossSecCalc(A, a, Z, z, E, y):
+    if y < -1 or y >= 1:
+        print("y out of bounds for Rutherford Cross Section")
+        return -1
+    A_ratio = A / a
+    out = (
+        ((1e-2) * 2.08 * ((Z * z) * (1 + A_ratio)) ** 2) / ((2 * A_ratio * E) ** 2)
+    ) * (1 / (1 - y) - 1 / 2)
+    return out
+
+
+def CM_to_Lab_Frame(ang0, E, A, a):
+    ang = math.acos(ang0)
+    mp = a * 938.346  # mass of proton * c^2, MeV
+    mn = A * 938.346  # mass of colliding nucleus * c^2, MeV
+    p = math.sqrt((E) * (E + 2 * mp))
+    u = p / (E + mp + mn)  # typo should be 2mp
+    g = 1 / math.sqrt(1 - u * u)
+    e = E + mp
+    v_ratio = u * (e - u * p) / (p - u * e)
+    if np.fabs((g * (math.cos(ang) + v_ratio))) == 0:
+        out = math.pi / 2
+    else:
+        out = math.atan(math.sin(ang) / (g * (math.cos(ang) + v_ratio)))
+    if out < 0:
+        out += math.pi
+    return out
+
+
+def DiscreteDensityConstructor(endf_dict):
+    densities = {}
+    incident_energies = endf_dict[6][2]["subsection"][1]["E"].items()
+    for key, value in incident_energies:
+        AngleProb = endf_dict[6][2]["subsection"][1]["A"][key].items()
+        temp1 = []  # store angles
+        temp2 = []  # store P
+        for key2, value2 in AngleProb:
+            if key2 % 2 == 1:
+                temp1.append(value2)
+            else:
+                temp2.append(value2)
+        temp1[-1] = 1  # final angle is slightly away from one, converting to 1 for ease
+        densities[value] = [temp1, temp2]
+    return densities
+
+
+def splineConstructorAngle(k, densities):
+    spline_PDF = {}
+    for key in densities.keys():
+        splt = scipy.interpolate.splrep(densities[key][0], densities[key][1], k=k)
+        spline_PDF[key] = splt
+    return spline_PDF
+
+
+def Total_CDF_constructor(cross_sec_data, spline_PDF, A, a, Z, z):
+    Tail_spacing = []
+    for i in range(10000):
+        Tail_spacing.append((11 + 5 * i - 1) / (11 + 5 * i))
+    Tail_spacing = np.array(Tail_spacing)
+    xx = np.concatenate((np.linspace(-1, 0.9, 100), Tail_spacing))
+    Total_CDF_dict = {}
+    for key in spline_PDF.keys():
+        if key not in cross_sec_data:
+            print(
+                "Energy value "
+                + str(key)
+                + " in angle data does not exist in cross section data, skipping"
+            )
+            continue
+        yy = []
+        for x in xx:
+            yy.append(CM_to_Lab_Frame(x, key * 1e-6, A, a))
+        total_CDF_key = []
+        for x in xx:
+            temp_cdf_value = 0
+            temp_cdf_value += cross_sec_data[key] * scipy.interpolate.splint(
+                -1, x, spline_PDF[key]
+            )
+            temp_cdf_value += RutherfordCrossSecCalc(A, a, Z, z, key * 1e-6, x)
+            total_CDF_key.append(2 * math.pi * temp_cdf_value)
+        Total_CDF_dict[key] = [yy, total_CDF_key]
+    return Total_CDF_dict
+
+
+def ErrorCheck(CDF_Data):
+    for key in CDF_Data.keys():
+        for i in range(1, len(CDF_Data[key][0])):
+            if CDF_Data[key][0][i] > CDF_Data[key][0][i - 1]:
+                print("Error in CM to Lab Conv")
+                print(key, i, CDF_Data[key][0][i], CDF_Data[key][0][i - 1])
+        for i in range(1, len(CDF_Data[key][1])):
+            if CDF_Data[key][1][i] <= CDF_Data[key][1][i - 1]:
+                print(
+                    "Error in CDF combination"
+                )  # This may flag due to numerical error, numerical integration step of CDF is negative, take previous value
+                print(key, i, CDF_Data[key][1][i], CDF_Data[key][1][i - 1])
+                CDF_Data[key][1][i] = CDF_Data[key][1][i - 1]
+    return CDF_Data
+
+
+def Threshold_Truncator(CDF_Data, Threshold):
+    CDF_Data0 = CDF_Data
+    for key in CDF_Data0.keys():
+        i = -1
+        while CDF_Data0[key][0][i] <= Threshold:
+            i -= 1
+        Distance = (Threshold - CDF_Data0[key][0][(i + 1)]) / (
+            CDF_Data0[key][0][i] - CDF_Data0[key][0][(i + 1)]
+        )
+        New_CDF_Value = (1 - Distance) * CDF_Data0[key][1][
+            (i + 1)
+        ] + Distance * CDF_Data0[key][1][i]
+        if i < -2:
+            Temp_yy = CDF_Data0[key][0][: (i + 2)]
+            Temp_CDF = CDF_Data0[key][1][: (i + 2)]
+            CDF_Data0[key] = [Temp_yy, Temp_CDF]
+        CDF_Data0[key][0][-1] = Threshold
+        CDF_Data0[key][1][-1] = New_CDF_Value
+    return CDF_Data0
+
+
+def Renormalise_CDF(CDF_Data):
+    CDF_Data0 = CDF_Data
+    IncomingEnergy = []
+    PoissonRate = []
+    for key in CDF_Data0.keys():
+        IncomingEnergy.append(key * 1e-6)
+        Renormalise_temp = CDF_Data0[key][1][-1]
+        PoissonRate.append(Renormalise_temp)
+        CDF_Data0[key][0].reverse()
+        CDF_Data0[key][1].reverse()
+        for i in range(len(CDF_Data0[key][1])):
+            CDF_Data0[key][1][i] = 1 - (CDF_Data0[key][1][i] / Renormalise_temp)
+        CDF_Data0[key][1][0] = 0
+    return ([IncomingEnergy, PoissonRate], CDF_Data0)
+
+
+parser = EndfParser()
+endf_dictCS = parser.parsefile(CrossSectionFile)
+true_incident_energy = []
+
+incident_energy = endf_dictCS[3][2]["xstable"]["E"]
+cross_section = endf_dictCS[3][2]["xstable"]["xs"]
+cross_sec_data = {}
+for i in range(len(incident_energy)):
+    cross_sec_data[incident_energy[i]] = cross_section[i]
+
+endf_dict = parser.parsefile(AngleFile)
+
+density = DiscreteDensityConstructor(endf_dict)
+for i in density.keys():
+    true_incident_energy.append(i)
+splines = splineConstructorAngle(3, density)
+CDF_Data = Total_CDF_constructor(cross_sec_data, splines, A_targ, A_inc, Z_targ, Z_inc)
+CDF_Data = ErrorCheck(CDF_Data)
+incident_energyout = []
+for key in CDF_Data.keys():
+    incident_energyout.append(key)
+f = open("Splines/" + Element + "_el_ruth_cross_sec.txt", "w")
+tmp = " ".join([str(z * 1e-6) for z in true_incident_energy])
+f.write(tmp + "\n")
+for key in CDF_Data.keys():
+    tmp = " ".join([str(z) for z in CDF_Data[key][0]])
+    f.write(tmp + "\n")
+    tmp = " ".join([str(z) for z in CDF_Data[key][1]])
+    f.write(tmp + "\n")
+f.close()
+
+# ============================================================================
+# File: Splines/Elastic_cross_section_generator_hydrogen.py
+# ============================================================================
+
+import math
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+import scipy.interpolate
+
+from endf_parserpy import EndfParser
+
+Threshold = 0.1
+
+
+def Nuclear_trig_constants(n, eta, sign):  # recursively evaluate antiderivative
+    if n == 0:
+        return [0, 1]
+    else:
+        sin_const = (
+            sign
+            * (
+                (n - 1) * Nuclear_trig_constants(n - 1, eta, sign)[0]
+                + eta * Nuclear_trig_constants(n - 1, eta, sign)[1]
+            )
+            / ((n - 1) ** 2 + eta**2)
+        )
+        cos_const = (
+            sign
+            * (
+                (n - 1) * Nuclear_trig_constants(n - 1, eta, sign)[1]
+                - eta * Nuclear_trig_constants(n - 1, eta, sign)[0]
+            )
+            / ((n - 1) ** 2 + eta**2)
+        )
+        return [sin_const, cos_const]
+
+
+def Trig_Integral_Eval(
+    deg, cosval, sinval, y, eta, sign
+):  # evaluation of antiderivative at a given value y
+    coeff = Nuclear_trig_constants(deg, eta, sign)
+    return ((1 + (y * sign)) ** (deg - 1)) * (coeff[0] * sinval + coeff[1] * cosval)
+
+
+def CDF_Poly_Eval(deg, eta, c, y, sign):  # evaluation of integration by parts form
+    cosval = np.cos(eta * np.log((1 + (y * sign)) / 2) + c)
+    sinval = np.sin(eta * np.log((1 + (y * sign)) / 2) + c)
+    temp = 0
+    for i in range(deg + 1):
+        temp += (
+            Trig_Integral_Eval(i + 1, cosval, sinval, y, eta, sign)
+            * (y ** (deg - i))
+            * math.factorial(deg)
+            * ((-1) ** (i))
+            / math.factorial(deg - i)
+        )
+    temp += (
+        ((-1) ** (deg + 1))
+        * math.factorial(deg)
+        * Trig_Integral_Eval(deg + 1, cosval, sinval, 0, eta, sign)
+    )
+    return temp
+
+
+def Legendre_Coeff_Cal(deg):  # outputs coefficients of legendre polynomial as a list
+    if deg == 0:
+        return [1]
+    elif deg == 1:
+        return [0, 1]
+    else:
+        temp1 = Legendre_Coeff_Cal(deg - 1)
+        temp1.insert(0, 0)
+        for i in range(len(temp1)):
+            temp1[i] = (2 * (deg - 1) + 1) * temp1[i] / deg
+        temp2 = Legendre_Coeff_Cal(deg - 2)
+        temp2.append(0)
+        temp2.append(0)
+        for i in range(len(temp2)):
+            temp2[i] = (1 - deg) * temp2[i] / deg
+        temp3 = []
+        for i in range(len(temp2)):
+            temp3.append(temp1[i] + temp2[i])
+        return temp3
+
+
+def CDF_Legendre_Eval(
+    deg, eta, c, y, sign
+):  # evaluation of integration by parts for Legendre polynomial
+    Legendre_temp = Legendre_Coeff_Cal(deg)
+    out = 0
+    for i in range(deg):
+        out += Legendre_temp[i] * CDF_Poly_Eval(deg, eta, c, y, sign)
+    return out
+
+
+def Legendre_int(deg, y):  # evaluation of Legendre polynomial integral
+    Legendre_temp = Legendre_Coeff_Cal(deg)
+    Total = 0
+    for i in range(len(Legendre_temp)):
+        Total += (y ** (i + 1)) / (i + 1)
+    return Total
+
+
+def Complex_Polar(re, im):
+    r = np.sqrt(re**2 + im**2)
+    theta = np.arctan2(im, re)
+    return [r, theta]
+
+
+def eta_eval(Z, z, E, m):
+    sqrtterm = 0.0496 * m / (E * 2)
+    out = Z * z * np.sqrt(sqrtterm)
+    return out
+
+
+def Total_Rate_calc(
+    Z, z, E, A, a, y, two_s, a_coef_re, a_coef_im, b_coef
+):  # total rate between 0 and y
+    A_ratio = A / a
+    eta_val = eta_eval(Z, z, E, a)
+    Rutherford_Coef = ((1e-2) * 4.16 * ((Z * z) * (1 + A_ratio)) ** 2) / (
+        (2 * A_ratio * E) ** 2
+    )
+    Rate = 0
+    Rate += Rutherford_Coef * (
+        (y / (1 - y**2))
+        + ((((-1) ** two_s) / (two_s + 1)))
+        * math.sin(2 * eta_val * math.log((1 + y) / (1 - y)))
+        / (2 * eta_val)
+    )
+    Nuclear_term_1 = 0
+    for i in range(len(a_coef_im)):
+        polar_temp = Complex_Polar(a_coef_re[i], a_coef_im[i])
+        int_temp = 0
+        int_temp += ((-1) ** i) * CDF_Legendre_Eval(i, eta_val, polar_temp[1], y, 1)
+        int_temp += CDF_Legendre_Eval(i, eta_val, polar_temp[1], y, -1)
+        Nuclear_term_1 += polar_temp[0] * (2 * i + 1) * int_temp / 2
+    Nuclear_term_1 *= 2 * eta_val
+    Rate -= Nuclear_term_1
+    Nuclear_term_2 = 0
+    for i in range(len(a_coef_im)):
+        Nuclear_term_2 += (4 * i + 1) * b_coef[i] * Legendre_int(2 * i, y) / 2
+    Rate += Nuclear_term_2
+    Rate *= 2 * np.pi
+    return Rate
+
+
+def Threshold_Truncator(
+    ang_data, Rate_data, Threshold
+):  # truncates CDF at both ends to avoid explosion in rutherford crosseciton
+    i = -1
+    while ang_data[i] <= Threshold:
+        i -= 1
+    if i == -1:
+        print("error end point does not reach threshold")
+    Distance = (Threshold - ang_data[(i + 1)]) / (ang_data[i] - ang_data[(i + 1)])
+    New_CDF_Value = (1 - Distance) * Rate_data[(i + 1)] + Distance * Rate_data[i]
+    if i < -2:
+        ang_data = ang_data[: (i + 2)]
+        Rate_data = Rate_data[: (i + 2)]
+    ang_data[-1] = Threshold
+    Rate_data[-1] = New_CDF_Value
+    return ang_data, Rate_data
+
+
+def ErrorCheck(Data, sign):  # checks for monotonicity in CDF and CM to Lab frame
+    if sign == 1:
+        for i in range(1, len(Data)):
+            if Data[i] < Data[i - 1]:
+                print("Error in CDF monotonicity")
+    if sign == -1:
+        for i in range(1, len(Data)):
+            if Data[i] >= Data[i - 1]:
+                print("Error in CM to Lab monotonicity")
+                print(Data[i], Data[i - 1])
+    if sign != -1 and sign != 1:
+        print("sign value error")
+    return 0
+
+
+def CM_to_Lab_Frame(ang0, E, A, a):
+    ang = math.acos(ang0)
+    mp = a * 938.346  # mass of proton * c^2, MeV
+    mn = A * 938.346  # mass of colliding nucleus * c^2, MeV
+    p = math.sqrt((E) * (E + 2 * mp))
+    u = p / (E + mp + mn)  # typo should be 2mp
+    g = 1 / math.sqrt(1 - u * u)
+    e = E + mp
+    v_ratio = u * (e - u * p) / (p - u * e)
+    if np.fabs((g * (math.cos(ang) + v_ratio))) == 0:
+        out = math.pi / 2
+    else:
+        out = math.atan(math.sin(ang) / (g * (math.cos(ang) + v_ratio)))
+    if out < 0:
+        out += math.pi
+    return out
+
+
+parser = EndfParser()
+endf_dict = parser.parsefile("Hydrogen_elastic_data.txt")
+density = {}
+angle_discretize = np.linspace(0, 0.9, 100)
+angle_discretize_end = []
+for i in range(
+    600
+):  # Setup interpolation points to match growth of rutherford crossection near boundary
+    angle_discretize_end.append(np.sqrt((5.5 + 5 * i - 1) / (5.5 + 5 * i)))
+angle_discretize_pos = np.concatenate((angle_discretize, angle_discretize_end))
+Energy_discrete = []
+Rate_discrete = []
+for i in endf_dict[6][2]["subsection"][1]["E"].keys():
+    print(i)
+    Total_rate = []
+    Real_coef = []
+    Imaginary_coef = []
+    b_coef = []
+    Energy = endf_dict[6][2]["subsection"][1]["E"][i] * 1e-6
+    if Energy >= 1:
+        for r in range(8, 22):
+            if r % 2 == 0:
+                Real_coef.append(endf_dict[6][2]["subsection"][1]["A"][i][r])
+            else:
+                Imaginary_coef.append(endf_dict[6][2]["subsection"][1]["A"][i][r])
+        for r in range(1, 8):
+            b_coef.append(endf_dict[6][2]["subsection"][1]["A"][i][r])
+        for ang in angle_discretize_pos:
+            Total_rate.append(
+                Total_Rate_calc(
+                    1, 1, Energy, 1, 1, ang, 1, Real_coef, Imaginary_coef, b_coef
+                )
+            )
+        #  CM_frame_angle, Total_rate = Threshold_Truncator(CM_frame_angle, Total_rate,Threshold)
+        ErrorCheck(Total_rate, 1)
+        Energy_discrete.append(Energy)
+        max_rate = Total_rate[-1]
+        Rate_discrete.append(max_rate)
+        Total_rate_True = []
+        angle_discrete_True = []
+        Bool_temp = True
+        for i in range(len(Total_rate)):
+            if True:
+                angle_discrete_True.insert(
+                    0, CM_to_Lab_Frame(-angle_discretize_pos[i], Energy, 1, 1)
+                )
+                Total_rate_True.insert(0, -Total_rate[i])
+            angle_discrete_True.append(
+                CM_to_Lab_Frame(angle_discretize_pos[i], Energy, 1, 1)
+            )
+            Total_rate_True.append(Total_rate[i])
+        max_rate = -Total_rate_True[0]
+        for i in range(len(Total_rate_True)):
+            Total_rate_True[i] += max_rate
+        density[Energy] = [angle_discrete_True, Total_rate_True]
+f = open("hydrogen_el_ruth_cross_sec.txt", "w")
+tmp = " ".join([str(z) for z in Energy_discrete])
+f.write(tmp + "\n")
+bool = True
+for key in density.keys():
+    tmp = " ".join([str(z) for z in density[key][0]])
+    f.write(tmp + "\n")
+    tmp = " ".join([str(z) for z in density[key][1]])
+    f.write(tmp + "\n")
+    bool = False
+f.close()
+
+# ============================================================================
+# File: Splines/Non_elastic_cross_section_generator.py
+# ============================================================================
+
+import math
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+import scipy.interpolate
+
+from endf_parserpy import EndfParser
+
+parser = EndfParser()
+Element = "argon"
+CS_file = "Splines/" + Element + "_cs_ne.txt"
+enang_file = "Splines/" + Element + "_enang_ne.txt"
+endf_dict = parser.parsefile(enang_file)
+densities_out = {}
+for key, item in endf_dict[6][5]["subsection"][2]["E"].items():
+    goinginen = item
+    denstemp = 0
+    denstemp2 = []
+    energytemp = []
+    r = []
+    for key2 in endf_dict[6][5]["subsection"][2]["b"][key]:
+        denstemp += endf_dict[6][5]["subsection"][2]["b"][key][key2][0]
+        energytemp.append(endf_dict[6][5]["subsection"][2]["Ep"][key][key2])
+        denstemp2.append(denstemp)
+        r.append(endf_dict[6][5]["subsection"][2]["b"][key][key2][1])
+    for j in range(len(denstemp2)):
+        denstemp2[j] *= 1 / denstemp
+    densities_out[item] = [energytemp, denstemp2, r]
+endf_dict = parser.parsefile(CS_file)
+avaenergies = []
+avaenergies2 = []
+for key in densities_out.keys():
+    avaenergies.append(key)
+    avaenergies2.append(key / 1e6)
+f = open("Splines/" + Element + "_ne_rate.txt", "w")
+f.write(" ".join([str(z / 1e6) for z in endf_dict[3][5]["xstable"]["E"]]) + "\n")
+tmp = " ".join([str(max(z, 0)) for z in endf_dict[3][5]["xstable"]["xs"]])
+f.write(tmp + "\n")
+f.close()
+f = open("Splines/" + Element + "_ne_energyangle_cdf.txt", "w")
+f.write(" ".join([str(z) for z in avaenergies2]) + "\n")
+for keys in densities_out.keys():
+    tmp = " ".join([str(z / 1e6) for z in densities_out[keys][0]])
+    f.write(tmp + "\n")
+    tmp = " ".join([str(max(z, 0)) for z in densities_out[keys][1]])
+    f.write(tmp + "\n")
+    tmp = " ".join([str(z) for z in densities_out[keys][2]])
+    f.write(tmp + "\n")
+f.close()
+
+# ============================================================================
+# Configuration Files
+# ============================================================================
+
+# File: sim.cfg (Default simulation configuration)
+# ============================================================================
+
+# Number of proton replicates
+replicates = 1000000;
+
+# Radius of nozzle centred at origin.
+nozzle_radius = 0.05;
+
+# Gaussian initial position inside nozzle
+initial_x_sd = 0.05;
+
+# Gaussian initial energies
+initial_e_mean = 100.0;
+initial_e_sd = 0.0001;
+
+# Change points between materials. Use an empty list for single-material
+# simulations.
+change_points = ();
+
+# Index of material in each interval, ordering as per Materials/materials.txt,
+# starting from row 0 as the first row.
+interval_materials = (2);
+
+# Discretisation step for track length
+step_size = 0.05;
+
+# Energy at which proton assumed absorbed with no further dose deposited.
+absorption_energy = 0.05;
+
+# Output grid voxel side length.
+grid_dx = 0.1;
+
+# Rutherford cutoff in the Lab frame from spherical BM to Poisson process, in radians.
+# Must be between 0.02 and 1.
+Rutherford_cutoff = 0.04;
+
+# Backscatter cutoff in radians in the CM frame for elastic hydrogen interactions.
+# Must be between 0 and pi / 2, e.g. a value of 0.2 corresponds to scattering angles
+# of [pi - 0.2, pi] being excluded.
+Backscatter_cutoff = 0.2;
+
+# Output destination file
+out_path = "./Output/test.txt"
+
+# File: sim_water_100MeV.cfg
+# Number of proton replicates
+replicates = 1000000;
+
+# Radius of nozzle centred at origin.
+nozzle_radius = 0.05;
+
+# Gaussian initial position inside nozzle
+initial_x_sd = 0.05;
+
+# Gaussian initial energies
+initial_e_mean = 100.0;
+initial_e_sd = 0.0001;
+
+# Change points between materials. Use an empty list for single-material
+# simulations.
+change_points = ();
+
+# Index of material in each interval, ordering as per Materials/materials.txt,
+# starting from row 0 as the first row.
+interval_materials = (2);
+
+# Discretisation step for track length
+step_size = 0.05;
+
+# Energy at which proton assumed absorbed with no further dose deposited.
+absorption_energy = 0.05;
+
+# Output grid voxel side length.
+grid_dx = 0.1;
+
+# Rutherford cutoff in the Lab frame from spherical BM to Poisson process, in radians.
+# Must be between 0.02 and 1.
+Rutherford_cutoff = 0.04;
+
+# Backscatter cutoff in radians in the CM frame for elastic hydrogen interactions.
+# Must be between 0 and pi / 2, e.g. a value of 0.2 corresponds to scattering angles
+# of [pi - 0.2, pi] being excluded.
+Backscatter_cutoff = 0.04;
+
+# Output destination file
+out_path = "./Output/SDE_1E6_100MeV.txt"
+
+# File: sim_water_150MeV.cfg
+# Number of proton replicates
+replicates = 1000000;
+
+# Radius of nozzle centred at origin.
+nozzle_radius = 0.05;
+
+# Gaussian initial position inside nozzle
+initial_x_sd = 0.05;
+
+# Gaussian initial energies
+initial_e_mean = 150.0;
+initial_e_sd = 0.0001;
+
+# Change points between materials. Use an empty list for single-material
+# simulations.
+change_points = ();
+
+# Index of material in each interval, ordering as per Materials/materials.txt,
+# starting from row 0 as the first row.
+interval_materials = (2);
+
+# Discretisation step for track length
+step_size = 0.05;
+
+# Energy at which proton assumed absorbed with no further dose deposited.
+absorption_energy = 0.05;
+
+# Output grid voxel side length.
+grid_dx = 0.1;
+
+# Rutherford cutoff in the Lab frame from spherical BM to Poisson process, in radians.
+# Must be between 0.02 and 1.
+Rutherford_cutoff = 0.04;
+
+# Backscatter cutoff in radians in the CM frame for elastic hydrogen interactions.
+# Must be between 0 and pi / 2, e.g. a value of 0.2 corresponds to scattering angles
+# of [pi - 0.2, pi] being excluded.
+Backscatter_cutoff = 0.04;
+
+# Output destination file
+out_path = "./Output/SDE_1E6_150MeV.txt"
+
+# File: sim_bone_100MeV.cfg
+# Number of proton replicates
+replicates = 1000000;
+
+# Radius of nozzle centred at origin.
+nozzle_radius = 0.05;
+
+# Gaussian initial position inside nozzle
+initial_x_sd = 0.05;
+
+# Gaussian initial energies
+initial_e_mean = 100.0;
+initial_e_sd = 0.0001;
+
+# Change points between materials. Use an empty list for single-material
+# simulations.
+change_points = (2.0);
+
+# Index of material in each interval, ordering as per Materials/materials.txt,
+# starting from row 0 as the first row.
+interval_materials = (1, 2);
+
+# Discretisation step for track length
+step_size = 0.05;
+
+# Energy at which proton assumed absorbed with no further dose deposited.
+absorption_energy = 0.05;
+
+# Output grid voxel side length.
+grid_dx = 0.1;
+
+# Rutherford cutoff in the Lab frame from spherical BM to Poisson process, in radians.
+# Must be between 0.02 and 1.
+Rutherford_cutoff = 0.04;
+
+# Backscatter cutoff in radians in the CM frame for elastic hydrogen interactions.
+# Must be between 0 and pi / 2, e.g. a value of 0.2 corresponds to scattering angles
+# of [pi - 0.2, pi] being excluded.
+Backscatter_cutoff = 0.04;
+
+# Output destination file
+out_path = "./Output/SDE_1E6_100MeV_bone+h2o.txt"
+
+# ============================================================================
+# Material Definition Files
+# ============================================================================
+
+# File: Materials/atoms.txt
+# ============================================================================
+
+argon 18 40
+calcium 20 40
+carbon 6 12
+fluorine 9 19
+hydrogen 1 1
+nitrogen 7 14
+oxygen 8 16
+
+# File: Materials/materials.txt
+# ============================================================================
+
+air
+bone
+water
+
+# File: Materials/water.txt
+# ============================================================================
+
+1.0
+75.0
+4 0.111894
+6 0.888106
+
+# File: Materials/bone.txt
+# ============================================================================
+
+1.45
+85.9
+1 0.176589
+2 0.536944
+3 0.167411
+4 0.0654709
+5 0.0215
+6 0.032085
+
+# File: Materials/air.txt
+# ============================================================================
+
+0.00120479
+85.7
+0 0.012827
+2 0.000124
+5 0.755268
+6 0.231781
+
+# ============================================================================
+# File: Makefile
+# ============================================================================
+
+CFLAGS=-Wall -Wextra -O3
+LDFLAGS= -lgsl -lgslcblas -lconfig++
+CC = g++
+
+main: simulate.cc
+	${CC} ${CFLAGS} -o simulate simulate.cc ${LDFLAGS}
+
+# ============================================================================
+# NOTE: Large Cross-Section Data Files (Not Included)
+# ============================================================================
+# 
+# The Splines/ directory contains large precomputed cross-section data files
+# (total size ~130MB) that are used by the simulator. These files are NOT
+# included in this code context due to their size, but are available in the
+# repository at: https://github.com/JereKoskela/proton-beam-sde/tree/main/Splines
+#
+# The files include:
+# - Elastic Rutherford cross-section data for various elements (H, C, N, O, F, Ar, Ca)
+# - Non-elastic cross-section rates and energy-angle CDFs
+# - Format: Plain text files with numerical data
+#
+# These files are generated by the Python scripts included above and contain
+# precomputed lookup tables for efficient simulation runtime.
+# ============================================================================

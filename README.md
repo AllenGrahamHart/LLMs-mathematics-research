@@ -792,6 +792,11 @@ The code execution environment includes:
 
 **GPU-Accelerated Computing:**
 - jax (scientific computing with autodiff and GPU support)
+- jaxopt (optimization in JAX)
+- optimistix (nonlinear solvers and root finding)
+- diffrax (differential equation solvers in JAX)
+- equinox (neural ODEs and PyTree handling)
+- lineax (linear algebra solvers in JAX)
 - cupy (NumPy-compatible GPU arrays)
 - modal (serverless GPU computation)
 

@@ -22,8 +22,9 @@ When writing code, note the Pip-installed packages are:
 - torch, torchvision
 - transformer-lens
 - datasets (BLIMP available via: `load_dataset('blimp', 'phenomenon_name')`)
-- jax, cupy
+- jax, jaxopt, optimistix, diffrax, cupy
 - sympy, einops, cvxpy, numba
+- equinox, lineax (JAX ecosystem for neural ODEs and linear algebra)
 - modal
 
 EXECUTION ENVIRONMENT:

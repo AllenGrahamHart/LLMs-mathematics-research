@@ -49,6 +49,10 @@ batch_progress/
 notes.txt
 analysis_of_data.ipynb
 
+# Private problem files and papers
+problems/Ellen_problem.txt
+problems/papers/Jolly2025.txt
+
 # Testing
 .pytest_cache/
 .coverage

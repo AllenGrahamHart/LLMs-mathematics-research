@@ -277,8 +277,9 @@ class ScaffoldedResearcher:
         code_section = ""
         if self.code_content:
             code_section = "\n\n=== AVAILABLE CODE CONTEXT ===\n\n"
-            code_section += "The following codebase is provided for your research and experimentation.\n"
-            code_section += "You may use, modify, extend, or experiment with this code.\n"
+            code_section += "The following code is provided for REFERENCE only to understand the underlying implementation.\n"
+            code_section += "You should NOT try to compile or run it directly.\n"
+            code_section += "Only Python code placed between the designated XML header and footer will be executed.\n"
             code_section += "For GPU-intensive tasks, you can use Modal (already installed and configured).\n\n"
 
             for code_name, code_data in self.code_content.items():
