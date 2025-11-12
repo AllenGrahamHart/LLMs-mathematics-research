@@ -135,6 +135,43 @@ LOADING YOUR OWN GENERATED DATA (from previous iterations):
    Example: `df = pd.read_csv("artifacts/data/results.csv")`
    Example: `arr = np.load("artifacts/data/array.npy")`
 
+CODE REPRODUCIBILITY:
+   Your code must be able to reproduce all experiments and results presented in the paper.
+
+   IMPORTANT: When caching expensive computations across iterations:
+   ✓ DO keep the functions that generated results shown in your paper
+   ✓ DO use conditionals to check if cached data exists
+   ✗ DON'T delete experiment code if those results appear in the paper
+   ✓ DO remove exploratory experiments that didn't make it into the paper
+
+   Good pattern (REPRODUCIBLE):
+   ```python
+   def run_experiment_shown_in_paper():
+       """This experiment's results appear in Figure 2."""
+       # ... full experiment code ...
+       results = compute_something_expensive()
+       np.save("artifacts/data/results.npy", results)
+       return results
+
+   # Use cached data if available, but keep experiment code
+   if os.path.exists("artifacts/data/results.npy"):
+       print("Loading cached results...")
+       results = np.load("artifacts/data/results.npy")
+   else:
+       print("Running experiment...")
+       results = run_experiment_shown_in_paper()
+
+   # Create Figure 2
+   plot_results(results)
+   ```
+
+   Bad pattern (NOT REPRODUCIBLE - don't do this):
+   ```python
+   # Experiment code removed but results are in the paper!
+   results = np.load("artifacts/data/results.npy")  # Can't reproduce Figure 2!
+   plot_results(results)
+   ```
+
 IMPORTANT - TIME TRACKING:
   Your code has a {timeout} second execution limit. To manage this effectively:
   - Include `import time` and track elapsed time with `time.time()`
