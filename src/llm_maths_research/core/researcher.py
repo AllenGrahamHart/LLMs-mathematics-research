@@ -35,6 +35,8 @@ class ScaffoldedResearcher:
         code_ids: Optional[List[str]] = None,
         code_paths: Optional[List[str]] = None,
         code_contexts: Optional[Dict[str, Dict[str, str]]] = None,
+        initial_paper: Optional[str] = None,
+        initial_code: Optional[str] = None,
         use_cache: bool = True
     ):
         """
@@ -55,9 +57,11 @@ class ScaffoldedResearcher:
                      (for use when running from repo - legacy/backward compatible)
             code_paths: List of full paths to code context directories (for pip users)
             code_contexts: Dict mapping code names to dicts with 'description' and 'code' keys (for programmatic use)
+            initial_paper: Custom initial paper filename from problems/initial/ directory (e.g., 'custom_paper.tex')
+            initial_code: Custom initial code filename from problems/initial/ directory (e.g., 'custom_code.py')
             use_cache: Enable 1-hour prompt caching for static content (default: True)
         """
-        self.session = ResearchSession(session_name, api_key=api_key)
+        self.session = ResearchSession(session_name, api_key=api_key, initial_paper=initial_paper, initial_code=initial_code)
         self.max_iterations = max_iterations
         self.problem_statement = ""
         self.paper_ids = paper_ids or []

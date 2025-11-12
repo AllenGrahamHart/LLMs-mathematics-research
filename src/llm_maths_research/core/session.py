@@ -31,15 +31,19 @@ SEPARATOR_WIDTH = 60
 class ResearchSession:
     """Manages a single research session including files, state, and API calls."""
 
-    def __init__(self, session_name: str, api_key: Optional[str] = None):
+    def __init__(self, session_name: str, api_key: Optional[str] = None, initial_paper: Optional[str] = None, initial_code: Optional[str] = None):
         """
         Initialize a new research session.
 
         Args:
             session_name: Unique name for this session
             api_key: LLM provider API key (if not provided, reads from appropriate env var)
+            initial_paper: Custom initial paper filename from problems/initial/ directory (optional)
+            initial_code: Custom initial code filename from problems/initial/ directory (optional)
         """
         self.session_name = session_name
+        self.initial_paper = initial_paper
+        self.initial_code = initial_code
         self.output_dir = f"outputs/{session_name}"
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -193,16 +197,34 @@ class ResearchSession:
 
     def _initialize_files(self) -> None:
         """Create initial LaTeX and Python files if they don't exist."""
-        # Load LaTeX template from file
-        template_path = os.path.join(os.path.dirname(__file__), "..", "templates", "initial_paper.tex")
-        with open(template_path, 'r') as f:
-            initial_latex = f.read()
+        # Determine LaTeX source
+        if self.initial_paper:
+            # Load custom initial paper from problems/initial/
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            custom_paper_path = os.path.join(project_root, "problems", "initial", self.initial_paper)
+            with open(custom_paper_path, 'r') as f:
+                initial_latex = f.read()
+        else:
+            # Load default LaTeX template
+            template_path = os.path.join(os.path.dirname(__file__), "..", "templates", "initial_paper.tex")
+            with open(template_path, 'r') as f:
+                initial_latex = f.read()
 
         if not os.path.exists(self.latex_file):
             with open(self.latex_file, 'w') as f:
                 f.write(initial_latex)
 
-        initial_python = "# Research code will be added here\n"
+        # Determine Python source
+        if self.initial_code:
+            # Load custom initial code from problems/initial/
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            custom_code_path = os.path.join(project_root, "problems", "initial", self.initial_code)
+            with open(custom_code_path, 'r') as f:
+                initial_python = f.read()
+        else:
+            # Use default initial code
+            initial_python = "# Research code will be added here\n"
+
         if not os.path.exists(self.python_file):
             with open(self.python_file, 'w') as f:
                 f.write(initial_python)

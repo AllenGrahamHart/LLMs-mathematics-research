@@ -629,6 +629,72 @@ Code contexts are cached as part of static prompt content:
 - **Subsequent iterations**: 0.1× cost (90% savings)
 - Efficient for multi-iteration research sessions
 
+## Custom Initial Files
+
+The system allows you to start research sessions with custom initial paper and code files instead of the default template and empty code. This is useful when you want to build upon existing work or start with a specific baseline.
+
+### Usage
+
+Use the `--initial-paper` and `--initial-code` flags when running experiments:
+
+```bash
+# Use custom initial paper
+python run_experiment.py --problem problems/open_research.txt \
+    --initial-paper my_paper.tex
+
+# Use custom initial code
+python run_experiment.py --problem problems/open_research.txt \
+    --initial-code my_code.py
+
+# Use both custom initial files
+python run_experiment.py --problem problems/open_research.txt \
+    --initial-paper my_paper.tex \
+    --initial-code my_code.py
+```
+
+### File Location
+
+Custom initial files are stored in `problems/initial/`:
+
+```
+problems/initial/
+├── example_paper.tex      # Example custom paper
+├── example_code.py        # Example custom code
+└── README.md             # Usage instructions
+```
+
+### File Types
+
+- **Initial Paper** (`.tex`): A LaTeX document used as the starting point instead of the default template
+  - Must be a complete LaTeX document with `\documentclass`, `\begin{document}`, etc.
+  - Can include existing sections, abstracts, equations, references
+
+- **Initial Code** (`.py`): Python code used as the starting point instead of an empty file
+  - Should be valid Python code that the AI can build upon
+  - Can include helper functions, imports, data loading code
+
+### Python API
+
+```python
+from llm_maths_research import ScaffoldedResearcher
+
+researcher = ScaffoldedResearcher(
+    session_name="my_session",
+    max_iterations=20,
+    initial_paper="my_paper.tex",     # Custom starting paper
+    initial_code="my_code.py"         # Custom starting code
+)
+
+researcher.run(problem)
+```
+
+### Notes
+
+- Files are optional - if not provided, defaults are used (template + empty code)
+- Initial files are only used when creating new session directories
+- Existing session files are never overwritten
+- Initial paper should be valid LaTeX; initial code should be valid Python
+
 ## Project Structure
 
 ```
@@ -653,6 +719,7 @@ llm-maths-research/
 ├── problems/                       # Research problem files
 │   ├── papers/                     # Reference papers as .txt files (e.g., Turrini2024.txt)
 │   ├── code/                       # Code contexts for ML research (e.g., nanogpt/)
+│   ├── initial/                    # Custom initial paper and code files
 │   ├── open_research.txt           # Default problem for mathematics research
 │   └── ml_research.txt             # Default problem for ML research
 ├── data/                           # Data files for experiments

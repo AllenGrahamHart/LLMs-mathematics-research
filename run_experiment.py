@@ -35,6 +35,8 @@ Examples:
     parser.add_argument('--problem', type=str, default='problems/open_research.txt', help='Path to problem file (default: problems/open_research.txt)')
     parser.add_argument('--data', nargs='*', help='Data file names from data/datasets/ directory (e.g., dataset1.csv timeseries/data.json)')
     parser.add_argument('--code', nargs='*', help='Code context names from problems/code/ directory (e.g., nanogpt transformer-xl)')
+    parser.add_argument('--initial-paper', type=str, help='Custom initial paper file from problems/initial/ directory (e.g., custom_paper.tex)')
+    parser.add_argument('--initial-code', type=str, help='Custom initial code file from problems/initial/ directory (e.g., custom_code.py)')
     parser.add_argument('--max-iterations', type=int, default=2, help='Maximum number of iterations (default: 2)')
     parser.add_argument('--session-name', type=str, help='Custom session name (default: auto-generated)')
     args = parser.parse_args()
@@ -77,6 +79,20 @@ Examples:
                 print(f"  - {paper_id}.txt")
             sys.exit(1)
 
+    # Validate initial paper file exists (only if provided)
+    if args.initial_paper:
+        initial_paper_path = Path(f"problems/initial/{args.initial_paper}")
+        if not initial_paper_path.exists():
+            print(f"Error: Initial paper file not found: {initial_paper_path}")
+            sys.exit(1)
+
+    # Validate initial code file exists (only if provided)
+    if args.initial_code:
+        initial_code_path = Path(f"problems/initial/{args.initial_code}")
+        if not initial_code_path.exists():
+            print(f"Error: Initial code file not found: {initial_code_path}")
+            sys.exit(1)
+
     # Generate session name
     if args.session_name:
         session_name = args.session_name
@@ -95,7 +111,9 @@ Examples:
         max_iterations=args.max_iterations,
         paper_ids=args.papers,
         data_ids=args.data,
-        code_ids=args.code
+        code_ids=args.code,
+        initial_paper=args.initial_paper,
+        initial_code=args.initial_code
     )
 
     researcher.run(problem)
