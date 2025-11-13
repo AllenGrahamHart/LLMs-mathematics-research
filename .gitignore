@@ -52,6 +52,10 @@ analysis_of_data.ipynb
 # Private problem files and papers
 problems/Ellen_problem.txt
 problems/papers/Jolly2025.txt
+problems/jolly_nonlinear_extension.txt
+problems/initial/jolly_gel_swelling_code.py
+problems/initial/jolly_gel_swelling_paper.tex
+problems/initial/README_JOLLY_FILES.md
 
 # Testing
 .pytest_cache/
