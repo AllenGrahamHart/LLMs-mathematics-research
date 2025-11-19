@@ -578,59 +578,6 @@ class ResearchSession:
         else:
             self.last_execution_output = "No code executed this iteration"
 
-    def process_response(self, response: str, iteration: int) -> None:
-        """
-        Process Claude's response and update state.
-
-        Args:
-            response: Response text from Claude
-            iteration: Current iteration number
-        """
-        self.write_log(f"\n{'='*60}\nITERATION {iteration}\n{'='*60}")
-        self.write_log(f"Response:\n{response}\n")
-
-        # Extract and execute code
-        python_code = extract_python_code(response)
-        if python_code:
-            self.write_log("Found Python code block")
-
-            with open(self.python_file, 'w', encoding='utf-8') as f:
-                f.write(python_code)
-
-            exec_result = execute_code(python_code, self.output_dir)
-            output_limit = CONFIG['execution']['output_limit']
-            if exec_result['success']:
-                self.write_log("✓ Code executed successfully")
-                self.last_execution_output = exec_result['output'][:output_limit]
-            else:
-                self.write_log("✗ Code execution failed")
-                self.last_execution_output = exec_result['output'][:output_limit]
-
-            self.write_log(f"Output:\n{self.last_execution_output}")
-
-            # Update artifact manifest after code execution
-            try:
-                self._update_artifact_manifest()
-                self.write_log("✓ Artifact manifest updated")
-            except Exception as e:
-                self.write_log(f"✗ Failed to update artifact manifest: {e}")
-        else:
-            self.last_execution_output = "No code executed this iteration"
-
-        # Extract and save LaTeX
-        latex_content = extract_latex_content(response)
-        if latex_content:
-            with open(self.latex_file, 'w', encoding='utf-8') as f:
-                f.write(latex_content)
-            self.write_log("✓ LaTeX file updated")
-
-        # Extract plan for next iteration
-        self.current_plan = extract_plan(response)
-        self.write_log(f"Next plan: {self.current_plan}")
-
-        # Write full plan section to plans file
-        self.write_plan(iteration, self.current_plan)
-
     def process_openalex(self, response: str, role: str = 'researcher') -> None:
         """
         Process OpenAlex blocks from response and update state.
@@ -757,6 +704,13 @@ class ResearchSession:
                 self.last_execution_output = exec_result['output'][:output_limit]
 
             self.write_log(f"Output:\n{self.last_execution_output}")
+
+            # Update artifact manifest after code execution
+            try:
+                self._update_artifact_manifest()
+                self.write_log("✓ Artifact manifest updated")
+            except Exception as e:
+                self.write_log(f"✗ Failed to update artifact manifest: {e}")
         else:
             self.write_log("✗ No code found in response")
             self.last_execution_output = "No code executed this iteration"
