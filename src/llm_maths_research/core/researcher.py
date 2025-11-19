@@ -412,7 +412,8 @@ You have access to the plan, literature results, code, and execution output in t
             plan=state['plan'],
             critique=state['critique'],
             researcher_openalex=state['researcher_openalex'],
-            critic_openalex=state['critic_openalex']
+            critic_openalex=state['critic_openalex'],
+            artifact_manifest=state.get('artifact_manifest', 'No artifacts saved yet.')
         )
 
         return (static_content, dynamic_content)

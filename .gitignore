@@ -55,6 +55,8 @@ problems/papers/Jolly2025.txt
 problems/jolly_nonlinear_extension.txt
 problems/initial/jolly_gel_swelling_code.py
 problems/initial/jolly_gel_swelling_paper.tex
+problems/initial/jolly_theory_code.py
+problems/initial/jolly_theory_paper.tex
 problems/initial/README_JOLLY_FILES.md
 
 # Testing

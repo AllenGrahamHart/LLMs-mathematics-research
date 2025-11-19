@@ -51,12 +51,18 @@ class ResearchSession:
         self.artifacts_dir = os.path.join(self.output_dir, "artifacts")
         self.figures_dir = os.path.join(self.artifacts_dir, "figures")
         self.data_generated_dir = os.path.join(self.artifacts_dir, "data")
+        self.derivations_dir = os.path.join(self.artifacts_dir, "derivations")
+        self.code_dir = os.path.join(self.artifacts_dir, "code")
+        self.notes_dir = os.path.join(self.artifacts_dir, "notes")
         self.logs_dir = os.path.join(self.output_dir, "logs")
         self.data_dir = os.path.join(self.output_dir, "data")  # Input data
 
         os.makedirs(self.artifacts_dir, exist_ok=True)
         os.makedirs(self.figures_dir, exist_ok=True)
         os.makedirs(self.data_generated_dir, exist_ok=True)
+        os.makedirs(self.derivations_dir, exist_ok=True)
+        os.makedirs(self.code_dir, exist_ok=True)
+        os.makedirs(self.notes_dir, exist_ok=True)
         os.makedirs(self.logs_dir, exist_ok=True)
         os.makedirs(self.data_dir, exist_ok=True)
 
@@ -229,6 +235,82 @@ class ResearchSession:
             with open(self.python_file, 'w') as f:
                 f.write(initial_python)
 
+    def _update_artifact_manifest(self) -> None:
+        """Generate MANIFEST.json cataloging all artifacts."""
+        import numpy as np
+
+        manifest = {
+            "last_updated": f"iteration_{self.current_iteration}",
+            "artifacts": {}
+        }
+
+        # Walk through artifacts directory
+        for root, dirs, files in os.walk(self.artifacts_dir):
+            for file in files:
+                if file == "MANIFEST.json":
+                    continue  # Skip the manifest itself
+
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, self.artifacts_dir)
+
+                info = {
+                    "size_kb": round(os.path.getsize(full_path) / 1024, 1)
+                }
+
+                # Auto-detect npz array names
+                if file.endswith('.npz'):
+                    try:
+                        with np.load(full_path) as data:
+                            info["arrays"] = list(data.keys())
+                    except Exception:
+                        pass
+
+                manifest["artifacts"][rel_path] = info
+
+        # Write manifest
+        manifest_path = os.path.join(self.artifacts_dir, "MANIFEST.json")
+        with open(manifest_path, 'w') as f:
+            json.dump(manifest, f, indent=2)
+
+    def get_artifact_manifest_summary(self) -> str:
+        """Get formatted summary of artifact manifest for prompt."""
+        manifest_path = os.path.join(self.artifacts_dir, "MANIFEST.json")
+
+        if not os.path.exists(manifest_path):
+            return "No artifacts saved yet."
+
+        try:
+            with open(manifest_path, 'r') as f:
+                manifest = json.load(f)
+        except Exception:
+            return "No artifacts saved yet."
+
+        if not manifest.get("artifacts"):
+            return "No artifacts saved yet."
+
+        # Group by directory
+        by_dir = {}
+        for path, info in sorted(manifest["artifacts"].items()):
+            dir_name = os.path.dirname(path) or "root"
+            file_name = os.path.basename(path)
+            by_dir.setdefault(dir_name, []).append((file_name, info))
+
+        # Format output
+        lines = [f"Last updated: {manifest.get('last_updated', 'unknown')}"]
+        lines.append(f"Total files: {len(manifest['artifacts'])}\n")
+
+        for dir_name in sorted(by_dir.keys()):
+            lines.append(f"{dir_name}/")
+            for file_name, info in by_dir[dir_name]:
+                size_kb = info.get("size_kb", 0)
+                arrays = info.get("arrays", [])
+                if arrays:
+                    lines.append(f"  - {file_name} ({size_kb}KB, arrays: {', '.join(arrays)})")
+                else:
+                    lines.append(f"  - {file_name} ({size_kb}KB)")
+
+        return "\n".join(lines)
+
     def get_state(self) -> Dict[str, str]:
         """
         Get current state as dictionary.
@@ -260,7 +342,8 @@ class ResearchSession:
             'plan': self.current_plan,
             'critique': self.current_critique,
             'researcher_openalex': self.current_researcher_openalex,
-            'critic_openalex': self.current_critic_openalex
+            'critic_openalex': self.current_critic_openalex,
+            'artifact_manifest': self.get_artifact_manifest_summary()
         }
 
     def set_reasoning_context(self, iteration: int, stage: str) -> None:
@@ -524,6 +607,13 @@ class ResearchSession:
                 self.last_execution_output = exec_result['output'][:output_limit]
 
             self.write_log(f"Output:\n{self.last_execution_output}")
+
+            # Update artifact manifest after code execution
+            try:
+                self._update_artifact_manifest()
+                self.write_log("✓ Artifact manifest updated")
+            except Exception as e:
+                self.write_log(f"✗ Failed to update artifact manifest: {e}")
         else:
             self.last_execution_output = "No code executed this iteration"
 

@@ -367,7 +367,10 @@ class OpenAIProvider(LLMProvider):
     def get_model_display_name(self) -> str:
         """Get display name for GPT models."""
         model_map = {
+            "gpt-5.1": "GPT-5.1",
+            "gpt-5.1-chat-latest": "GPT-5.1 Instant",
             "chatgpt-5": "GPT-5",
+            "gpt-5": "GPT-5",
             "gpt-4": "GPT-4",
             "gpt-4-turbo": "GPT-4 Turbo",
             "gpt-4o": "GPT-4o",
@@ -412,9 +415,22 @@ class GoogleProvider(LLMProvider):
             "temperature": temperature,
         }
 
-        # Note: Google Gemini does not support thinking_config parameter in the API
-        # The thinking_budget in config is kept for documentation purposes only
-        # Gemini does not expose reasoning content via the API
+        # Gemini 3 uses thinking_level parameter (not thinking_budget)
+        # thinking_budget: -1 = 'high' (default), 0 = 'low', positive int = legacy thinking_budget
+        # Note: Cannot use both thinking_level and thinking_budget in same request
+        if thinking_budget is not None:
+            if thinking_budget == -1:
+                # -1 maps to 'high' (maximum reasoning depth)
+                generation_config["thinking_level"] = "high"
+            elif thinking_budget == 0:
+                # 0 maps to 'low' (minimize latency)
+                generation_config["thinking_level"] = "low"
+            elif thinking_budget > 0:
+                # Positive values use legacy thinking_budget (not recommended for Gemini 3)
+                generation_config["thinking_budget"] = thinking_budget
+        # If thinking_budget is None, Gemini 3 defaults to 'high'
+
+        # Note: Gemini does not expose reasoning content via the API
 
         # Add system instruction if provided
         if system:
@@ -483,6 +499,15 @@ class GoogleProvider(LLMProvider):
             "temperature": temperature,
         }
 
+        # Gemini 3 uses thinking_level parameter (not thinking_budget)
+        if thinking_budget is not None:
+            if thinking_budget == -1:
+                generation_config["thinking_level"] = "high"
+            elif thinking_budget == 0:
+                generation_config["thinking_level"] = "low"
+            elif thinking_budget > 0:
+                generation_config["thinking_budget"] = thinking_budget
+
         if system:
             self.client = self.genai.GenerativeModel(
                 self.model,
@@ -536,6 +561,9 @@ class GoogleProvider(LLMProvider):
     def get_model_display_name(self) -> str:
         """Get display name for Gemini models."""
         model_map = {
+            "gemini-3-pro-preview": "Gemini 3 Pro",
+            "gemini-3-pro-preview-11-2025": "Gemini 3 Pro",
+            "gemini-3-pro-preview-11-2025-thinking": "Gemini 3 Pro Thinking",
             "gemini-2.5-pro": "Gemini 2.5 Pro",
             "gemini-2.5-flash": "Gemini 2.5 Flash",
             "gemini-2.5-flash-lite": "Gemini 2.5 Flash Lite",
@@ -690,6 +718,8 @@ class xAIProvider(LLMProvider):
     def get_model_display_name(self) -> str:
         """Get display name for Grok models."""
         model_map = {
+            "grok-4.1": "Grok 4.1",
+            "grok-4.1-thinking": "Grok 4.1 Thinking",
             "grok-4-0709": "Grok 4",
             "grok-beta": "Grok Beta",
             "grok-vision-beta": "Grok Vision Beta",

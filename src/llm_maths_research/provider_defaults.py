@@ -30,38 +30,38 @@ PROVIDER_DEFAULTS = {
     },
 
     'openai': {
-        'model': 'gpt-5',
-        'display_name': 'GPT-5',
+        'model': 'gpt-5.1',
+        'display_name': 'GPT-5.1',
         'max_tokens': 128000,
         'max_completion_tokens': 128000,  # OpenAI-specific parameter name for GPT-5/o1
-        'reasoning_effort': 'high',  # GPT-5 reasoning effort: minimal, low, medium, high
+        'reasoning_effort': 'high',  # GPT-5.1 reasoning effort: minimal, low, medium, high
         'costs': {
             'input_per_million': 1.25,
             'output_per_million': 10.0,
             'cache_write_multiplier': 1.0,
             'cache_read_multiplier': 0.1,  # 90% savings on cached tokens
         },
-        'notes': 'GPT-5 with high reasoning effort for maximum performance. Uses max_completion_tokens parameter. Prompt caching provides 90% cost savings.',
+        'notes': 'GPT-5.1 with high reasoning effort for maximum performance. Warmer and more conversational. Uses max_completion_tokens parameter. Prompt caching provides 90% cost savings.',
     },
 
     'google': {
-        'model': 'gemini-2.5-pro',
-        'display_name': 'Gemini 2.5 Pro',
-        'max_tokens': 65536,
-        'max_output_tokens': 65536,  # Google-specific parameter name
-        'thinking_budget': -1,  # -1 = adaptive thinking (model adjusts automatically), 0 = disabled, or up to 32000 tokens
+        'model': 'gemini-3-pro-preview',
+        'display_name': 'Gemini 3 Pro',
+        'max_tokens': 64000,  # 1M input context, 64K output
+        'max_output_tokens': 64000,  # Google-specific parameter name
+        'thinking_budget': -1,  # Maps to thinking_level: -1='high' (default, max reasoning), 0='low' (fast), >0=legacy budget
         'costs': {
-            'input_per_million': 1.25,  # For prompts <= 200K tokens
-            'output_per_million': 10.0,
+            'input_per_million': 2.0,  # For prompts <= 200K tokens
+            'output_per_million': 12.0,  # $4/$18 for prompts > 200K tokens
             'cache_write_multiplier': 1.0,  # Automatic caching
             'cache_read_multiplier': 0.1,   # 90% savings on cached tokens
         },
-        'notes': 'Adaptive thinking model with automatic context caching. Note: Gemini does NOT expose reasoning/thought content via API - thinking_budget is for documentation only. 1M input context, 65.5K output.',
+        'notes': 'State-of-the-art reasoning with PhD-level performance (37.5% Humanity\'s Last Exam, 91.9% GPQA Diamond, 95% AIME 2025). Uses thinking_level=\'high\' by default for maximum reasoning depth. Most powerful Gemini model for mathematics research. Note: Gemini does NOT expose reasoning/thought content via API. 1M input context, 64K output.',
     },
 
     'xai': {
-        'model': 'grok-4-0709',
-        'display_name': 'Grok 4',
+        'model': 'grok-4.1',
+        'display_name': 'Grok 4.1',
         'max_tokens': 128000,  # 256K input context, 128K output
         'costs': {
             'input_per_million': 3.0,
@@ -69,7 +69,7 @@ PROVIDER_DEFAULTS = {
             'cache_write_multiplier': 1.0,
             'cache_read_multiplier': 0.25,  # 75% savings on cached tokens
         },
-        'notes': 'OpenAI-compatible API. 256K context window with prompt caching (75% cost savings). Note: Grok does NOT expose reasoning content via API.',
+        'notes': 'OpenAI-compatible API. 256K context window with prompt caching (75% cost savings). Grok 4.1 reduces hallucinations by 3x. Note: Grok does NOT expose reasoning content via API.',
     },
 
     'moonshot': {

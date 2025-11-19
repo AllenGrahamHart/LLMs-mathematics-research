@@ -12,7 +12,7 @@ api:
   # LLM Provider - Default provider to use
   # Options: anthropic, openai, google, xai, moonshot
   # Can be overridden via CLI: --provider openai
-  provider: anthropic
+  provider: google
 
   # Optional: Override provider defaults (see provider_defaults.py for full list)
   # If not specified, uses sensible defaults for each provider

@@ -35,18 +35,30 @@ EXECUTION ENVIRONMENT:
    ├── experiment_code.py      # Your code (you are here)
    ├── paper.tex               # Your LaTeX paper
    ├── artifacts/
-   │   ├── figures/           # Save ALL figures here
-   │   └── data/              # Save ALL generated data files (CSV, pickle, npy, etc.) here
+   │   ├── figures/           # Save ALL plots (PNG, PDF, SVG)
+   │   ├── data/              # Save ALL numerical results (NPZ, CSV, JSON, pickle)
+   │   ├── code/              # Save reusable Python functions, solver implementations
+   │   ├── derivations/       # Save LaTeX derivations, proof sketches
+   │   ├── notes/             # Save analysis notes, TODOs, design decisions
+   │   └── MANIFEST.json      # Auto-generated inventory (updated after code execution)
    ├── data/                  # Input data files (READ from here)
    └── logs/                  # System logs (don't touch)
 
-   IMPORTANT FILE PATHS:
-   - Save figures: `plt.savefig("artifacts/figures/my_plot.png", dpi={figure_dpi})`
-   - Save data: `df.to_csv("artifacts/data/results.csv")` or `np.save("artifacts/data/array.npy", arr)`
+   ARTIFACT MANAGEMENT - Save anything useful across iterations:
+   - Figures: `plt.savefig("artifacts/figures/my_plot.png", dpi={figure_dpi})`
+   - Data: `np.savez("artifacts/data/results.npz", x=x, p=p)` or `df.to_csv("artifacts/data/results.csv")`
+   - Code snippets: Save helper functions to `artifacts/code/solver_utils.py` for reuse
+   - Derivations: Save LaTeX equations to `artifacts/derivations/edge_bc.tex`
+   - Notes: Save analysis notes to `artifacts/notes/iteration_5_findings.md`
    - Load input data: `pd.read_csv("data/input_file.csv")`
    - Reference figures in LaTeX: \includegraphics[width=0.95\textwidth]{{artifacts/figures/my_plot.png}}
 
-   Use comments in your code to track what you've saved so you can load it in future iterations.
+   The ARTIFACT MANIFEST at the end of this prompt shows everything currently saved in artifacts/.
+   Use it to:
+   - Load previous results: `data = np.load("artifacts/data/results.npz"); x = data['x']`
+   - Reuse figures in LaTeX: `\includegraphics[width=0.95\textwidth]{{artifacts/figures/my_plot.png}}`
+   - Import saved code: `from artifacts.code.solver_utils import my_helper_function`
+   - Check what data exists before deciding whether to recompute or load cached results
 
 MODAL GPU INTEGRATION (when required):
    If you need GPU computation, use Modal with this pattern:
@@ -275,3 +287,6 @@ IMPORTANT:
 
 --- Critic's Literature Searches ---
 {critic_openalex}
+
+--- Artifact Manifest ---
+{artifact_manifest}
