@@ -27,6 +27,7 @@ The system manages the full research workflow including code execution, LaTeX co
 - **Template System**: Customizable prompts and LaTeX templates
 - **Structured Response Format**: XML-based parsing for robust extraction of code, LaTeX, and plans
 - **Comprehensive Logging**: Tracks all iterations, critiques, plans, and metrics
+- **Artifact Manifest**: Auto-generated inventory of all saved artifacts (figures, data, code) updated after each iteration
 - **Cost Tracking**: Monitors API usage and costs
 - **Unit Tests**: 74 tests covering core functionality, code loading, XML extraction, literature integration, and three-stage architecture
 - **Configurable**: YAML-based configuration for timeouts, models, and limits
@@ -51,9 +52,9 @@ The generator phase uses a novel three-stage approach where each iteration consi
 The system supports multiple LLM providers, allowing you to choose between different models based on your needs:
 
 - **Anthropic**: Claude Sonnet 4.5 (with extended thinking & prompt caching)
-- **OpenAI**: GPT-5 (with prompt caching for 90% cost savings)
-- **Google**: Gemini 2.5 Pro (state-of-the-art thinking model with context caching)
-- **xAI**: Grok 4 (256K context window with 75% cache savings)
+- **OpenAI**: GPT-5.1 (latest with improved reasoning & 90% cache savings)
+- **Google**: Gemini 3 Pro (PhD-level reasoning with 1M context & automatic caching)
+- **xAI**: Grok 4.1 (reduced hallucinations, 256K context, 75% cache savings)
 - **Moonshot**: Kimi K2 Thinking (cost-effective thinking model with 256K context)
 
 Switch providers by editing one line in `config.yaml`:
@@ -81,11 +82,11 @@ Each provider has different parameters for controlling reasoning depth and effor
 - Higher effort = more thorough reasoning but ~23× more output tokens
 - Best performance with `'high'` for complex research tasks
 
-**Google Gemini 2.5 Pro** - Adaptive thinking:
-- `thinking_budget: -1` - Adaptive/dynamic reasoning (default)
-- Model automatically adjusts thinking depth based on task complexity
-- Alternative: Set explicit budget (0 to disable, or up to 32000 tokens)
-- `-1` provides optimal balance for autonomous research
+**Google Gemini 3 Pro** - Thinking level control:
+- `thinking_budget: -1` - Maps to `thinking_level: 'high'` (default, maximum reasoning)
+- `thinking_budget: 0` - Maps to `thinking_level: 'low'` (fast, minimal latency)
+- Positive values use legacy thinking_budget parameter (not recommended)
+- Gemini 3 achieves PhD-level performance: 37.5% on Humanity's Last Exam, 91.9% GPQA Diamond
 
 **xAI Grok 4** - Automatic reasoning:
 - No user-controllable parameters
