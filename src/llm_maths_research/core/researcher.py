@@ -492,7 +492,8 @@ In addition to your critique - please complete this survey:
             papers_section=self._build_papers_section(),
             data_section=self._build_data_section(include_paths=False),
             code_section=self._build_code_section(),
-            session_name=self.session.session_name
+            session_name=self.session.session_name,
+            timeout=CONFIG['execution']['timeout']
         )
 
         # Fill in dynamic content (changes each iteration)
